@@ -54,10 +54,42 @@ RM = /usr/bin/cmake -E remove -f
 EQUALS = =
 
 # The top-level source directory on which CMake was run.
-CMAKE_SOURCE_DIR = /home/yz/Desktop/passivelocation
+CMAKE_SOURCE_DIR = /home/yz/Desktop/wydw/passivelocation
 
 # The top-level build directory on which CMake was run.
-CMAKE_BINARY_DIR = /home/yz/Desktop/passivelocation/build
+CMAKE_BINARY_DIR = /home/yz/Desktop/wydw/passivelocation/build
+
+#=============================================================================
+# Target rules for target CMakeFiles/run.dir
+
+# All Build rule for target.
+CMakeFiles/run.dir/all: CMakeFiles/passivelocation.dir/all
+	$(MAKE) -f CMakeFiles/run.dir/build.make CMakeFiles/run.dir/depend
+	$(MAKE) -f CMakeFiles/run.dir/build.make CMakeFiles/run.dir/build
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --progress-dir=/home/yz/Desktop/wydw/passivelocation/build/CMakeFiles --progress-num= "Built target run"
+.PHONY : CMakeFiles/run.dir/all
+
+# Build rule for subdir invocation for target.
+CMakeFiles/run.dir/rule: cmake_check_build_system
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/yz/Desktop/wydw/passivelocation/build/CMakeFiles 7
+	$(MAKE) -f CMakeFiles/Makefile2 CMakeFiles/run.dir/all
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/yz/Desktop/wydw/passivelocation/build/CMakeFiles 0
+.PHONY : CMakeFiles/run.dir/rule
+
+# Convenience name for target.
+run: CMakeFiles/run.dir/rule
+
+.PHONY : run
+
+# clean rule for target.
+CMakeFiles/run.dir/clean:
+	$(MAKE) -f CMakeFiles/run.dir/build.make CMakeFiles/run.dir/clean
+.PHONY : CMakeFiles/run.dir/clean
+
+# clean rule for target.
+clean: CMakeFiles/run.dir/clean
+
+.PHONY : clean
 
 #=============================================================================
 # Target rules for target CMakeFiles/passivelocation.dir
@@ -66,7 +98,7 @@ CMAKE_BINARY_DIR = /home/yz/Desktop/passivelocation/build
 CMakeFiles/passivelocation.dir/all:
 	$(MAKE) -f CMakeFiles/passivelocation.dir/build.make CMakeFiles/passivelocation.dir/depend
 	$(MAKE) -f CMakeFiles/passivelocation.dir/build.make CMakeFiles/passivelocation.dir/build
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --progress-dir=/home/yz/Desktop/passivelocation/build/CMakeFiles --progress-num=1,2,3,4,5,6,7 "Built target passivelocation"
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --progress-dir=/home/yz/Desktop/wydw/passivelocation/build/CMakeFiles --progress-num=1,2,3,4,5,6,7 "Built target passivelocation"
 .PHONY : CMakeFiles/passivelocation.dir/all
 
 # Include target in all.
@@ -76,9 +108,9 @@ all: CMakeFiles/passivelocation.dir/all
 
 # Build rule for subdir invocation for target.
 CMakeFiles/passivelocation.dir/rule: cmake_check_build_system
-	$(CMAKE_COMMAND) -E cmake_progress_start /home/yz/Desktop/passivelocation/build/CMakeFiles 7
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/yz/Desktop/wydw/passivelocation/build/CMakeFiles 7
 	$(MAKE) -f CMakeFiles/Makefile2 CMakeFiles/passivelocation.dir/all
-	$(CMAKE_COMMAND) -E cmake_progress_start /home/yz/Desktop/passivelocation/build/CMakeFiles 0
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/yz/Desktop/wydw/passivelocation/build/CMakeFiles 0
 .PHONY : CMakeFiles/passivelocation.dir/rule
 
 # Convenience name for target.

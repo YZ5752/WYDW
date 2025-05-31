@@ -1,139 +1,106 @@
-# 无源侦察协同定位仿真系统 (Passive Location Simulation System)
+# 协同雷达侦察仿真评估系统
 
-本项目是一个用于雷达侦察和辐射源模型仿真的系统，支持单平台和多平台协同侦察效能分析。
+基于Ubuntu 18.04系统开发的协同雷达侦察仿真评估系统，使用GTK3实现界面。
 
-## 功能特点
+## 功能简介
 
-- 雷达侦察和辐射源建模
-- 单平台雷达侦察效能仿真分析
-- 多平台协同侦察效能仿真分析
-- 无源侦察情报数据处理与评估
-- 多种仿真评估模式支持：任务前、实时、任务后
+系统具备以下六个主要功能界面：
 
-## 系统要求
+1. **雷达设备模型**：管理雷达设备模型，包括添加、编辑、删除功能
+2. **辐射源模型**：管理辐射源模型，包括添加、编辑、删除功能
+3. **单平台仿真**：进行单平台雷达侦察效能仿真分析
+4. **多平台仿真**：进行多平台协同侦察效能仿真分析
+5. **数据分选**：实现情报数据显示和数据分选功能
+6. **仿真评估**：实现对侦察定位能力的各项指标评估
+
+## 系统环境要求
 
 - Ubuntu 18.04 LTS
-- Visual C++ (在Ubuntu下可使用g++)
-- GTK+ 3.0
-- ODBC驱动和连接库
-- CMake 3.10或更高版本
+- Visual C++ 或 g++ 7.4.0及以上
+- GTK 3.22及以上
+- CMake 3.10及以上
 
-## 构建与安装
+## 安装依赖
 
-### 前提条件
-
-安装必要的依赖项：
+在Ubuntu 18.04系统上安装所需的依赖库：
 
 ```bash
-sudo apt-get update
-sudo apt-get install build-essential cmake
-sudo apt-get install libgtk-3-dev
-sudo apt-get install unixodbc-dev
+sudo apt update
+sudo apt install build-essential cmake
+sudo apt install libgtk-3-dev
+sudo apt install pkg-config
 ```
 
-### 构建步骤
+## 编译构建
 
-
-1. 克隆代码库
+1. 克隆代码仓库：
 
 ```bash
 git clone git@github.com:YZyh2519/passivelocation.git
-cd passivelocation
+cd PassiveLocationSimulation
 ```
 
-2. 创建构建目录
+2. 创建构建目录并编译：
 
 ```bash
 mkdir build
 cd build
-```
-
-3. 配置和构建项目
-
-```bash
 cmake ..
-make
+make 
 ```
 
-4. 安装应用程序
+3. 运行程序：
 
 ```bash
-sudo make install
+./PassiveLocationSimulation
 ```
 
-## 数据库配置
-
-本系统使用ODBC连接数据库。您需要设置一个名为"PassiveLocationDSN"的ODBC数据源，可以连接到MySQL、PostgreSQL或其他支持ODBC的数据库系统。
-
-### 创建数据库表
+或使用CMake的自定义目标：
 
 ```bash
-# 对于MySQL
-sudo mysql -u root passivelocation < database/schema.sql
-
-
+make run
 ```
 
-### 配置ODBC
+## 使用说明
 
-1. 安装ODBC驱动
+### 雷达设备模型
 
-```bash
-# 对于MySQL
-sudo apt-get install libmyodbc
+- 点击"新增"按钮添加新的雷达设备模型
+- 在弹出的对话框中输入雷达设备模型的名称、位置（经度纬度）、技术体制、基本参数、工作参数等信息
+- 在列表中选择已有模型，点击"编辑"或"删除"可修改或删除模型
 
-# 对于PostgreSQL
-sudo apt-get install odbc-postgresql
-```
+### 辐射源模型
 
-2. 编辑odbc.ini文件
+- 点击"新增"按钮添加新的辐射源模型
+- 在弹出的对话框中输入辐射源模型的名称、位置（经度纬度）、发射功率、扫描周期、频率范围、工作扇区等信息
+- 在列表中选择已有模型，点击"编辑"或"删除"可修改或删除模型
 
-```bash
-sudo nano /etc/odbc.ini
-```
+### 单平台仿真
 
-添加以下内容：
+- 从下拉列表中选择雷达设备模型和辐射源模型
+- 选择定位算法（快速定位、基线定位）
+- 点击"开始"按钮进行仿真计算
+- 系统将在地图上展示仿真结果，并在右侧显示威力、测向误差、参数测量误差等数据
 
-```
-[PassiveLocationDSN]
-Description     = Passive Location Database
-Driver          = MySQL
-Server          = localhost
-Database        = passive_location
-Port            = 3306
-User            = username
-Password        = password
-```
+### 多平台仿真
 
-## 运行应用程序
+- 从下拉列表中选择多个雷达设备模型和辐射源模型
+- 选择定位算法（时差定位、频差定位、测向定位）
+- 点击"开始"按钮进行多平台协同仿真计算
+- 系统将在地图上展示仿真结果
 
-```bash
-./passivelocation
-```
+### 数据分选
 
-## 项目结构
+- 从下拉列表中选择目标
+- 在表格中查看与目标相关的测向和定位数据
+- 选择需要的数据，可以进行删除、高亮显示等操作
+- 点击"录入"按钮将选择的数据存入数据库
 
-- `include/` - 头文件
-- `src/` - 源代码
-- `res/` - 资源文件
-- `database/` - 数据库脚本
-- `doc/` - 文档
+### 仿真评估
 
-
-
-1. 雷达侦察设备模型开发
-   - 在 `radar_model.h` 中定义模型接口
-   - 实现不同的技术体制（干涉仪体制、时差体制）
-
-2. 辐射源模型开发
-   - 在 `radar_model.h` 中定义辐射源接口
-   - 根据发射功率、扫描周期等参数实现模型
-
-3. 仿真算法开发
-   - 单平台算法：快速定位、基线定位
-   - 多平台算法：时差定位、频差定位、测向定位
-
-4. UI开发
-   - 使用GTK+ 3.0构建用户界面
-   - 支持地图显示、参数设置、结果展示
+- 选择目标和评估类型（单平台或多平台）
+- 点击"开始评估"按钮进行评估计算
+- 系统将显示最远定位距离、定位时间、定位精度、测向精度等指标
+- 并显示定位精度随时间变化的图表
+- 点击"导出结果"可将评估结果保存为文本文件
 

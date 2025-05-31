@@ -48,13 +48,25 @@ RM = /usr/bin/cmake -E remove -f
 EQUALS = =
 
 # The top-level source directory on which CMake was run.
-CMAKE_SOURCE_DIR = /home/yz/Desktop/passivelocation
+CMAKE_SOURCE_DIR = /home/yz/Desktop/wydw/passivelocation
 
 # The top-level build directory on which CMake was run.
-CMAKE_BINARY_DIR = /home/yz/Desktop/passivelocation/build
+CMAKE_BINARY_DIR = /home/yz/Desktop/wydw/passivelocation/build
 
 #=============================================================================
 # Targets provided globally by CMake.
+
+# Special rule for the target install
+install: preinstall
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --cyan "Install the project..."
+	/usr/bin/cmake -P cmake_install.cmake
+.PHONY : install
+
+# Special rule for the target install
+install/fast: preinstall/fast
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --cyan "Install the project..."
+	/usr/bin/cmake -P cmake_install.cmake
+.PHONY : install/fast
 
 # Special rule for the target install/strip
 install/strip: preinstall
@@ -123,23 +135,11 @@ rebuild_cache/fast: rebuild_cache
 
 .PHONY : rebuild_cache/fast
 
-# Special rule for the target install
-install: preinstall
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --cyan "Install the project..."
-	/usr/bin/cmake -P cmake_install.cmake
-.PHONY : install
-
-# Special rule for the target install
-install/fast: preinstall/fast
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --cyan "Install the project..."
-	/usr/bin/cmake -P cmake_install.cmake
-.PHONY : install/fast
-
 # The main all target
 all: cmake_check_build_system
-	$(CMAKE_COMMAND) -E cmake_progress_start /home/yz/Desktop/passivelocation/build/CMakeFiles /home/yz/Desktop/passivelocation/build/CMakeFiles/progress.marks
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/yz/Desktop/wydw/passivelocation/build/CMakeFiles /home/yz/Desktop/wydw/passivelocation/build/CMakeFiles/progress.marks
 	$(MAKE) -f CMakeFiles/Makefile2 all
-	$(CMAKE_COMMAND) -E cmake_progress_start /home/yz/Desktop/passivelocation/build/CMakeFiles 0
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/yz/Desktop/wydw/passivelocation/build/CMakeFiles 0
 .PHONY : all
 
 # The main clean target
@@ -166,6 +166,19 @@ preinstall/fast:
 depend:
 	$(CMAKE_COMMAND) -H$(CMAKE_SOURCE_DIR) -B$(CMAKE_BINARY_DIR) --check-build-system CMakeFiles/Makefile.cmake 1
 .PHONY : depend
+
+#=============================================================================
+# Target rules for targets named run
+
+# Build rule for target.
+run: cmake_check_build_system
+	$(MAKE) -f CMakeFiles/Makefile2 run
+.PHONY : run
+
+# fast build rule for target.
+run/fast:
+	$(MAKE) -f CMakeFiles/run.dir/build.make CMakeFiles/run.dir/build
+.PHONY : run/fast
 
 #=============================================================================
 # Target rules for targets named passivelocation
@@ -348,14 +361,15 @@ help:
 	@echo "... all (the default if no target is provided)"
 	@echo "... clean"
 	@echo "... depend"
+	@echo "... install"
 	@echo "... install/strip"
+	@echo "... run"
+	@echo "... passivelocation"
 	@echo "... install/local"
 	@echo "... test"
 	@echo "... list_install_components"
-	@echo "... passivelocation"
 	@echo "... edit_cache"
 	@echo "... rebuild_cache"
-	@echo "... install"
 	@echo "... src/data_processor.o"
 	@echo "... src/data_processor.i"
 	@echo "... src/data_processor.s"

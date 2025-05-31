@@ -2,10 +2,10 @@
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/Modules/")
 
 cmake_minimum_required(VERSION 3.10)
-project(passivelocation)
+project(passivelocation VERSION 1.0)
 
 # 设置C++标准
-set(CMAKE_CXX_STANDARD 14)
+set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # 查找GTK3
@@ -28,13 +28,19 @@ include_directories(${ODBC_INCLUDE_DIRS})
 file(GLOB SOURCES "src/*.cpp")
 
 # 创建可执行文件
-add_executable(passivelocation ${SOURCES})
+add_executable(${PROJECT_NAME} ${SOURCES})
 
 # 链接库
-target_link_libraries(passivelocation ${GTK3_LIBRARIES} ${ODBC_LIBRARIES})
+target_link_libraries(${PROJECT_NAME} ${GTK3_LIBRARIES} ${ODBC_LIBRARIES})
+
+# 设置包含目录
+target_include_directories(${PROJECT_NAME} PRIVATE include)
+
+# 设置输出目录
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 
 # 安装目标
-install(TARGETS passivelocation DESTINATION bin)
+install(TARGETS ${PROJECT_NAME} DESTINATION bin)
 
 # 复制资源文件
 install(DIRECTORY res/ DESTINATION share/passivelocation/res)
@@ -44,4 +50,16 @@ install(DIRECTORY database/ DESTINATION share/passivelocation/database)
 
 # 添加测试
 enable_testing()
-# 这里可以添加测试案例 
+# 这里可以添加测试案例
+
+# 添加构建脚本
+add_custom_target(run
+    COMMAND ${PROJECT_NAME}
+    DEPENDS ${PROJECT_NAME}
+    WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/bin
+)
+
+# 显示构建信息
+message(STATUS "GTK3 include dirs: ${GTK3_INCLUDE_DIRS}")
+message(STATUS "GTK3 library dirs: ${GTK3_LIBRARY_DIRS}")
+message(STATUS "C++ compiler: ${CMAKE_CXX_COMPILER_ID}") 
