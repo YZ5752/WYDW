@@ -129,9 +129,33 @@ CMakeFiles/passivelocation.dir/src/main.cpp.o.provides: CMakeFiles/passivelocati
 CMakeFiles/passivelocation.dir/src/main.cpp.o.provides.build: CMakeFiles/passivelocation.dir/src/main.cpp.o
 
 
+CMakeFiles/passivelocation.dir/src/map_view.cpp.o: CMakeFiles/passivelocation.dir/flags.make
+CMakeFiles/passivelocation.dir/src/map_view.cpp.o: ../src/map_view.cpp
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/yz/Desktop/wydw/passivelocation/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_4) "Building CXX object CMakeFiles/passivelocation.dir/src/map_view.cpp.o"
+	/usr/bin/c++  $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -o CMakeFiles/passivelocation.dir/src/map_view.cpp.o -c /home/yz/Desktop/wydw/passivelocation/src/map_view.cpp
+
+CMakeFiles/passivelocation.dir/src/map_view.cpp.i: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Preprocessing CXX source to CMakeFiles/passivelocation.dir/src/map_view.cpp.i"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /home/yz/Desktop/wydw/passivelocation/src/map_view.cpp > CMakeFiles/passivelocation.dir/src/map_view.cpp.i
+
+CMakeFiles/passivelocation.dir/src/map_view.cpp.s: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Compiling CXX source to assembly CMakeFiles/passivelocation.dir/src/map_view.cpp.s"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /home/yz/Desktop/wydw/passivelocation/src/map_view.cpp -o CMakeFiles/passivelocation.dir/src/map_view.cpp.s
+
+CMakeFiles/passivelocation.dir/src/map_view.cpp.o.requires:
+
+.PHONY : CMakeFiles/passivelocation.dir/src/map_view.cpp.o.requires
+
+CMakeFiles/passivelocation.dir/src/map_view.cpp.o.provides: CMakeFiles/passivelocation.dir/src/map_view.cpp.o.requires
+	$(MAKE) -f CMakeFiles/passivelocation.dir/build.make CMakeFiles/passivelocation.dir/src/map_view.cpp.o.provides.build
+.PHONY : CMakeFiles/passivelocation.dir/src/map_view.cpp.o.provides
+
+CMakeFiles/passivelocation.dir/src/map_view.cpp.o.provides.build: CMakeFiles/passivelocation.dir/src/map_view.cpp.o
+
+
 CMakeFiles/passivelocation.dir/src/radar_model.cpp.o: CMakeFiles/passivelocation.dir/flags.make
 CMakeFiles/passivelocation.dir/src/radar_model.cpp.o: ../src/radar_model.cpp
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/yz/Desktop/wydw/passivelocation/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_4) "Building CXX object CMakeFiles/passivelocation.dir/src/radar_model.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/yz/Desktop/wydw/passivelocation/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_5) "Building CXX object CMakeFiles/passivelocation.dir/src/radar_model.cpp.o"
 	/usr/bin/c++  $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -o CMakeFiles/passivelocation.dir/src/radar_model.cpp.o -c /home/yz/Desktop/wydw/passivelocation/src/radar_model.cpp
 
 CMakeFiles/passivelocation.dir/src/radar_model.cpp.i: cmake_force
@@ -155,7 +179,7 @@ CMakeFiles/passivelocation.dir/src/radar_model.cpp.o.provides.build: CMakeFiles/
 
 CMakeFiles/passivelocation.dir/src/simulation.cpp.o: CMakeFiles/passivelocation.dir/flags.make
 CMakeFiles/passivelocation.dir/src/simulation.cpp.o: ../src/simulation.cpp
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/yz/Desktop/wydw/passivelocation/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_5) "Building CXX object CMakeFiles/passivelocation.dir/src/simulation.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/yz/Desktop/wydw/passivelocation/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_6) "Building CXX object CMakeFiles/passivelocation.dir/src/simulation.cpp.o"
 	/usr/bin/c++  $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -o CMakeFiles/passivelocation.dir/src/simulation.cpp.o -c /home/yz/Desktop/wydw/passivelocation/src/simulation.cpp
 
 CMakeFiles/passivelocation.dir/src/simulation.cpp.i: cmake_force
@@ -179,7 +203,7 @@ CMakeFiles/passivelocation.dir/src/simulation.cpp.o.provides.build: CMakeFiles/p
 
 CMakeFiles/passivelocation.dir/src/ui_manager.cpp.o: CMakeFiles/passivelocation.dir/flags.make
 CMakeFiles/passivelocation.dir/src/ui_manager.cpp.o: ../src/ui_manager.cpp
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/yz/Desktop/wydw/passivelocation/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_6) "Building CXX object CMakeFiles/passivelocation.dir/src/ui_manager.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/yz/Desktop/wydw/passivelocation/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_7) "Building CXX object CMakeFiles/passivelocation.dir/src/ui_manager.cpp.o"
 	/usr/bin/c++  $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -o CMakeFiles/passivelocation.dir/src/ui_manager.cpp.o -c /home/yz/Desktop/wydw/passivelocation/src/ui_manager.cpp
 
 CMakeFiles/passivelocation.dir/src/ui_manager.cpp.i: cmake_force
@@ -201,14 +225,40 @@ CMakeFiles/passivelocation.dir/src/ui_manager.cpp.o.provides: CMakeFiles/passive
 CMakeFiles/passivelocation.dir/src/ui_manager.cpp.o.provides.build: CMakeFiles/passivelocation.dir/src/ui_manager.cpp.o
 
 
+CMakeFiles/passivelocation.dir/src/ui_static_methods.cpp.o: CMakeFiles/passivelocation.dir/flags.make
+CMakeFiles/passivelocation.dir/src/ui_static_methods.cpp.o: ../src/ui_static_methods.cpp
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/yz/Desktop/wydw/passivelocation/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_8) "Building CXX object CMakeFiles/passivelocation.dir/src/ui_static_methods.cpp.o"
+	/usr/bin/c++  $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -o CMakeFiles/passivelocation.dir/src/ui_static_methods.cpp.o -c /home/yz/Desktop/wydw/passivelocation/src/ui_static_methods.cpp
+
+CMakeFiles/passivelocation.dir/src/ui_static_methods.cpp.i: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Preprocessing CXX source to CMakeFiles/passivelocation.dir/src/ui_static_methods.cpp.i"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /home/yz/Desktop/wydw/passivelocation/src/ui_static_methods.cpp > CMakeFiles/passivelocation.dir/src/ui_static_methods.cpp.i
+
+CMakeFiles/passivelocation.dir/src/ui_static_methods.cpp.s: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Compiling CXX source to assembly CMakeFiles/passivelocation.dir/src/ui_static_methods.cpp.s"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /home/yz/Desktop/wydw/passivelocation/src/ui_static_methods.cpp -o CMakeFiles/passivelocation.dir/src/ui_static_methods.cpp.s
+
+CMakeFiles/passivelocation.dir/src/ui_static_methods.cpp.o.requires:
+
+.PHONY : CMakeFiles/passivelocation.dir/src/ui_static_methods.cpp.o.requires
+
+CMakeFiles/passivelocation.dir/src/ui_static_methods.cpp.o.provides: CMakeFiles/passivelocation.dir/src/ui_static_methods.cpp.o.requires
+	$(MAKE) -f CMakeFiles/passivelocation.dir/build.make CMakeFiles/passivelocation.dir/src/ui_static_methods.cpp.o.provides.build
+.PHONY : CMakeFiles/passivelocation.dir/src/ui_static_methods.cpp.o.provides
+
+CMakeFiles/passivelocation.dir/src/ui_static_methods.cpp.o.provides.build: CMakeFiles/passivelocation.dir/src/ui_static_methods.cpp.o
+
+
 # Object files for target passivelocation
 passivelocation_OBJECTS = \
 "CMakeFiles/passivelocation.dir/src/data_processor.cpp.o" \
 "CMakeFiles/passivelocation.dir/src/db_connector.cpp.o" \
 "CMakeFiles/passivelocation.dir/src/main.cpp.o" \
+"CMakeFiles/passivelocation.dir/src/map_view.cpp.o" \
 "CMakeFiles/passivelocation.dir/src/radar_model.cpp.o" \
 "CMakeFiles/passivelocation.dir/src/simulation.cpp.o" \
-"CMakeFiles/passivelocation.dir/src/ui_manager.cpp.o"
+"CMakeFiles/passivelocation.dir/src/ui_manager.cpp.o" \
+"CMakeFiles/passivelocation.dir/src/ui_static_methods.cpp.o"
 
 # External object files for target passivelocation
 passivelocation_EXTERNAL_OBJECTS =
@@ -216,13 +266,16 @@ passivelocation_EXTERNAL_OBJECTS =
 passivelocation: CMakeFiles/passivelocation.dir/src/data_processor.cpp.o
 passivelocation: CMakeFiles/passivelocation.dir/src/db_connector.cpp.o
 passivelocation: CMakeFiles/passivelocation.dir/src/main.cpp.o
+passivelocation: CMakeFiles/passivelocation.dir/src/map_view.cpp.o
 passivelocation: CMakeFiles/passivelocation.dir/src/radar_model.cpp.o
 passivelocation: CMakeFiles/passivelocation.dir/src/simulation.cpp.o
 passivelocation: CMakeFiles/passivelocation.dir/src/ui_manager.cpp.o
+passivelocation: CMakeFiles/passivelocation.dir/src/ui_static_methods.cpp.o
 passivelocation: CMakeFiles/passivelocation.dir/build.make
 passivelocation: /usr/lib/x86_64-linux-gnu/libodbc.so
+passivelocation: /usr/lib/x86_64-linux-gnu/libodbc.so
 passivelocation: CMakeFiles/passivelocation.dir/link.txt
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --bold --progress-dir=/home/yz/Desktop/wydw/passivelocation/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_7) "Linking CXX executable passivelocation"
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --bold --progress-dir=/home/yz/Desktop/wydw/passivelocation/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_9) "Linking CXX executable passivelocation"
 	$(CMAKE_COMMAND) -E cmake_link_script CMakeFiles/passivelocation.dir/link.txt --verbose=$(VERBOSE)
 
 # Rule to build all files generated by this target.
@@ -233,9 +286,11 @@ CMakeFiles/passivelocation.dir/build: passivelocation
 CMakeFiles/passivelocation.dir/requires: CMakeFiles/passivelocation.dir/src/data_processor.cpp.o.requires
 CMakeFiles/passivelocation.dir/requires: CMakeFiles/passivelocation.dir/src/db_connector.cpp.o.requires
 CMakeFiles/passivelocation.dir/requires: CMakeFiles/passivelocation.dir/src/main.cpp.o.requires
+CMakeFiles/passivelocation.dir/requires: CMakeFiles/passivelocation.dir/src/map_view.cpp.o.requires
 CMakeFiles/passivelocation.dir/requires: CMakeFiles/passivelocation.dir/src/radar_model.cpp.o.requires
 CMakeFiles/passivelocation.dir/requires: CMakeFiles/passivelocation.dir/src/simulation.cpp.o.requires
 CMakeFiles/passivelocation.dir/requires: CMakeFiles/passivelocation.dir/src/ui_manager.cpp.o.requires
+CMakeFiles/passivelocation.dir/requires: CMakeFiles/passivelocation.dir/src/ui_static_methods.cpp.o.requires
 
 .PHONY : CMakeFiles/passivelocation.dir/requires
 

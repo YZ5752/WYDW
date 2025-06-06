@@ -5,36 +5,49 @@ cmake_minimum_required(VERSION 3.10)
 project(passivelocation VERSION 1.0)
 
 # 设置C++标准
-set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # 查找GTK3
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(GTK3 REQUIRED gtk+-3.0)
 
-# 包含GTK3的头文件路径
-include_directories(${GTK3_INCLUDE_DIRS})
-link_directories(${GTK3_LIBRARY_DIRS})
-add_definitions(${GTK3_CFLAGS_OTHER})
-
-# 包含项目头文件路径
-include_directories(include)
+# 查找WebKit2GTK
+pkg_check_modules(WEBKIT2 REQUIRED webkit2gtk-4.0)
 
 # 查找ODBC
 find_package(ODBC REQUIRED MODULE)
-include_directories(${ODBC_INCLUDE_DIRS})
+
+# 包含头文件路径
+include_directories(
+    ${GTK3_INCLUDE_DIRS}
+    ${WEBKIT2_INCLUDE_DIRS}
+    ${ODBC_INCLUDE_DIRS}
+    ${CMAKE_CURRENT_SOURCE_DIR}/include
+)
+
+# 链接目录
+link_directories(
+    ${GTK3_LIBRARY_DIRS}
+    ${WEBKIT2_LIBRARY_DIRS}
+)
 
 # 添加源文件
 file(GLOB SOURCES "src/*.cpp")
 
-# 创建可执行文件
+# 确保包含ui_static_methods.cpp
+list(APPEND SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/src/ui_static_methods.cpp")
+
+# 创建可执行文件（仅一次）
 add_executable(${PROJECT_NAME} ${SOURCES})
 
 # 链接库
-target_link_libraries(${PROJECT_NAME} ${GTK3_LIBRARIES} ${ODBC_LIBRARIES})
-
-# 设置包含目录
-target_include_directories(${PROJECT_NAME} PRIVATE include)
+target_link_libraries(${PROJECT_NAME} 
+    ${GTK3_LIBRARIES} 
+    ${WEBKIT2_LIBRARIES}
+    ${ODBC_LIBRARIES}
+    stdc++fs  # 添加filesystem库支持
+)
 
 # 设置输出目录
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
@@ -61,5 +74,5 @@ add_custom_target(run
 
 # 显示构建信息
 message(STATUS "GTK3 include dirs: ${GTK3_INCLUDE_DIRS}")
-message(STATUS "GTK3 library dirs: ${GTK3_LIBRARY_DIRS}")
-message(STATUS "C++ compiler: ${CMAKE_CXX_COMPILER_ID}") 
+message(STATUS "WebKit2GTK include dirs: ${WEBKIT2_INCLUDE_DIRS}")
+message(STATUS "C++ compiler: ${CMAKE_CXX_COMPILER_ID}")

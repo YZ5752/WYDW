@@ -3,6 +3,7 @@
 #include <gtk/gtk.h>
 #include "simulation.h"
 #include "data_processor.h"
+#include "map_view.h"
 
 // 辅助函数，获取容器中指定索引的子控件
 GtkWidget* get_child_at_index(GtkContainer* container, gint index);
@@ -45,6 +46,9 @@ public:
     // 显示地图
     void showMap(GtkWidget* container);
     
+    // 显示WebKit地图 (新增方法)
+    void showWebMap(GtkWidget* container);
+    
     // 在地图上显示定位结果
     void showLocationResults(GtkWidget* map, const std::vector<LocationResult>& results);
     
@@ -64,6 +68,9 @@ public:
     void showResultsTable(GtkWidget* container, 
                         const std::vector<std::pair<std::string, double>>& results);
 
+    // 更新误差表格
+    void updateErrorTable(GtkWidget* table, const std::string& techSystem);
+
     // 雷达设备模型UI回调
     static void onAddRadarDevice(GtkWidget* widget, gpointer data);
     static void onEditRadarDevice(GtkWidget* widget, gpointer data);
@@ -80,6 +87,9 @@ public:
     // 多平台仿真UI回调
     static void onMultiPlatformSimulation(GtkWidget* widget, gpointer data);
     
+    // 技术体制变化回调
+    static void onTechSystemChanged(GtkWidget* widget, gpointer data);
+    
     // 数据分选回调
     static void onDataSelectionChanged(GtkWidget* widget, gpointer data);
     static void onDataImport(GtkWidget* widget, gpointer data);
@@ -87,11 +97,12 @@ public:
     // 仿真评估回调
     static void onEvaluationStart(GtkWidget* widget, gpointer data);
     static void onExportResults(GtkWidget* widget, gpointer data);
-
-private:
-    UIManager();
-    ~UIManager();
     
+    // 更新模型列表
+    static void updateRadarDeviceList(GtkWidget* list);
+    static void updateRadiationSourceList(GtkWidget* list);
+    
+    // 页面控件
     GtkWidget* m_mainWindow;
     GtkWidget* m_radarDeviceModelPage;
     GtkWidget* m_radiationSourceModelPage;
@@ -99,10 +110,17 @@ private:
     GtkWidget* m_multiPlatformPage;
     GtkWidget* m_dataSelectionPage;
     GtkWidget* m_evaluationPage;
+
+private:
+    UIManager();
+    ~UIManager();
     
-    // 更新模型列表
-    void updateRadarDeviceList(GtkWidget* list);
-    void updateRadiationSourceList(GtkWidget* list);
+    // 禁止拷贝
+    UIManager(const UIManager&) = delete;
+    UIManager& operator=(const UIManager&) = delete;
+    
+    // 地图视图对象 (新增成员)
+    MapView m_mapView;
     
     // 创建通用的表格
     GtkWidget* createModelList(const std::vector<std::string>& headers);

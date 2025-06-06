@@ -1,20 +1,21 @@
 -- 创建雷达设备模型表
 CREATE TABLE radar_devices (
     device_id INT PRIMARY KEY AUTO_INCREMENT,
+    device_type VARCHAR(50) NOT NULL,  -- 类型：侦察机（移动）/雷达（固定）
     name VARCHAR(100) NOT NULL,
-    technical_system VARCHAR(50) NOT NULL,  -- 技术体制：干涉仪体制/时差体制
-    algorithm VARCHAR(50) NOT NULL,        -- 算法：快速定位/基线定位
+    technical_system VARCHAR(50) NOT NULL,  -- 技术体制：时差/频差
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    coordinate_id INT,
+    FOREIGN KEY (coordinate_id) REFERENCES coordinates(coordinate_id)
 );
 
 -- 创建雷达设备基本参数表
 CREATE TABLE radar_basic_params (
     param_id INT PRIMARY KEY AUTO_INCREMENT,
     device_id INT NOT NULL,
-    param_name VARCHAR(100) NOT NULL,
-    param_value DOUBLE NOT NULL,
-    param_unit VARCHAR(50),
+    antenna_length DOUBLE,       -- 天线长度
+    noise_level DOUBLE,          -- 噪声
     FOREIGN KEY (device_id) REFERENCES radar_devices(device_id) ON DELETE CASCADE
 );
 
@@ -22,9 +23,12 @@ CREATE TABLE radar_basic_params (
 CREATE TABLE radar_work_params (
     param_id INT PRIMARY KEY AUTO_INCREMENT,
     device_id INT NOT NULL,
-    param_name VARCHAR(100) NOT NULL,
-    param_value DOUBLE NOT NULL,
-    param_unit VARCHAR(50),
+    work_start_time TIME,        -- 工作开始时间
+    work_end_time TIME,          -- 工作结束时间
+    freq_min DOUBLE NOT NULL,    -- 侦收的频率范围最小值
+    freq_max DOUBLE NOT NULL,    -- 侦收的频率范围最大值
+    angle_min DOUBLE,            -- 角度范围最小值
+    angle_max DOUBLE,            -- 角度范围最大值
     FOREIGN KEY (device_id) REFERENCES radar_devices(device_id) ON DELETE CASCADE
 );
 
@@ -32,13 +36,16 @@ CREATE TABLE radar_work_params (
 CREATE TABLE radiation_sources (
     source_id INT PRIMARY KEY AUTO_INCREMENT,
     name VARCHAR(100) NOT NULL,
-    transmit_power DOUBLE NOT NULL,  -- 发射功率
-    scan_period DOUBLE NOT NULL,     -- 扫描周期
-    freq_min DOUBLE NOT NULL,        -- 最小频率
-    freq_max DOUBLE NOT NULL,        -- 最大频率
-    work_sector DOUBLE NOT NULL,     -- 工作扇区
+    device_type VARCHAR(50) NOT NULL,  -- 类型：雷达站（固定）/飞机（移动）/舰船（移动）
+    transmit_power DOUBLE NOT NULL,    -- 发射功率
+    scan_period DOUBLE NOT NULL,       -- 扫描周期
+    freq_min DOUBLE NOT NULL,          -- 频率范围最小值
+    freq_max DOUBLE NOT NULL,          -- 频率范围最大值
+    work_sector DOUBLE NOT NULL,       -- 工作扇区
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    coordinate_id INT,
+    FOREIGN KEY (coordinate_id) REFERENCES coordinates(coordinate_id)
 );
 
 -- 创建坐标点表
