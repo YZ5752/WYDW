@@ -274,6 +274,33 @@ src/main.cpp.s:
 	$(MAKE) -f CMakeFiles/passivelocation.dir/build.make CMakeFiles/passivelocation.dir/src/main.cpp.s
 .PHONY : src/main.cpp.s
 
+src/map_view.o: src/map_view.cpp.o
+
+.PHONY : src/map_view.o
+
+# target to build an object file
+src/map_view.cpp.o:
+	$(MAKE) -f CMakeFiles/passivelocation.dir/build.make CMakeFiles/passivelocation.dir/src/map_view.cpp.o
+.PHONY : src/map_view.cpp.o
+
+src/map_view.i: src/map_view.cpp.i
+
+.PHONY : src/map_view.i
+
+# target to preprocess a source file
+src/map_view.cpp.i:
+	$(MAKE) -f CMakeFiles/passivelocation.dir/build.make CMakeFiles/passivelocation.dir/src/map_view.cpp.i
+.PHONY : src/map_view.cpp.i
+
+src/map_view.s: src/map_view.cpp.s
+
+.PHONY : src/map_view.s
+
+# target to generate assembly for a file
+src/map_view.cpp.s:
+	$(MAKE) -f CMakeFiles/passivelocation.dir/build.make CMakeFiles/passivelocation.dir/src/map_view.cpp.s
+.PHONY : src/map_view.cpp.s
+
 src/radar_model.o: src/radar_model.cpp.o
 
 .PHONY : src/radar_model.o
@@ -355,6 +382,33 @@ src/ui_manager.cpp.s:
 	$(MAKE) -f CMakeFiles/passivelocation.dir/build.make CMakeFiles/passivelocation.dir/src/ui_manager.cpp.s
 .PHONY : src/ui_manager.cpp.s
 
+src/ui_static_methods.o: src/ui_static_methods.cpp.o
+
+.PHONY : src/ui_static_methods.o
+
+# target to build an object file
+src/ui_static_methods.cpp.o:
+	$(MAKE) -f CMakeFiles/passivelocation.dir/build.make CMakeFiles/passivelocation.dir/src/ui_static_methods.cpp.o
+.PHONY : src/ui_static_methods.cpp.o
+
+src/ui_static_methods.i: src/ui_static_methods.cpp.i
+
+.PHONY : src/ui_static_methods.i
+
+# target to preprocess a source file
+src/ui_static_methods.cpp.i:
+	$(MAKE) -f CMakeFiles/passivelocation.dir/build.make CMakeFiles/passivelocation.dir/src/ui_static_methods.cpp.i
+.PHONY : src/ui_static_methods.cpp.i
+
+src/ui_static_methods.s: src/ui_static_methods.cpp.s
+
+.PHONY : src/ui_static_methods.s
+
+# target to generate assembly for a file
+src/ui_static_methods.cpp.s:
+	$(MAKE) -f CMakeFiles/passivelocation.dir/build.make CMakeFiles/passivelocation.dir/src/ui_static_methods.cpp.s
+.PHONY : src/ui_static_methods.cpp.s
+
 # Help Target
 help:
 	@echo "The following are some of the valid targets for this Makefile:"
@@ -379,6 +433,9 @@ help:
 	@echo "... src/main.o"
 	@echo "... src/main.i"
 	@echo "... src/main.s"
+	@echo "... src/map_view.o"
+	@echo "... src/map_view.i"
+	@echo "... src/map_view.s"
 	@echo "... src/radar_model.o"
 	@echo "... src/radar_model.i"
 	@echo "... src/radar_model.s"
@@ -388,6 +445,9 @@ help:
 	@echo "... src/ui_manager.o"
 	@echo "... src/ui_manager.i"
 	@echo "... src/ui_manager.s"
+	@echo "... src/ui_static_methods.o"
+	@echo "... src/ui_static_methods.i"
+	@echo "... src/ui_static_methods.s"
 .PHONY : help
 
 

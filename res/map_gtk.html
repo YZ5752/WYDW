@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Passive Location Map</title>
+    <link rel="stylesheet" href="ol.css" type="text/css">
+    <style>
+        html, body, #map {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+        }
+        .platform-marker {
+            width: 24px;
+            height: 24px;
+            background-color: blue;
+            border-radius: 50%;
+            border: 2px solid white;
+            cursor: pointer;
+            position: relative;
+        }
+        .platform-marker:before {
+            content: attr(data-name);
+            position: absolute;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            white-space: nowrap;
+            color: white;
+            background-color: rgba(0, 0, 0, 0.7);
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 12px;
+        }
+        .target-marker {
+            width: 20px;
+            height: 20px;
+            background-color: red;
+            border-radius: 50%;
+            border: 2px solid white;
+            cursor: pointer;
+        }
+        .popup {
+            position: absolute;
+            background-color: white;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.2);
+            padding: 15px;
+            border-radius: 10px;
+            border: 1px solid #cccccc;
+            bottom: 12px;
+            left: -50px;
+            min-width: 180px;
+        }
+        .popup:after, .popup:before {
+            top: 100%;
+            border: solid transparent;
+            content: " ";
+            height: 0;
+            width: 0;
+            position: absolute;
+            pointer-events: none;
+        }
+        .popup:after {
+            border-top-color: white;
+            border-width: 10px;
+            left: 48px;
+            margin-left: -10px;
+        }
+        .popup:before {
+            border-top-color: #cccccc;
+            border-width: 11px;
+            left: 48px;
+            margin-left: -11px;
+        }
+        .popup-closer {
+            text-decoration: none;
+            position: absolute;
+            top: 2px;
+            right: 8px;
+        }
+        .popup-content {
+            margin: 0;
+        }
+    </style>
+</head>
+<body>
+    <div id="map"></div>
+    <div id="popup" class="popup">
+        <a href="#" id="popup-closer" class="popup-closer">×</a>
+        <div id="popup-content" class="popup-content"></div>
+    </div>
+
+    <script src="ol.js"></script>
+    <script>
+        // 全局变量
+        var map;
+        var platformSource = new ol.source.Vector();
+        var targetSource = new ol.source.Vector();
+        var lineSource = new ol.source.Vector();
+        var errorEllipseSource = new ol.source.Vector();
+        var platformLayer, targetLayer, lineLayer, errorEllipseLayer;
+        var popup, popupElement, popupContent, popupCloser;
+        
+        // 初始化地图
+        function initMap() {
+            // 创建地图视图
+            var view = new ol.View({
+                center: ol.proj.fromLonLat([116.3833, 39.9167]), // 北京为默认中心
+                zoom: 5
+            });
+            
+            // 创建图层
+            var baseLayer = new ol.layer.Tile({
+                source: new ol.source.OSM()
+            });
+            
+            platformLayer = new ol.layer.Vector({
+                source: platformSource,
+                style: platformStyle
+            });
+            
+            targetLayer = new ol.layer.Vector({
+                source: targetSource,
+                style: targetStyle
+            });
+            
+            lineLayer = new ol.layer.Vector({
+                source: lineSource
+            });
+            
+            errorEllipseLayer = new ol.layer.Vector({
+                source: errorEllipseSource,
+                style: errorEllipseStyle
+            });
+            
+            // 创建地图
+            map = new ol.Map({
+                target: 'map',
+                layers: [baseLayer, lineLayer, errorEllipseLayer, platformLayer, targetLayer],
+                view: view,
+                controls: ol.control.defaults().extend([
+                    new ol.control.FullScreen(),
+                    new ol.control.ScaleLine(),
+                    new ol.control.ZoomSlider(),
+                    new ol.control.ZoomToExtent()
+                ])
+            });
+            
+            // 初始化弹窗
+            initPopup();
+            
+            // 添加事件监听
+            map.on('click', function(evt) {
+                var feature = map.forEachFeatureAtPixel(evt.pixel, function(feature) {
+                    return feature;
+                });
+                
+                if (feature) {
+                    var coordinates = feature.getGeometry().getCoordinates();
+                    var properties = feature.getProperties();
+                    
+                    var content = '';
+                    if (properties.type === 'platform') {
+                        content = '<h4>' + properties.name + '</h4>' +
+                                  '<p>经度: ' + properties.lon.toFixed(4) + '</p>' +
+                                  '<p>纬度: ' + properties.lat.toFixed(4) + '</p>';
+                    } else if (properties.type === 'target') {
+                        content = '<h4>目标</h4>' +
+                                  '<p>经度: ' + properties.lon.toFixed(4) + '</p>' +
+                                  '<p>纬度: ' + properties.lat.toFixed(4) + '</p>';
+                    }
+                    
+                    if (content) {
+                        popupContent.innerHTML = content;
+                        popup.setPosition(coordinates);
+                    }
+                } else {
+                    popup.setPosition(undefined);
+                }
+            });
+        }
+        
+        // 初始化弹窗
+        function initPopup() {
+            popupElement = document.getElementById('popup');
+            popupContent = document.getElementById('popup-content');
+            popupCloser = document.getElementById('popup-closer');
+            
+            popup = new ol.Overlay({
+                element: popupElement,
+                positioning: 'bottom-center',
+                stopEvent: false,
+                offset: [0, -10]
+            });
+            
+            map.addOverlay(popup);
+            
+            popupCloser.onclick = function() {
+                popup.setPosition(undefined);
+                popupCloser.blur();
+                return false;
+            };
+        }
+        
+        // 平台样式
+        function platformStyle(feature) {
+            return new ol.style.Style({
+                image: new ol.style.Icon({
+                    src: 'platform.png',
+                    scale: 0.5
+                }),
+                text: new ol.style.Text({
+                    text: feature.get('name'),
+                    offsetY: -20,
+                    fill: new ol.style.Fill({
+                        color: 'white'
+                    }),
+                    stroke: new ol.style.Stroke({
+                        color: 'black',
+                        width: 2
+                    })
+                })
+            });
+        }
+        
+        // 目标样式
+        function targetStyle() {
+            return new ol.style.Style({
+                image: new ol.style.Icon({
+                    src: 'target.png',
+                    scale: 0.5
+                })
+            });
+        }
+        
+        // 误差椭圆样式
+        function errorEllipseStyle(feature) {
+            return new ol.style.Style({
+                stroke: new ol.style.Stroke({
+                    color: feature.get('color') || 'rgba(255, 0, 0, 0.8)',
+                    width: 2
+                }),
+                fill: new ol.style.Fill({
+                    color: feature.get('fillColor') || 'rgba(255, 0, 0, 0.2)'
+                })
+            });
+        }
+        
+        // 添加平台
+        function addPlatform(lat, lon, name) {
+            var coords = ol.proj.fromLonLat([lon, lat]);
+            var feature = new ol.Feature({
+                geometry: new ol.geom.Point(coords),
+                type: 'platform',
+                name: name,
+                lat: lat,
+                lon: lon
+            });
+            
+            platformSource.addFeature(feature);
+            return feature;
+        }
+        
+        // 添加目标
+        function addTarget(lat, lon) {
+            var coords = ol.proj.fromLonLat([lon, lat]);
+            var feature = new ol.Feature({
+                geometry: new ol.geom.Point(coords),
+                type: 'target',
+                lat: lat,
+                lon: lon
+            });
+            
+            targetSource.addFeature(feature);
+            return feature;
+        }
+        
+        // 添加方位线
+        function addLineOfBearing(platformLat, platformLon, azimuth, length, color) {
+            var start = ol.proj.fromLonLat([platformLon, platformLat]);
+            
+            // 计算终点坐标
+            var radAzimuth = (azimuth * Math.PI) / 180;
+            var lon2 = platformLon + (length * Math.sin(radAzimuth)) / (111.32 * Math.cos(platformLat * Math.PI / 180));
+            var lat2 = platformLat + (length * Math.cos(radAzimuth)) / 111.32;
+            
+            var end = ol.proj.fromLonLat([lon2, lat2]);
+            
+            var feature = new ol.Feature({
+                geometry: new ol.geom.LineString([start, end]),
+                type: 'line'
+            });
+            
+            // 设置样式
+            feature.setStyle(new ol.style.Style({
+                stroke: new ol.style.Stroke({
+                    color: color || 'blue',
+                    width: 2
+                })
+            }));
+            
+            lineSource.addFeature(feature);
+            return feature;
+        }
+        
+        // 添加误差椭圆
+        function addErrorEllipse(centerLat, centerLon, semiMajorAxis, semiMinorAxis, orientation) {
+            var center = ol.proj.fromLonLat([centerLon, centerLat]);
+            
+            // 生成椭圆点
+            var ellipsePoints = [];
+            var points = 60;  // 椭圆边缘的点数量
+            
+            for (var i = 0; i <= points; i++) {
+                var angle = (i * 2 * Math.PI) / points;
+                
+                // 椭圆参数方程
+                var x = semiMajorAxis * Math.cos(angle);
+                var y = semiMinorAxis * Math.sin(angle);
+                
+                // 旋转
+                var rotX = x * Math.cos(orientation) - y * Math.sin(orientation);
+                var rotY = x * Math.sin(orientation) + y * Math.cos(orientation);
+                
+                // 转换为经纬度
+                var latDelta = rotY / 111.32;  // 每度纬度大约111.32公里
+                var lonDelta = rotX / (111.32 * Math.cos(centerLat * Math.PI / 180));
+                
+                var lon = centerLon + lonDelta;
+                var lat = centerLat + latDelta;
+                
+                ellipsePoints.push(ol.proj.fromLonLat([lon, lat]));
+            }
+            
+            var feature = new ol.Feature({
+                geometry: new ol.geom.Polygon([ellipsePoints]),
+                type: 'ellipse'
+            });
+            
+            errorEllipseSource.addFeature(feature);
+            return feature;
+        }
+        
+        // 清除所有图层
+        function clearAllLayers() {
+            platformSource.clear();
+            targetSource.clear();
+            lineSource.clear();
+            errorEllipseSource.clear();
+        }
+        
+        // 定位到指定位置
+        function centerMap(lat, lon, zoom) {
+            map.getView().animate({
+                center: ol.proj.fromLonLat([lon, lat]),
+                zoom: zoom || map.getView().getZoom(),
+                duration: 1000
+            });
+        }
+        
+        // 初始化地图
+        document.addEventListener('DOMContentLoaded', initMap);
+        
+        // 提供接口给外部调用
+        window.mapAPI = {
+            addPlatform: addPlatform,
+            addTarget: addTarget,
+            addLineOfBearing: addLineOfBearing,
+            addErrorEllipse: addErrorEllipse,
+            clearAllLayers: clearAllLayers,
+            centerMap: centerMap
+        };
+    </script>
+</body>
+</html> 

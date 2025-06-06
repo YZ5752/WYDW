@@ -3,11 +3,36 @@
 
 // RadarDevice实现
 RadarDevice::RadarDevice()
-    : m_technicalSystem("干涉仪体制"),
-      m_algorithm("快速定位") {
+    : m_deviceType("雷达"),
+      m_deviceCount(1),
+      m_technicalSystem("时差"),
+      m_antennaLength(0.0),
+      m_noiseLevel(0.0),
+      m_workStartTime("00:00:00"),
+      m_workEndTime("23:59:59"),
+      m_freqMin(0.0),
+      m_freqMax(0.0),
+      m_angleMin(0.0),
+      m_angleMax(360.0) {
 }
 
 RadarDevice::~RadarDevice() {
+}
+
+void RadarDevice::setDeviceType(const std::string& type) {
+    m_deviceType = type;
+}
+
+std::string RadarDevice::getDeviceType() const {
+    return m_deviceType;
+}
+
+void RadarDevice::setDeviceCount(int count) {
+    m_deviceCount = count;
+}
+
+int RadarDevice::getDeviceCount() const {
+    return m_deviceCount;
 }
 
 void RadarDevice::setTechnicalSystem(const std::string& system) {
@@ -18,28 +43,47 @@ std::string RadarDevice::getTechnicalSystem() const {
     return m_technicalSystem;
 }
 
-void RadarDevice::setAlgorithm(const std::string& algorithm) {
-    m_algorithm = algorithm;
+void RadarDevice::setAntennaLength(double length) {
+    m_antennaLength = length;
 }
 
-std::string RadarDevice::getAlgorithm() const {
-    return m_algorithm;
+double RadarDevice::getAntennaLength() const {
+    return m_antennaLength;
 }
 
-void RadarDevice::setBasicParameters(const std::vector<double>& params) {
-    m_basicParams = params;
+void RadarDevice::setNoiseLevel(double noise) {
+    m_noiseLevel = noise;
 }
 
-std::vector<double> RadarDevice::getBasicParameters() const {
-    return m_basicParams;
+double RadarDevice::getNoiseLevel() const {
+    return m_noiseLevel;
 }
 
-void RadarDevice::setWorkParameters(const std::vector<double>& params) {
-    m_workParams = params;
+void RadarDevice::setWorkTimeRange(const std::string& startTime, const std::string& endTime) {
+    m_workStartTime = startTime;
+    m_workEndTime = endTime;
 }
 
-std::vector<double> RadarDevice::getWorkParameters() const {
-    return m_workParams;
+std::pair<std::string, std::string> RadarDevice::getWorkTimeRange() const {
+    return std::make_pair(m_workStartTime, m_workEndTime);
+}
+
+void RadarDevice::setFrequencyRange(double min, double max) {
+    m_freqMin = min;
+    m_freqMax = max;
+}
+
+std::pair<double, double> RadarDevice::getFrequencyRange() const {
+    return std::make_pair(m_freqMin, m_freqMax);
+}
+
+void RadarDevice::setAngleRange(double min, double max) {
+    m_angleMin = min;
+    m_angleMax = max;
+}
+
+std::pair<double, double> RadarDevice::getAngleRange() const {
+    return std::make_pair(m_angleMin, m_angleMax);
 }
 
 double RadarDevice::calculatePower() const {
@@ -59,7 +103,8 @@ double RadarDevice::calculateParameterError() const {
 
 // RadiationSource实现
 RadiationSource::RadiationSource()
-    : m_transmitPower(100.0),
+    : m_deviceType("雷达站"),
+      m_transmitPower(100.0),
       m_scanPeriod(5.0),
       m_freqMin(1000.0),
       m_freqMax(2000.0),
@@ -67,6 +112,14 @@ RadiationSource::RadiationSource()
 }
 
 RadiationSource::~RadiationSource() {
+}
+
+void RadiationSource::setDeviceType(const std::string& type) {
+    m_deviceType = type;
+}
+
+std::string RadiationSource::getDeviceType() const {
+    return m_deviceType;
 }
 
 void RadiationSource::setTransmitPower(double power) {

@@ -29,6 +29,7 @@ sudo apt update
 sudo apt install build-essential cmake
 sudo apt install libgtk-3-dev
 sudo apt install pkg-config
+sudo apt-get install libwebkit2gtk-4.0-dev
 ```
 
 ## 编译构建
@@ -37,7 +38,6 @@ sudo apt install pkg-config
 
 ```bash
 git clone git@github.com:YZyh2519/passivelocation.git
-cd PassiveLocationSimulation
 ```
 
 2. 创建构建目录并编译：
@@ -52,7 +52,7 @@ make
 3. 运行程序：
 
 ```bash
-./PassiveLocationSimulation
+./passivelocation
 ```
 
 或使用CMake的自定义目标：
@@ -62,6 +62,14 @@ make run
 ```
 
 ## 使用说明
+
+## git上传代码
+```
+git add .
+git commit -m ''
+git push -u origin .._dev
+```
+
 
 ### 雷达设备模型
 
