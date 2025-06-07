@@ -83,6 +83,229 @@ static gboolean on_tree_view_button_press(GtkWidget *treeview, GdkEventButton *e
     
     return FALSE;
 }
+// ... existing code ...
+
+// 创建雷达设备模型UI
+GtkWidget* UIManager::createRadarDeviceModelUI() {
+    GtkWidget* container = gtk_box_new(GTK_ORIENTATION_VERTICAL, 5);
+    gtk_container_set_border_width(GTK_CONTAINER(container), 10);
+    
+    // 添加标题
+    GtkWidget* titleLabel = gtk_label_new("雷达设备模型管理");
+    gtk_widget_set_halign(titleLabel, GTK_ALIGN_START);
+    PangoAttrList* attrList = pango_attr_list_new();
+    PangoAttribute* attr = pango_attr_weight_new(PANGO_WEIGHT_BOLD);
+    pango_attr_list_insert(attrList, attr);
+    gtk_label_set_attributes(GTK_LABEL(titleLabel), attrList);
+    pango_attr_list_unref(attrList);
+    gtk_box_pack_start(GTK_BOX(container), titleLabel, FALSE, FALSE, 5);
+    
+    // 创建添加按钮
+    GtkWidget* addButton = gtk_button_new_with_label("添加雷达设备");
+    GtkWidget* buttonBox = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 5);
+    gtk_box_pack_start(GTK_BOX(buttonBox), addButton, FALSE, FALSE, 0);
+    gtk_box_pack_start(GTK_BOX(container), buttonBox, FALSE, FALSE, 5);
+    
+    // 创建雷达设备列表
+    std::vector<std::string> headers = {"ID", "名称", "型号", "工作频率(MHz)", "编辑", "删除"};
+    GtkWidget* deviceList = createModelList(headers);
+    GtkWidget* scrollWindow = gtk_scrolled_window_new(NULL, NULL);
+    gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(scrollWindow), 
+                                  GTK_POLICY_AUTOMATIC, 
+                                  GTK_POLICY_AUTOMATIC);
+    gtk_container_add(GTK_CONTAINER(scrollWindow), deviceList);
+    gtk_box_pack_start(GTK_BOX(container), scrollWindow, TRUE, TRUE, 0);
+    
+    // 设置滚动窗口的最小尺寸
+    gtk_widget_set_size_request(scrollWindow, -1, 300);
+    
+    // 连接信号
+    g_signal_connect(deviceList, "button-press-event",
+                    G_CALLBACK(on_tree_view_button_press), NULL);
+    
+    // 更新列表
+    updateReconnaissanceDeviceList(deviceList);
+    
+    return container;
+}
+
+// 创建辐射源模型UI
+GtkWidget* UIManager::createRadiationSourceModelUI() {
+    GtkWidget* container = gtk_box_new(GTK_ORIENTATION_VERTICAL, 5);
+    gtk_container_set_border_width(GTK_CONTAINER(container), 10);
+    
+    // 添加标题
+    GtkWidget* titleLabel = gtk_label_new("辐射源模型管理");
+    gtk_widget_set_halign(titleLabel, GTK_ALIGN_START);
+    PangoAttrList* attrList = pango_attr_list_new();
+    PangoAttribute* attr = pango_attr_weight_new(PANGO_WEIGHT_BOLD);
+    pango_attr_list_insert(attrList, attr);
+    gtk_label_set_attributes(GTK_LABEL(titleLabel), attrList);
+    pango_attr_list_unref(attrList);
+    gtk_box_pack_start(GTK_BOX(container), titleLabel, FALSE, FALSE, 5);
+    
+    // 创建添加按钮
+    GtkWidget* addButton = gtk_button_new_with_label("添加辐射源");
+    GtkWidget* buttonBox = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 5);
+    gtk_box_pack_start(GTK_BOX(buttonBox), addButton, FALSE, FALSE, 0);
+    gtk_box_pack_start(GTK_BOX(container), buttonBox, FALSE, FALSE, 5);
+    
+    // 创建辐射源列表
+    std::vector<std::string> headers = {"ID", "名称", "型号", "工作频率(MHz)", "编辑", "删除"};
+    GtkWidget* sourceList = createModelList(headers);
+    GtkWidget* scrollWindow = gtk_scrolled_window_new(NULL, NULL);
+    gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(scrollWindow), 
+                                  GTK_POLICY_AUTOMATIC, 
+                                  GTK_POLICY_AUTOMATIC);
+    gtk_container_add(GTK_CONTAINER(scrollWindow), sourceList);
+    gtk_box_pack_start(GTK_BOX(container), scrollWindow, TRUE, TRUE, 0);
+    
+    // 设置滚动窗口的最小尺寸
+    gtk_widget_set_size_request(scrollWindow, -1, 300);
+    
+    // 连接信号
+    g_signal_connect(sourceList, "button-press-event",
+                    G_CALLBACK(on_tree_view_button_press), NULL);
+    
+    // 更新列表
+    updateRadiationSourceList(sourceList);
+    
+    return container;
+}
+
+// 雷达设备编辑回调
+void UIManager::onEditRadarDevice(GtkWidget* widget, gpointer data) {
+    GtkTreeSelection* selection = gtk_tree_view_get_selection(GTK_TREE_VIEW(widget));
+    GtkTreeModel* model;
+    GtkTreeIter iter;
+    
+    if (gtk_tree_selection_get_selected(selection, &model, &iter)) {
+        gchar* id_str;
+        gtk_tree_model_get(model, &iter, 0, &id_str, -1);
+        
+        g_print("编辑雷达设备: %s\n", id_str);
+        
+        // 转换ID为整数
+        int id = atoi(id_str);
+        
+        // 获取所有设备，并查找对应ID的设备
+        std::vector<ReconnaissanceDevice> devices = getAllReconnaissanceDevices();
+        for (const auto& device : devices) {
+            if (device.getDeviceId() == id) {
+                // 这里应该弹出编辑对话框
+                // 实际项目中完成该功能
+                g_print("找到设备: %s\n", device.getDeviceName().c_str());
+                break;
+            }
+        }
+        
+        g_free(id_str);
+    }
+}
+
+// 辐射源编辑回调
+void UIManager::onEditRadiationSource(GtkWidget* widget, gpointer data) {
+    GtkTreeSelection* selection = gtk_tree_view_get_selection(GTK_TREE_VIEW(widget));
+    GtkTreeModel* model;
+    GtkTreeIter iter;
+    
+    if (gtk_tree_selection_get_selected(selection, &model, &iter)) {
+        gchar* id_str;
+        gtk_tree_model_get(model, &iter, 0, &id_str, -1);
+        
+        g_print("编辑辐射源: %s\n", id_str);
+        
+        // 转换ID为整数
+        int id = atoi(id_str);
+        
+        // 获取所有辐射源，并查找对应ID的辐射源
+        std::vector<RadiationSource> sources = getAllRadiationSources();
+        for (const auto& source : sources) {
+            if (source.getRadiationId() == id) {
+                // 这里应该弹出编辑对话框
+                // 实际项目中完成该功能
+                g_print("找到辐射源: %s\n", source.getRadiationName().c_str());
+                break;
+            }
+        }
+        
+        g_free(id_str);
+    }
+}
+
+// 雷达设备删除回调
+void UIManager::onDeleteRadarDevice(GtkWidget* widget, gpointer data) {
+    GtkTreeSelection* selection = gtk_tree_view_get_selection(GTK_TREE_VIEW(widget));
+    GtkTreeModel* model;
+    GtkTreeIter iter;
+    
+    if (gtk_tree_selection_get_selected(selection, &model, &iter)) {
+        gchar* id_str;
+        gtk_tree_model_get(model, &iter, 0, &id_str, -1);
+        
+        g_print("删除雷达设备: %s\n", id_str);
+        
+        // 转换ID为整数
+        int id = atoi(id_str);
+        
+        // 弹出确认对话框
+        GtkWidget* dialog = gtk_message_dialog_new(GTK_WINDOW(gtk_widget_get_toplevel(widget)),
+                                                GTK_DIALOG_MODAL,
+                                                GTK_MESSAGE_QUESTION,
+                                                GTK_BUTTONS_YES_NO,
+                                                "确定要删除雷达设备 %s 吗?", id_str);
+        
+        gint response = gtk_dialog_run(GTK_DIALOG(dialog));
+        gtk_widget_destroy(dialog);
+        
+        if (response == GTK_RESPONSE_YES) {
+            // 删除设备
+            deleteReconnaissanceDevice(id);
+            
+            // 更新列表
+            updateReconnaissanceDeviceList(widget);
+        }
+        
+        g_free(id_str);
+    }
+}
+
+// 辐射源删除回调
+void UIManager::onDeleteRadiationSource(GtkWidget* widget, gpointer data) {
+    GtkTreeSelection* selection = gtk_tree_view_get_selection(GTK_TREE_VIEW(widget));
+    GtkTreeModel* model;
+    GtkTreeIter iter;
+    
+    if (gtk_tree_selection_get_selected(selection, &model, &iter)) {
+        gchar* id_str;
+        gtk_tree_model_get(model, &iter, 0, &id_str, -1);
+        
+        g_print("删除辐射源: %s\n", id_str);
+        
+        // 转换ID为整数
+        int id = atoi(id_str);
+        
+        // 弹出确认对话框
+        GtkWidget* dialog = gtk_message_dialog_new(GTK_WINDOW(gtk_widget_get_toplevel(widget)),
+                                                GTK_DIALOG_MODAL,
+                                                GTK_MESSAGE_QUESTION,
+                                                GTK_BUTTONS_YES_NO,
+                                                "确定要删除辐射源 %s 吗?", id_str);
+        
+        gint response = gtk_dialog_run(GTK_DIALOG(dialog));
+        gtk_widget_destroy(dialog);
+        
+        if (response == GTK_RESPONSE_YES) {
+            // 删除辐射源
+            deleteRadiationSource(id);
+            
+            // 更新列表
+            updateRadiationSourceList(widget);
+        }
+        
+        g_free(id_str);
+    }
+}
 
 // 绘制地图的回调函数
 static gboolean drawMapCallback(GtkWidget* widget, cairo_t* cr, gpointer data) {
@@ -386,599 +609,6 @@ GtkWidget* UIManager::createModelList(const std::vector<std::string>& headers) {
     } catch (...) {
         g_print("Unknown exception in createModelList\n");
         return NULL;
-    }
-}
-
-GtkWidget* UIManager::createRadarDeviceModelUI() {
-    g_print("Creating radar device model UI components...\n");
-    
-    try {
-        // 创建页面的主容器
-        GtkWidget* container = gtk_box_new(GTK_ORIENTATION_VERTICAL, 10);
-        if (!container) {
-            g_print("Failed to create container\n");
-            return NULL;
-        }
-        
-        gtk_container_set_border_width(GTK_CONTAINER(container), 15);
-        
-        // 标题
-        g_print("  Creating title label...\n");
-        GtkWidget* titleLabel = gtk_label_new(NULL);
-        if (!titleLabel) {
-            g_print("Failed to create title label\n");
-            gtk_widget_destroy(container);
-            return NULL;
-        }
-        
-        gtk_label_set_markup(GTK_LABEL(titleLabel), "<span font='16' weight='bold'>侦察设备模型管理</span>");
-        gtk_box_pack_start(GTK_BOX(container), titleLabel, FALSE, FALSE, 5);
-        
-        // 创建表格列表
-        g_print("  Creating model list...\n");
-        std::vector<std::string> headers = {
-            "名称", 
-            "设备类型", 
-            "技术体制", 
-            "天线长度(m)", 
-            "频率范围(MHz)"
-        };
-        GtkWidget* treeView = createModelList(headers);
-        if (!treeView) {
-            g_print("Failed to create tree view\n");
-            gtk_widget_destroy(container);
-            return NULL;
-        }
-        
-        // 滚动窗口
-        g_print("  Creating scroll window...\n");
-        GtkWidget* scrollWin = gtk_scrolled_window_new(NULL, NULL);
-        if (!scrollWin) {
-            g_print("Failed to create scroll window\n");
-            gtk_widget_destroy(container);
-            return NULL;
-        }
-        
-        gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(scrollWin), 
-                                     GTK_POLICY_AUTOMATIC, GTK_POLICY_AUTOMATIC);
-        gtk_container_add(GTK_CONTAINER(scrollWin), treeView);
-        
-        // 设置最小高度
-        gtk_widget_set_size_request(scrollWin, -1, 500);
-        gtk_box_pack_start(GTK_BOX(container), scrollWin, TRUE, TRUE, 0);
-        
-        // 按钮区域
-        g_print("  Creating button box...\n");
-        GtkWidget* buttonBox = gtk_button_box_new(GTK_ORIENTATION_HORIZONTAL);
-        if (!buttonBox) {
-            g_print("Failed to create button box\n");
-            gtk_widget_destroy(container);
-            return NULL;
-        }
-        
-        gtk_button_box_set_layout(GTK_BUTTON_BOX(buttonBox), GTK_BUTTONBOX_END);
-        gtk_box_set_spacing(GTK_BOX(buttonBox), 10);
-        gtk_box_pack_start(GTK_BOX(container), buttonBox, FALSE, FALSE, 0);
-        
-        // 新增按钮
-        GtkWidget* addButton = gtk_button_new_with_label("新增");
-        gtk_container_add(GTK_CONTAINER(buttonBox), addButton);
-        g_signal_connect(addButton, "clicked", G_CALLBACK(onAddRadarDevice), treeView);
-        
-        // 更新列表数据
-        g_print("  Updating radar device list...\n");
-        updateRadarDeviceList(treeView);
-        
-        g_print("Radar device model UI created successfully\n");
-        return container;
-    } catch (const std::exception& e) {
-        g_print("Exception in createRadarDeviceModelUI: %s\n", e.what());
-        return NULL;
-    } catch (...) {
-        g_print("Unknown exception in createRadarDeviceModelUI\n");
-        return NULL;
-    }
-}
-
-// 雷达设备模型对话框回调函数
-void UIManager::onAddRadarDevice(GtkWidget* widget, gpointer data) {
-    GtkWidget* dialog = gtk_dialog_new_with_buttons("新增侦察设备模型",
-                                                   GTK_WINDOW(UIManager::getInstance().m_mainWindow),
-                                                   GTK_DIALOG_MODAL,
-                                                   "取消", GTK_RESPONSE_CANCEL,
-                                                   "确定", GTK_RESPONSE_ACCEPT,
-                                                   NULL);
-    
-    GtkWidget* contentArea = gtk_dialog_get_content_area(GTK_DIALOG(dialog));
-    gtk_container_set_border_width(GTK_CONTAINER(contentArea), 15);
-    
-    // 名称输入
-    GtkWidget* nameBox = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 5);
-    gtk_box_pack_start(GTK_BOX(contentArea), nameBox, FALSE, FALSE, 5);
-    
-    GtkWidget* nameLabel = gtk_label_new("名称:");
-    gtk_box_pack_start(GTK_BOX(nameBox), nameLabel, FALSE, FALSE, 5);
-    
-    GtkWidget* nameEntry = gtk_entry_new();
-    gtk_box_pack_start(GTK_BOX(nameBox), nameEntry, TRUE, TRUE, 5);
-    
-    // 设备类型
-    GtkWidget* typeBox = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 5);
-    gtk_box_pack_start(GTK_BOX(contentArea), typeBox, FALSE, FALSE, 5);
-    
-    GtkWidget* typeLabel = gtk_label_new("设备类型:");
-    gtk_box_pack_start(GTK_BOX(typeBox), typeLabel, FALSE, FALSE, 5);
-    
-    GtkWidget* typeCombo = gtk_combo_box_text_new();
-    gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(typeCombo), "雷达（固定）");
-    gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(typeCombo), "侦察机（移动）");
-    gtk_combo_box_set_active(GTK_COMBO_BOX(typeCombo), 0);
-    gtk_box_pack_start(GTK_BOX(typeBox), typeCombo, TRUE, TRUE, 5);
-    
-    // // 技术体制
-    // GtkWidget* techBox = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 5);
-    // gtk_box_pack_start(GTK_BOX(contentArea), techBox, FALSE, FALSE, 5);
-    
-    // GtkWidget* techLabel = gtk_label_new("技术体制:");
-    // gtk_box_pack_start(GTK_BOX(techBox), techLabel, FALSE, FALSE, 5);
-    
-    // GtkWidget* techCombo = gtk_combo_box_text_new();
-    // gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(techCombo), "时差");
-    // gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(techCombo), "频差");
-    // gtk_combo_box_set_active(GTK_COMBO_BOX(techCombo), 0);
-    // gtk_box_pack_start(GTK_BOX(techBox), techCombo, TRUE, TRUE, 5);
-    
-    // 天线长度
-    GtkWidget* antennaBox = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 5);
-    gtk_box_pack_start(GTK_BOX(contentArea), antennaBox, FALSE, FALSE, 5);
-    
-    GtkWidget* antennaLabel = gtk_label_new("天线长度(m):");
-    gtk_box_pack_start(GTK_BOX(antennaBox), antennaLabel, FALSE, FALSE, 5);
-    
-    GtkWidget* antennaEntry = gtk_entry_new();
-    gtk_entry_set_text(GTK_ENTRY(antennaEntry), "3.0");
-    gtk_box_pack_start(GTK_BOX(antennaBox), antennaEntry, TRUE, TRUE, 5);
-    
-    // 噪声
-    GtkWidget* noiseBox = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 5);
-    gtk_box_pack_start(GTK_BOX(contentArea), noiseBox, FALSE, FALSE, 5);
-    
-    GtkWidget* noiseLabel = gtk_label_new("噪声(dB):");
-    gtk_box_pack_start(GTK_BOX(noiseBox), noiseLabel, FALSE, FALSE, 5);
-    
-    GtkWidget* noiseEntry = gtk_entry_new();
-    gtk_entry_set_text(GTK_ENTRY(noiseEntry), "0.5");
-    gtk_box_pack_start(GTK_BOX(noiseBox), noiseEntry, TRUE, TRUE, 5);
-    
-    // // 工作时间段
-    // GtkWidget* timeBox = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 5);
-    // gtk_box_pack_start(GTK_BOX(contentArea), timeBox, FALSE, FALSE, 5);
-    
-    // GtkWidget* timeLabel = gtk_label_new("工作时间段:");
-    // gtk_box_pack_start(GTK_BOX(timeBox), timeLabel, FALSE, FALSE, 5);
-    
-    // GtkWidget* startTimeEntry = gtk_entry_new();
-    // gtk_entry_set_text(GTK_ENTRY(startTimeEntry), "00:00:00");
-    // gtk_box_pack_start(GTK_BOX(timeBox), startTimeEntry, TRUE, TRUE, 5);
-    
-    // GtkWidget* timeToLabel = gtk_label_new("至");
-    // gtk_box_pack_start(GTK_BOX(timeBox), timeToLabel, FALSE, FALSE, 5);
-    
-    // GtkWidget* endTimeEntry = gtk_entry_new();
-    // gtk_entry_set_text(GTK_ENTRY(endTimeEntry), "23:59:59");
-    // gtk_box_pack_start(GTK_BOX(timeBox), endTimeEntry, TRUE, TRUE, 5);
-    
-    // 频率范围
-    GtkWidget* freqBox = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 5);
-    gtk_box_pack_start(GTK_BOX(contentArea), freqBox, FALSE, FALSE, 5);
-    
-    GtkWidget* freqLabel = gtk_label_new("频率范围(MHz):");
-    gtk_box_pack_start(GTK_BOX(freqBox), freqLabel, FALSE, FALSE, 5);
-    
-    GtkWidget* minFreqEntry = gtk_entry_new();
-    gtk_entry_set_text(GTK_ENTRY(minFreqEntry), "1000");
-    gtk_box_pack_start(GTK_BOX(freqBox), minFreqEntry, TRUE, TRUE, 5);
-    
-    GtkWidget* freqToLabel = gtk_label_new("至");
-    gtk_box_pack_start(GTK_BOX(freqBox), freqToLabel, FALSE, FALSE, 5);
-    
-    GtkWidget* maxFreqEntry = gtk_entry_new();
-    gtk_entry_set_text(GTK_ENTRY(maxFreqEntry), "2000");
-    gtk_box_pack_start(GTK_BOX(freqBox), maxFreqEntry, TRUE, TRUE, 5);
-    
-    // 角度范围
-    GtkWidget* angleBox = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 5);
-    gtk_box_pack_start(GTK_BOX(contentArea), angleBox, FALSE, FALSE, 5);
-    
-    GtkWidget* angleLabel = gtk_label_new("角度范围(°):");
-    gtk_box_pack_start(GTK_BOX(angleBox), angleLabel, FALSE, FALSE, 5);
-    
-    GtkWidget* minAngleEntry = gtk_entry_new();
-    gtk_entry_set_text(GTK_ENTRY(minAngleEntry), "0");
-    gtk_box_pack_start(GTK_BOX(angleBox), minAngleEntry, TRUE, TRUE, 5);
-    
-    GtkWidget* angleToLabel = gtk_label_new("至");
-    gtk_box_pack_start(GTK_BOX(angleBox), angleToLabel, FALSE, FALSE, 5);
-    
-    GtkWidget* maxAngleEntry = gtk_entry_new();
-    gtk_entry_set_text(GTK_ENTRY(maxAngleEntry), "360");
-    gtk_box_pack_start(GTK_BOX(angleBox), maxAngleEntry, TRUE, TRUE, 5);
-    
-    // 位置输入
-    GtkWidget* posBox = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 5);
-    gtk_box_pack_start(GTK_BOX(contentArea), posBox, FALSE, FALSE, 5);
-    
-    GtkWidget* posLabel = gtk_label_new("位置坐标:");
-    gtk_box_pack_start(GTK_BOX(posBox), posLabel, FALSE, FALSE, 5);
-    
-    GtkWidget* posXEntry = gtk_entry_new();
-    gtk_entry_set_text(GTK_ENTRY(posXEntry), "0.0");
-    gtk_box_pack_start(GTK_BOX(posBox), posXEntry, TRUE, TRUE, 5);
-    
-    GtkWidget* posYEntry = gtk_entry_new();
-    gtk_entry_set_text(GTK_ENTRY(posYEntry), "0.0");
-    gtk_box_pack_start(GTK_BOX(posBox), posYEntry, TRUE, TRUE, 5);
-    
-    GtkWidget* posZEntry = gtk_entry_new();
-    gtk_entry_set_text(GTK_ENTRY(posZEntry), "0.0");
-    gtk_box_pack_start(GTK_BOX(posBox), posZEntry, TRUE, TRUE, 5);
-    
-    gtk_widget_show_all(dialog);
-    
-    int result = gtk_dialog_run(GTK_DIALOG(dialog));
-    if (result == GTK_RESPONSE_ACCEPT) {
-        // 获取输入的值
-        const gchar* name = gtk_entry_get_text(GTK_ENTRY(nameEntry));
-        const gchar* deviceType = gtk_combo_box_text_get_active_text(GTK_COMBO_BOX_TEXT(typeCombo));
-        // const gchar* techSystem = gtk_combo_box_text_get_active_text(GTK_COMBO_BOX_TEXT(techCombo));
-        const gchar* antennaLength = gtk_entry_get_text(GTK_ENTRY(antennaEntry));
-        const gchar* noise = gtk_entry_get_text(GTK_ENTRY(noiseEntry));
-        // const gchar* startTime = gtk_entry_get_text(GTK_ENTRY(startTimeEntry));
-        // const gchar* endTime = gtk_entry_get_text(GTK_ENTRY(endTimeEntry));
-        const gchar* minFreq = gtk_entry_get_text(GTK_ENTRY(minFreqEntry));
-        const gchar* maxFreq = gtk_entry_get_text(GTK_ENTRY(maxFreqEntry));
-        const gchar* minAngle = gtk_entry_get_text(GTK_ENTRY(minAngleEntry));
-        const gchar* maxAngle = gtk_entry_get_text(GTK_ENTRY(maxAngleEntry));
-        const gchar* posX = gtk_entry_get_text(GTK_ENTRY(posXEntry));
-        const gchar* posY = gtk_entry_get_text(GTK_ENTRY(posYEntry));
-        const gchar* posZ = gtk_entry_get_text(GTK_ENTRY(posZEntry));
-        
-        // 创建雷达设备对象
-        RadarDevice device;
-        device.setDeviceType(deviceType);
-        // device.setTechnicalSystem(techSystem);
-        device.setAntennaLength(atof(antennaLength));
-        device.setNoiseLevel(atof(noise));
-        // device.setWorkTimeRange(startTime, endTime);
-        device.setFrequencyRange(atof(minFreq), atof(maxFreq));
-        device.setAngleRange(atof(minAngle), atof(maxAngle));
-        
-        // 更新列表
-        UIManager::updateRadarDeviceList(GTK_WIDGET(data));
-    }
-    
-    gtk_widget_destroy(dialog);
-}
-
-void UIManager::onEditRadarDevice(GtkWidget* widget, gpointer data) {
-    // 获取选中的行
-    GtkTreeView* treeView = GTK_TREE_VIEW(data);
-    GtkTreeSelection* selection = gtk_tree_view_get_selection(treeView);
-    GtkTreeModel* model;
-    GtkTreeIter iter;
-    
-    if (gtk_tree_selection_get_selected(selection, &model, &iter)) {
-        // 获取选中的数据
-        gchar* name;
-        gchar* longitude;
-        gchar* latitude;
-        
-        gtk_tree_model_get(model, &iter, 
-                          0, &name, 
-                          1, &longitude, 
-                          2, &latitude, 
-                          -1);
-        
-        // 创建编辑对话框，这里简化为与新增相同
-        onAddRadarDevice(widget, data);
-        
-        g_free(name);
-        g_free(longitude);
-        g_free(latitude);
-    }
-}
-
-void UIManager::onDeleteRadarDevice(GtkWidget* widget, gpointer data) {
-    // 获取选中的行
-    GtkTreeView* treeView = GTK_TREE_VIEW(data);
-    GtkTreeSelection* selection = gtk_tree_view_get_selection(treeView);
-    GtkTreeModel* model;
-    GtkTreeIter iter;
-    
-    if (gtk_tree_selection_get_selected(selection, &model, &iter)) {
-        // 从数据库删除对应的记录
-        // 然后从列表中删除
-        gtk_list_store_remove(GTK_LIST_STORE(model), &iter);
-    }
-}
-
-GtkWidget* UIManager::createRadiationSourceModelUI() {
-    g_print("Creating radiation source model UI components...\n");
-    
-    try {
-        // 创建页面的主容器
-        GtkWidget* container = gtk_box_new(GTK_ORIENTATION_VERTICAL, 10);
-        if (!container) {
-            g_print("Failed to create container\n");
-            return NULL;
-        }
-        
-        gtk_container_set_border_width(GTK_CONTAINER(container), 15);
-        
-        // 标题
-        g_print("  Creating title label...\n");
-        GtkWidget* titleLabel = gtk_label_new(NULL);
-        if (!titleLabel) {
-            g_print("Failed to create title label\n");
-            gtk_widget_destroy(container);
-            return NULL;
-        }
-        
-        gtk_label_set_markup(GTK_LABEL(titleLabel), "<span font='16' weight='bold'>辐射源模型管理</span>");
-        gtk_box_pack_start(GTK_BOX(container), titleLabel, FALSE, FALSE, 5);
-        
-        // 创建表格列表
-        g_print("  Creating model list...\n");
-        std::vector<std::string> headers = {
-            "名称", 
-            "设备类型", 
-            "发射功率(W)", 
-            "扫描周期(s)", 
-            "频率范围(MHz)", 
-            "工作扇区(°)"
-        };
-        GtkWidget* treeView = createModelList(headers);
-        if (!treeView) {
-            g_print("Failed to create tree view\n");
-            gtk_widget_destroy(container);
-            return NULL;
-        }
-        
-        // 滚动窗口
-        g_print("  Creating scroll window...\n");
-        GtkWidget* scrollWin = gtk_scrolled_window_new(NULL, NULL);
-        if (!scrollWin) {
-            g_print("Failed to create scroll window\n");
-            gtk_widget_destroy(container);
-            return NULL;
-        }
-        
-        gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(scrollWin), 
-                                     GTK_POLICY_AUTOMATIC, GTK_POLICY_AUTOMATIC);
-        gtk_container_add(GTK_CONTAINER(scrollWin), treeView);
-        
-        // 设置最小高度
-        gtk_widget_set_size_request(scrollWin, -1, 500);
-        gtk_box_pack_start(GTK_BOX(container), scrollWin, TRUE, TRUE, 0);
-        
-        // 按钮区域
-        g_print("  Creating button box...\n");
-        GtkWidget* buttonBox = gtk_button_box_new(GTK_ORIENTATION_HORIZONTAL);
-        if (!buttonBox) {
-            g_print("Failed to create button box\n");
-            gtk_widget_destroy(container);
-            return NULL;
-        }
-        
-        gtk_button_box_set_layout(GTK_BUTTON_BOX(buttonBox), GTK_BUTTONBOX_END);
-        gtk_box_set_spacing(GTK_BOX(buttonBox), 10);
-        gtk_box_pack_start(GTK_BOX(container), buttonBox, FALSE, FALSE, 0);
-        
-        // 新增按钮
-        GtkWidget* addButton = gtk_button_new_with_label("新增");
-        gtk_container_add(GTK_CONTAINER(buttonBox), addButton);
-        g_signal_connect(addButton, "clicked", G_CALLBACK(onAddRadiationSource), treeView);
-        
-        // 更新列表数据
-        g_print("  Updating radiation source list...\n");
-        updateRadiationSourceList(treeView);
-        
-        g_print("Radiation source model UI created successfully\n");
-        return container;
-    } catch (const std::exception& e) {
-        g_print("Exception in createRadiationSourceModelUI: %s\n", e.what());
-        return NULL;
-    } catch (...) {
-        g_print("Unknown exception in createRadiationSourceModelUI\n");
-        return NULL;
-    }
-}
-
-// 辐射源模型对话框回调函数
-void UIManager::onAddRadiationSource(GtkWidget* widget, gpointer data) {
-    GtkWidget* dialog = gtk_dialog_new_with_buttons("新增辐射源模型",
-                                                   GTK_WINDOW(UIManager::getInstance().m_mainWindow),
-                                                   GTK_DIALOG_MODAL,
-                                                   "取消", GTK_RESPONSE_CANCEL,
-                                                   "确定", GTK_RESPONSE_ACCEPT,
-                                                   NULL);
-    
-    GtkWidget* contentArea = gtk_dialog_get_content_area(GTK_DIALOG(dialog));
-    gtk_container_set_border_width(GTK_CONTAINER(contentArea), 15);
-    
-    // 名称输入
-    GtkWidget* nameBox = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 5);
-    gtk_box_pack_start(GTK_BOX(contentArea), nameBox, FALSE, FALSE, 5);
-    
-    GtkWidget* nameLabel = gtk_label_new("名称:");
-    gtk_box_pack_start(GTK_BOX(nameBox), nameLabel, FALSE, FALSE, 5);
-    
-    GtkWidget* nameEntry = gtk_entry_new();
-    gtk_box_pack_start(GTK_BOX(nameBox), nameEntry, TRUE, TRUE, 5);
-    
-    // 设备类型
-    GtkWidget* typeBox = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 5);
-    gtk_box_pack_start(GTK_BOX(contentArea), typeBox, FALSE, FALSE, 5);
-    
-    GtkWidget* typeLabel = gtk_label_new("设备类型:");
-    gtk_box_pack_start(GTK_BOX(typeBox), typeLabel, FALSE, FALSE, 5);
-    
-    GtkWidget* typeCombo = gtk_combo_box_text_new();
-    gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(typeCombo), "雷达（固定）");
-    gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(typeCombo), "飞机（移动）");
-    gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(typeCombo), "舰船（移动）");
-    gtk_combo_box_set_active(GTK_COMBO_BOX(typeCombo), 0);
-    gtk_box_pack_start(GTK_BOX(typeBox), typeCombo, TRUE, TRUE, 5);
-    
-    // 发射功率
-    GtkWidget* powerBox = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 5);
-    gtk_box_pack_start(GTK_BOX(contentArea), powerBox, FALSE, FALSE, 5);
-    
-    GtkWidget* powerLabel = gtk_label_new("发射功率(W):");
-    gtk_box_pack_start(GTK_BOX(powerBox), powerLabel, FALSE, FALSE, 5);
-    
-    GtkWidget* powerEntry = gtk_entry_new();
-    gtk_entry_set_text(GTK_ENTRY(powerEntry), "100");
-    gtk_box_pack_start(GTK_BOX(powerBox), powerEntry, TRUE, TRUE, 5);
-    
-    // 扫描周期
-    GtkWidget* periodBox = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 5);
-    gtk_box_pack_start(GTK_BOX(contentArea), periodBox, FALSE, FALSE, 5);
-    
-    GtkWidget* periodLabel = gtk_label_new("扫描周期(s):");
-    gtk_box_pack_start(GTK_BOX(periodBox), periodLabel, FALSE, FALSE, 5);
-    
-    GtkWidget* periodEntry = gtk_entry_new();
-    gtk_entry_set_text(GTK_ENTRY(periodEntry), "5");
-    gtk_box_pack_start(GTK_BOX(periodBox), periodEntry, TRUE, TRUE, 5);
-    
-    // 频率范围
-    GtkWidget* freqBox = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 5);
-    gtk_box_pack_start(GTK_BOX(contentArea), freqBox, FALSE, FALSE, 5);
-    
-    GtkWidget* freqLabel = gtk_label_new("频率范围(MHz):");
-    gtk_box_pack_start(GTK_BOX(freqBox), freqLabel, FALSE, FALSE, 5);
-    
-    GtkWidget* minFreqEntry = gtk_entry_new();
-    gtk_entry_set_text(GTK_ENTRY(minFreqEntry), "1000");
-    gtk_box_pack_start(GTK_BOX(freqBox), minFreqEntry, TRUE, TRUE, 5);
-    
-    GtkWidget* freqToLabel = gtk_label_new("至");
-    gtk_box_pack_start(GTK_BOX(freqBox), freqToLabel, FALSE, FALSE, 5);
-    
-    GtkWidget* maxFreqEntry = gtk_entry_new();
-    gtk_entry_set_text(GTK_ENTRY(maxFreqEntry), "2000");
-    gtk_box_pack_start(GTK_BOX(freqBox), maxFreqEntry, TRUE, TRUE, 5);
-    
-    // 工作扇区
-    GtkWidget* sectorBox = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 5);
-    gtk_box_pack_start(GTK_BOX(contentArea), sectorBox, FALSE, FALSE, 5);
-    
-    GtkWidget* sectorLabel = gtk_label_new("工作扇区(°):");
-    gtk_box_pack_start(GTK_BOX(sectorBox), sectorLabel, FALSE, FALSE, 5);
-    
-    GtkWidget* sectorEntry = gtk_entry_new();
-    gtk_entry_set_text(GTK_ENTRY(sectorEntry), "90");
-    gtk_box_pack_start(GTK_BOX(sectorBox), sectorEntry, TRUE, TRUE, 5);
-    
-    // 位置输入
-    GtkWidget* posBox = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 5);
-    gtk_box_pack_start(GTK_BOX(contentArea), posBox, FALSE, FALSE, 5);
-    
-    GtkWidget* posLabel = gtk_label_new("位置坐标:");
-    gtk_box_pack_start(GTK_BOX(posBox), posLabel, FALSE, FALSE, 5);
-    
-    GtkWidget* posXEntry = gtk_entry_new();
-    gtk_entry_set_text(GTK_ENTRY(posXEntry), "0.0");
-    gtk_box_pack_start(GTK_BOX(posBox), posXEntry, TRUE, TRUE, 5);
-    
-    GtkWidget* posYEntry = gtk_entry_new();
-    gtk_entry_set_text(GTK_ENTRY(posYEntry), "0.0");
-    gtk_box_pack_start(GTK_BOX(posBox), posYEntry, TRUE, TRUE, 5);
-    
-    GtkWidget* posZEntry = gtk_entry_new();
-    gtk_entry_set_text(GTK_ENTRY(posZEntry), "0.0");
-    gtk_box_pack_start(GTK_BOX(posBox), posZEntry, TRUE, TRUE, 5);
-    
-    gtk_widget_show_all(dialog);
-    
-    int result = gtk_dialog_run(GTK_DIALOG(dialog));
-    if (result == GTK_RESPONSE_ACCEPT) {
-        // 获取输入的值
-        const gchar* name = gtk_entry_get_text(GTK_ENTRY(nameEntry));
-        const gchar* deviceType = gtk_combo_box_text_get_active_text(GTK_COMBO_BOX_TEXT(typeCombo));
-        const gchar* power = gtk_entry_get_text(GTK_ENTRY(powerEntry));
-        const gchar* period = gtk_entry_get_text(GTK_ENTRY(periodEntry));
-        const gchar* minFreq = gtk_entry_get_text(GTK_ENTRY(minFreqEntry));
-        const gchar* maxFreq = gtk_entry_get_text(GTK_ENTRY(maxFreqEntry));
-        const gchar* sector = gtk_entry_get_text(GTK_ENTRY(sectorEntry));
-        const gchar* posX = gtk_entry_get_text(GTK_ENTRY(posXEntry));
-        const gchar* posY = gtk_entry_get_text(GTK_ENTRY(posYEntry));
-        const gchar* posZ = gtk_entry_get_text(GTK_ENTRY(posZEntry));
-        
-        // 创建辐射源对象
-        RadiationSource source;
-        source.setDeviceType(deviceType);
-        source.setTransmitPower(atof(power));
-        source.setScanPeriod(atof(period));
-        source.setFrequencyRange(atof(minFreq), atof(maxFreq));
-        source.setWorkSector(atof(sector));
-        
-        // 更新列表
-        UIManager::updateRadiationSourceList(GTK_WIDGET(data));
-    }
-    
-    gtk_widget_destroy(dialog);
-}
-
-void UIManager::onEditRadiationSource(GtkWidget* widget, gpointer data) {
-    // 获取选中的行
-    GtkTreeView* treeView = GTK_TREE_VIEW(data);
-    GtkTreeSelection* selection = gtk_tree_view_get_selection(treeView);
-    GtkTreeModel* model;
-    GtkTreeIter iter;
-    
-    if (gtk_tree_selection_get_selected(selection, &model, &iter)) {
-        // 获取选中的数据
-        gchar* name;
-        gchar* deviceType;
-        gchar* power;
-        gchar* period;
-        gchar* freqRange;
-        gchar* sector;
-        
-        gtk_tree_model_get(model, &iter, 
-                          0, &name, 
-                          1, &deviceType, 
-                          2, &power, 
-                          3, &period, 
-                          4, &freqRange, 
-                          5, &sector, 
-                          -1);
-        
-        // 创建编辑对话框，这里简化为与新增相同
-        onAddRadiationSource(widget, data);
-        
-        g_free(name);
-        g_free(deviceType);
-        g_free(power);
-        g_free(period);
-        g_free(freqRange);
-        g_free(sector);
-    }
-}
-
-void UIManager::onDeleteRadiationSource(GtkWidget* widget, gpointer data) {
-    // 获取选中的行
-    GtkTreeView* treeView = GTK_TREE_VIEW(data);
-    GtkTreeSelection* selection = gtk_tree_view_get_selection(treeView);
-    GtkTreeModel* model;
-    GtkTreeIter iter;
-    
-    if (gtk_tree_selection_get_selected(selection, &model, &iter)) {
-        // 从数据库删除对应的记录
-        // 然后从列表中删除
-        gtk_list_store_remove(GTK_LIST_STORE(model), &iter);
     }
 }
 

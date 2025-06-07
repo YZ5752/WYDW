@@ -18,7 +18,7 @@ int main(int argc, char* argv[]) {
         // 初始化数据库连接
         g_print("Initializing database connection...\n");
         DBConnector& dbConnector = DBConnector::getInstance();
-        if (!dbConnector.init("PassiveLocationDSN", "root", "")) {  // 使用root用户，空密码
+        if (!dbConnector.init("127.0.0.1", "root", "z20020319", "passive_location", 3306)) {
             handle_error("Failed to connect to database");
             return 1;
         }

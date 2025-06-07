@@ -1,11 +1,13 @@
 #pragma once
 
-#include <sql.h>
-#include <sqlext.h>
+#include <mysql/mysql.h>
 #include <string>
 #include <vector>
+#include <map>
 #include "simulation.h"
 #include "data_processor.h"
+#include "reconnaissance_device_model.h"
+#include "radiation_source_model.h"
 
 // 数据库连接器
 class DBConnector {
@@ -13,7 +15,7 @@ public:
     static DBConnector& getInstance();
     
     // 初始化连接
-    bool init(const std::string& dsn, const std::string& user, const std::string& password);
+    bool init(const std::string& host, const std::string& user, const std::string& password, const std::string& db, unsigned int port = 3306);
     
     // 关闭连接
     void close();
@@ -25,10 +27,10 @@ public:
     bool createTables();
     
     // 保存雷达设备模型
-    bool saveRadarDevice(const RadarDevice& device, int& deviceId);
+    bool saveReconnaissanceDevice(const ReconnaissanceDevice& device, int& deviceId);
     
     // 获取所有雷达设备模型
-    std::vector<RadarDevice> getAllRadarDevices();
+    std::vector<ReconnaissanceDevice> getAllReconnaissanceDevices();
     
     // 保存辐射源模型
     bool saveRadiationSource(const RadiationSource& source, int& sourceId);
@@ -65,15 +67,22 @@ public:
     bool commitTransaction();
     bool rollbackTransaction();
 
+    // 新增侦察设备
+    bool addReconnaissanceDevice(const ReconnaissanceDevice& device);
+    
+    // 编辑侦察设备
+    bool updateReconnaissanceDevice(const ReconnaissanceDevice& device);
+    
+    // 删除侦察设备
+    bool deleteReconnaissanceDevice(int deviceId);
+
 private:
     DBConnector();
     ~DBConnector();
     
-    SQLHENV m_env;        // 环境句柄
-    SQLHDBC m_dbc;        // 连接句柄
-    SQLHSTMT m_stmt;      // 语句句柄
-    bool m_connected;     // 连接状态
+    MYSQL* m_conn;      // MySQL连接句柄
+    bool m_connected;   // 连接状态
     
-    // 处理ODBC错误
-    void handleError(SQLHANDLE handle, SQLSMALLINT type);
+    // 处理MySQL错误
+    void handleError();
 }; 

@@ -4,6 +4,8 @@
 #include "simulation.h"
 #include "data_processor.h"
 #include "map_view.h"
+#include "reconnaissance_device_model.h"
+#include "radiation_source_model.h"
 
 // 辅助函数，获取容器中指定索引的子控件
 GtkWidget* get_child_at_index(GtkContainer* container, gint index);
@@ -21,12 +23,6 @@ public:
     
     // 创建主窗口
     GtkWidget* createMainWindow();
-    
-    // 创建雷达设备模型UI
-    GtkWidget* createRadarDeviceModelUI();
-    
-    // 创建辐射源模型UI
-    GtkWidget* createRadiationSourceModelUI();
     
     // 创建单平台仿真UI
     GtkWidget* createSinglePlatformUI();
@@ -61,12 +57,6 @@ public:
     // 在地图上显示基准点
     void showReferencePoints(GtkWidget* map, const std::map<std::string, Coordinate>& points);
     
-    // 显示雷达侦察设备参数设置对话框
-    bool showRadarDeviceDialog(RadarDevice& device);
-    
-    // 显示辐射源参数设置对话框
-    bool showRadiationSourceDialog(RadiationSource& source);
-    
     // 显示定位精度图表
     void showAccuracyChart(GtkWidget* container, const std::map<double, double>& data);
     
@@ -76,16 +66,6 @@ public:
 
     // 更新误差表格
     void updateErrorTable(GtkWidget* table, const std::string& techSystem);
-
-    // 雷达设备模型UI回调
-    static void onAddRadarDevice(GtkWidget* widget, gpointer data);
-    static void onEditRadarDevice(GtkWidget* widget, gpointer data);
-    static void onDeleteRadarDevice(GtkWidget* widget, gpointer data);
-    
-    // 辐射源模型UI回调
-    static void onAddRadiationSource(GtkWidget* widget, gpointer data);
-    static void onEditRadiationSource(GtkWidget* widget, gpointer data);
-    static void onDeleteRadiationSource(GtkWidget* widget, gpointer data);
     
     // 单平台仿真UI回调
     static void onSinglePlatformSimulation(GtkWidget* widget, gpointer data);
@@ -105,8 +85,25 @@ public:
     static void onExportResults(GtkWidget* widget, gpointer data);
     
     // 更新模型列表
-    static void updateRadarDeviceList(GtkWidget* list);
+    static void updateReconnaissanceDeviceList(GtkWidget* list);
     static void updateRadiationSourceList(GtkWidget* list);
+    
+    // 创建雷达设备模型UI
+    GtkWidget* createRadarDeviceModelUI();
+    
+    // 创建辐射源模型UI
+    GtkWidget* createRadiationSourceModelUI();
+    
+    // 雷达设备编辑和删除回调
+    static void onEditRadarDevice(GtkWidget* widget, gpointer data);
+    static void onDeleteRadarDevice(GtkWidget* widget, gpointer data);
+    
+    // 辐射源编辑和删除回调
+    static void onEditRadiationSource(GtkWidget* widget, gpointer data);
+    static void onDeleteRadiationSource(GtkWidget* widget, gpointer data);
+    
+    // 创建通用的表格
+    GtkWidget* createModelList(const std::vector<std::string>& headers);
     
     // 页面控件
     GtkWidget* m_mainWindow;
@@ -127,7 +124,4 @@ private:
     
     // 地图视图对象 (新增成员)
     MapView m_mapView;
-    
-    // 创建通用的表格
-    GtkWidget* createModelList(const std::vector<std::string>& headers);
 }; 

@@ -4,7 +4,6 @@
 #include <sstream>
 
 namespace fs = std::filesystem;
-
 // 构造函数
 MapView::MapView() 
     : m_webView(nullptr), 
