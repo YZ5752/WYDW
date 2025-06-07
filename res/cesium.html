@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <script src="./Cesium/Cesium.js"></script> <!--引入cesium的接口文件-->
+  <link href="./Cesium/Widgets/widgets.css" rel="stylesheet"> <!--引入cesium的样式文件-->
+</head>
+
+<body>
+  <div id="cesiumContainer"></div>
+  <!-- 添加显示经纬度的元素 -->
+  <div id="coordinateInfo" style="position: absolute; bottom: 10px; left: 10px; background-color: rgba(42, 42, 42, 0.8); color: white; padding: 5px; border-radius: 4px; font-size: 14px; z-index: 999;">
+    经度: 0.000000°, 纬度: 0.000000°
+  </div>
+  <style>
+    html,
+    body,
+    #cesiumContainer {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+    }
+  </style>
+  <script>
+    // 设置Cesium ion访问令牌
+    Cesium.Ion.defaultAccessToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiIyMTUwM2VmMi1mMmY0LTQwYTYtOWU5OC1mYTlhYTQ1MzFkY2QiLCJpZCI6MzA5ODE3LCJpYXQiOjE3NDkxOTk2Mjh9.Hkkpi8oEP1rLg6y3yd3T5b3gOOrfuHIHqSbSlH3wPds';
+    
+    // 创建谷歌地图图层
+    var googleUrl = "http://mt1.google.cn/vt/lyrs=s&hl=zh-CN&x={x}&y={y}&z={z}&s=Gali";
+    var viewer = new Cesium.Viewer('cesiumContainer', {
+        baseLayerPicker: false,
+        geocoder: false,
+        homeButton: true,
+        sceneModePicker: true,
+        navigationHelpButton: false,
+        animation: false,
+        timeline: false,
+        fullscreenButton: false,
+        imageryProvider: new Cesium.UrlTemplateImageryProvider({url: googleUrl})
+    });
+    
+    // // 定义天地图图层
+    // var tiandiLayer = new Cesium.WebMapTileServiceImageryProvider({
+    //   url: "http://t0.tianditu.com/img_w/wmts?service=wmts&request=GetTile&version=1.0.0&LAYER=img&tileMatrixSet=w&TileMatrix={TileMatrix}&TileRow={TileRow}&TileCol={TileCol}&style=default&format=tiles&tk=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiIyMTUwM2VmMi1mMmY0LTQwYTYtOWU5OC1mYTlhYTQ1MzFkY2QiLCJpZCI6MzA5ODE3LCJpYXQiOjE3NDkxOTk2Mjh9.Hkkpi8oEP1rLg6y3yd3T5b3gOOrfuHIHqSbSlH3wPds",
+    //   layer: "img",
+    //   style: "default",
+    //   format: "tiles",
+    //   tileMatrixSetID: "w",
+    //   credit: new Cesium.Credit("天地图全球影像服务"),
+    //   subdomains: ["t0", "t1", "t2", "t3", "t4", "t5", "t6", "t7"],
+    //   maximumLevel: 18,
+    // });
+
+    // // 尝试添加本地地图图层
+    // try {
+    //   var localLayer = viewer.scene.imageryLayers.addImageryProvider(
+    //     new Cesium.UrlTemplateImageryProvider({
+    //       url: "ditu/{z}/{x}/{y}.png",
+    //       tilingScheme: new Cesium.WebMercatorTilingScheme(),
+    //       fileExtension: "png",
+    //       minimumLevel: 0,
+    //       maximumLevel: 20,
+    //     })
+    //   );
+    // } catch(e) {
+    //   console.log("加载本地地图图层失败:", e);
+    // }
+
+    // 尝试添加高德地图图层
+    try {
+      var gaodeLayer = viewer.imageryLayers.addImageryProvider(
+        new Cesium.WebMapServiceImageryProvider({
+          url: "http://webrd04.is.autonavi.com/appmaptile?lang=zh_cn&size=1&scale=1&style=8&x={x}&y={y}&z={z}",
+          layers: "gaode",
+          tilingScheme: new Cesium.WebMercatorTilingScheme(),
+        })
+      );
+    } catch(e) {
+      console.log("加载高德地图图层失败:", e);
+    }
+
+    // 设置初始视图（中国上空）
+    var CHINA_VIEW = {
+      destination: Cesium.Cartesian3.fromDegrees(116.3833, 39.9167, 1000000), // 北京上空
+      orientation: {
+        heading: 0, // 左右摆头
+        pitch: -1.5,  // 上下摇头
+        roll: 0.0                    // default value
+      }
+    };
+    
+    // 设置home按钮的默认视图为中国上空
+    viewer.homeButton.viewModel.command.beforeExecute.addEventListener(function(e) {
+      e.cancel = true; // 取消默认行为
+      viewer.camera.flyTo(CHINA_VIEW); // 飞行到中国上空的视图
+    });
+    
+    // 初始化视图为中国上空
+    viewer.camera.setView(CHINA_VIEW);
+
+    // 移除版权信息
+    viewer.cesiumWidget.creditContainer.style.display = "none";
+    
+    // 获取经纬度显示元素
+    var coordinateInfoElement = document.getElementById('coordinateInfo');
+    
+    // 添加鼠标点击事件监听器
+    var handler = new Cesium.ScreenSpaceEventHandler(viewer.scene.canvas);
+    handler.setInputAction(function(click) {
+      // 获取点击位置的笛卡尔坐标
+      var cartesian = viewer.camera.pickEllipsoid(click.position, viewer.scene.globe.ellipsoid);
+      if (cartesian) {
+        // 将笛卡尔坐标转换为经纬度坐标
+        var cartographic = Cesium.Cartographic.fromCartesian(cartesian);
+        var longitude = Cesium.Math.toDegrees(cartographic.longitude);
+        var latitude = Cesium.Math.toDegrees(cartographic.latitude);
+        
+        // 格式化经纬度显示（保留6位小数）
+        var longitudeStr = longitude.toFixed(6);
+        var latitudeStr = latitude.toFixed(6);
+        
+        // 更新显示
+        coordinateInfoElement.innerHTML = '经度: ' + longitudeStr + '°, 纬度: ' + latitudeStr + '°';
+      }
+    }, Cesium.ScreenSpaceEventType.LEFT_CLICK);
+    
+    // 添加鼠标移动事件监听器，显示鼠标悬停位置的经纬度
+    handler.setInputAction(function(movement) {
+      var cartesian = viewer.camera.pickEllipsoid(movement.endPosition, viewer.scene.globe.ellipsoid);
+      if (cartesian) {
+        var cartographic = Cesium.Cartographic.fromCartesian(cartesian);
+        var longitude = Cesium.Math.toDegrees(cartographic.longitude);
+        var latitude = Cesium.Math.toDegrees(cartographic.latitude);
+        
+        var longitudeStr = longitude.toFixed(6);
+        var latitudeStr = latitude.toFixed(6);
+        
+        coordinateInfoElement.innerHTML = '经度: ' + longitudeStr + '°, 纬度: ' + latitudeStr + '°';
+      }
+    }, Cesium.ScreenSpaceEventType.MOUSE_MOVE);
+  </script>
+</body>
+
+</html>
