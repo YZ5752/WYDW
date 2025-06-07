@@ -1213,34 +1213,26 @@ void UIManager::onSinglePlatformSimulation(GtkWidget* widget, gpointer data) {
     UIManager& ui = UIManager::getInstance();
     
     // 清除之前的点
-    ui.m_mapView.clearPoints();
+    ui.clearPoints();
     
     // 添加模拟目标位置
-    ui.m_mapView.addPoint(119.97, 31.71, "目标");
+    ui.addPoint(119.97, 31.71, "目标");
     
     // 添加雷达设备位置
-    ui.m_mapView.addPoint(118.78, 32.07, "雷达1");
+    ui.addPoint(118.78, 32.07, "雷达1");
+    ui.addPoint(120.58, 31.30, "雷达2");
+    ui.addPoint(120.30, 31.57, "雷达3");
     
     // 设置中心点
-    ui.m_mapView.setCenter(119.4, 31.9, 8);
+    ui.m_mapView.setCenter(119.4, 31.9, 100000);
     
     // 获取技术体制选择
-    GtkWidget* algoCombo = GTK_WIDGET(g_object_get_data(G_OBJECT(container), "algo-combo"));
-    const gchar* techSystem = gtk_combo_box_text_get_active_text(GTK_COMBO_BOX_TEXT(algoCombo));
-    
-    // 更新仿真结果值
     GtkWidget* rightBox = get_child_at_index(GTK_CONTAINER(hbox), 1);
-    GtkWidget* resultFrame = get_child_at_index(GTK_CONTAINER(rightBox), 3);
-    GtkWidget* resultBox = gtk_bin_get_child(GTK_BIN(resultFrame));
-    GtkWidget* table = get_child_at_index(GTK_CONTAINER(resultBox), 0);
-    
-    // 获取各结果值的标签
-    GtkWidget* dirDataValue = gtk_grid_get_child_at(GTK_GRID(table), 1, 1);
-    GtkWidget* locDataValue = gtk_grid_get_child_at(GTK_GRID(table), 1, 2);
-    
-    // 设置模拟结果值
-    if (dirDataValue) gtk_label_set_text(GTK_LABEL(dirDataValue), "85.6°");
-    if (locDataValue) gtk_label_set_text(GTK_LABEL(locDataValue), "119.97°E, 31.71°N");
+    GtkWidget* settingsFrame = get_child_at_index(GTK_CONTAINER(rightBox), 0);
+    GtkWidget* settingsBox = gtk_bin_get_child(GTK_BIN(settingsFrame));
+    GtkWidget* techSystemBox = get_child_at_index(GTK_CONTAINER(settingsBox), 0);
+    GtkWidget* techSystemCombo = get_child_at_index(GTK_CONTAINER(techSystemBox), 1);
+    const gchar* techSystem = gtk_combo_box_text_get_active_text(GTK_COMBO_BOX_TEXT(techSystemCombo));
     
     // 获取误差表格
     GtkWidget* errorTable = GTK_WIDGET(g_object_get_data(G_OBJECT(container), "error-table"));
@@ -1251,7 +1243,7 @@ void UIManager::onSinglePlatformSimulation(GtkWidget* widget, gpointer data) {
     }
 }
 
-// 多平台协同侦察UI创建 (简化版)
+// 多平台协同侦察UI
 GtkWidget* UIManager::createMultiPlatformUI() {
     // 创建页面的主容器
     GtkWidget* container = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 10);
@@ -1405,6 +1397,7 @@ GtkWidget* UIManager::createMultiPlatformUI() {
     return container;
 }
 
+
 // 多平台仿真回调
 void UIManager::onMultiPlatformSimulation(GtkWidget* widget, gpointer data) {
     // 这里应该调用仿真引擎进行多平台协同仿真计算
@@ -1434,37 +1427,34 @@ void UIManager::onMultiPlatformSimulation(GtkWidget* widget, gpointer data) {
     UIManager& ui = UIManager::getInstance();
     
     // 清除之前的点
-    ui.m_mapView.clearPoints();
+    ui.clearPoints();
     
     // 添加模拟目标位置
-    ui.m_mapView.addPoint(119.97, 31.71, "目标");
+    ui.addPoint(119.97, 31.71, "目标");
     
     // 添加雷达设备位置
-    ui.m_mapView.addPoint(118.78, 32.07, "雷达1");
-    ui.m_mapView.addPoint(120.58, 31.30, "雷达2");
-    ui.m_mapView.addPoint(120.30, 31.57, "雷达3");
+    ui.addPoint(118.78, 32.07, "雷达1");
+    ui.addPoint(120.58, 31.30, "雷达2");
+    ui.addPoint(120.30, 31.57, "雷达3");
     
     // 设置中心点
-    ui.m_mapView.setCenter(119.4, 31.9, 8);
+    ui.m_mapView.setCenter(119.4, 31.9, 100000);
     
     // 获取技术体制选择
+    GtkWidget* techSystemBox = get_child_at_index(GTK_CONTAINER(rightBox), 1);
+    GtkWidget* settingsBox = gtk_bin_get_child(GTK_BIN(techSystemBox));
     GtkWidget* algoCombo = GTK_WIDGET(g_object_get_data(G_OBJECT(container), "algo-combo"));
-    const gchar* techSystem = gtk_combo_box_text_get_active_text(GTK_COMBO_BOX_TEXT(algoCombo));
+    const gchar* techSystem = algoCombo ? 
+        gtk_combo_box_text_get_active_text(GTK_COMBO_BOX_TEXT(algoCombo)) :
+        "TDOA";
     
-    // 更新仿真结果值
-    GtkWidget* resultFrame = get_child_at_index(GTK_CONTAINER(rightBox), 5); // 注意索引可能需要调整
-    GtkWidget* resultBox = gtk_bin_get_child(GTK_BIN(resultFrame));
-    GtkWidget* table = get_child_at_index(GTK_CONTAINER(resultBox), 0);
+    // 获取误差表格
+    GtkWidget* errorTable = GTK_WIDGET(g_object_get_data(G_OBJECT(container), "error-table"));
     
-    // 获取各结果值的标签
-    GtkWidget* dirDataValue = gtk_grid_get_child_at(GTK_GRID(table), 1, 1);
-    GtkWidget* locDataValue = gtk_grid_get_child_at(GTK_GRID(table), 1, 2);
-    
-    // 设置模拟结果值
-    if (dirDataValue) gtk_label_set_text(GTK_LABEL(dirDataValue), "87.2°");
-    if (locDataValue) gtk_label_set_text(GTK_LABEL(locDataValue), "119.97°E, 31.71°N");
-    
-    g_print("Multi platform simulation completed with %s\n", techSystem);
+    // 更新误差表格内容
+    if (errorTable) {
+        ui.updateErrorTable(errorTable, techSystem);
+    }
 }
 
 // 创建数据显示UI (简化版，仅用于兼容)
@@ -1640,14 +1630,14 @@ void UIManager::onDataSelectionChanged(GtkWidget* widget, gpointer data) {
         UIManager& ui = UIManager::getInstance();
         
         // 清除之前的点
-        ui.m_mapView.clearPoints();
+        ui.clearPoints(); 
         
         // 根据选择显示不同目标
         if (strcmp(selected_text, "目标1") == 0) {
-            ui.m_mapView.addPoint(119.97, 31.71, "目标1");
+            ui.addPoint(119.97, 31.71, "目标1");
             ui.m_mapView.setCenter(119.97, 31.71, 8);
         } else if (strcmp(selected_text, "目标2") == 0) {
-            ui.m_mapView.addPoint(120.30, 31.57, "目标2");
+            ui.addPoint(120.30, 31.57, "目标2");
             ui.m_mapView.setCenter(120.30, 31.57, 8);
         }
         
@@ -1947,8 +1937,18 @@ void UIManager::showWebMap(GtkWidget* container) {
     gtk_widget_set_size_request(mapWidget, 800, 700);
     gtk_container_add(GTK_CONTAINER(container), mapWidget);
     m_mapView.setUse3DMap(true);
-    m_mapView.setMapType("3d");
-    m_mapView.setCenter(116.3833, 39.9167, 5); 
+    // m_mapView.setMapType("3d");
+    m_mapView.setCenter(116.3833, 39.9167, 1000000);
+}
+
+// 添加标记点
+void UIManager::addPoint(double longitude, double latitude, const std::string& title) {
+    m_mapView.addMarker(longitude, latitude, title, "", "#FF0000");
+}
+
+// 清除所有标记点
+void UIManager::clearPoints() {
+    m_mapView.clearMarkers();
 }
 
 // 定义未实现的函数

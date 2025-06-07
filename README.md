@@ -67,9 +67,13 @@ make run
 ```
 git add .
 git commit -m ''
-git push -u origin .._dev
+git push -u origin dev
 ```
-
+## git拉取代码
+```
+git fetch
+git merge main
+```
 
 ### 雷达设备模型
 

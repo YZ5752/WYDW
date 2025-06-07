@@ -49,6 +49,12 @@ public:
     // 显示WebKit地图 (新增方法)
     void showWebMap(GtkWidget* container);
     
+    // 添加标记点到地图
+    void addPoint(double longitude, double latitude, const std::string& title);
+    
+    // 清除地图上的所有标记点
+    void clearPoints();
+    
     // 在地图上显示定位结果
     void showLocationResults(GtkWidget* map, const std::vector<LocationResult>& results);
     
