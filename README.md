@@ -16,7 +16,7 @@
 ## 系统环境要求
 
 - Ubuntu 18.04 LTS
-- Visual C++ 或 g++ 7.4.0及以上
+- Visual C++ 或 g++ 8.4.0
 - GTK 3.22及以上
 - CMake 3.10及以上
 
