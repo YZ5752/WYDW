@@ -12,7 +12,7 @@ SinglePlatformSimulation::SinglePlatformSimulation() {
 SinglePlatformSimulation::~SinglePlatformSimulation() {
 }
 
-void SinglePlatformSimulation::setRadarDevice(const RadarDevice& device) {
+void SinglePlatformSimulation::setRadarDevice(const ReconnaissanceDevice& device) {
     m_device = device;
 }
 
@@ -50,7 +50,7 @@ MultiPlatformSimulation::MultiPlatformSimulation() {
 MultiPlatformSimulation::~MultiPlatformSimulation() {
 }
 
-void MultiPlatformSimulation::addPlatform(const Coordinate& position, const RadarDevice& device) {
+void MultiPlatformSimulation::addPlatform(const Coordinate& position, const ReconnaissanceDevice& device) {
     m_platforms.push_back(std::make_pair(position, device));
 }
 

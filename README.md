@@ -30,6 +30,7 @@ sudo apt install build-essential cmake
 sudo apt install libgtk-3-dev
 sudo apt install pkg-config
 sudo apt-get install libwebkit2gtk-4.0-dev
+sudo apt install libmysqlclient-dev
 ```
 
 ## 编译构建
@@ -69,6 +70,14 @@ git add .
 git commit -m ''
 git push -u origin dev
 ```
+## 
+例：
+```
+git add .
+git commit -m '新增地图'
+git push -u origin yz_dev
+```
+
 ## git拉取代码
 ```
 git fetch

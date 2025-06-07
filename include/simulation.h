@@ -1,6 +1,7 @@
 #pragma once
 
-#include "radar_model.h"
+#include "reconnaissance_device_model.h"
+#include "radiation_source_model.h"
 #include <vector>
 #include <string>
 #include <map>
@@ -28,7 +29,7 @@ public:
     ~SinglePlatformSimulation();
 
     // 设置雷达设备
-    void setRadarDevice(const RadarDevice& device);
+    void setRadarDevice(const ReconnaissanceDevice& device);
     
     // 设置辐射源
     void setRadiationSource(const RadiationSource& source);
@@ -43,7 +44,7 @@ public:
     LocationResult calculateLocation();
 
 private:
-    RadarDevice m_device;
+    ReconnaissanceDevice m_device;
     RadiationSource m_source;
     Coordinate m_platformPosition;
     std::string m_algorithm;  // 定位算法
@@ -56,7 +57,7 @@ public:
     ~MultiPlatformSimulation();
 
     // 添加雷达平台
-    void addPlatform(const Coordinate& position, const RadarDevice& device);
+    void addPlatform(const Coordinate& position, const ReconnaissanceDevice& device);
     
     // 设置辐射源
     void setRadiationSource(const RadiationSource& source);
@@ -71,7 +72,7 @@ public:
     LocationResult calculateCooperativeLocation();
 
 private:
-    std::vector<std::pair<Coordinate, RadarDevice>> m_platforms;
+    std::vector<std::pair<Coordinate, ReconnaissanceDevice>> m_platforms;
     RadiationSource m_source;
     std::string m_algorithm;  // 定位算法
 };
