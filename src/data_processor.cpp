@@ -218,6 +218,5 @@ std::map<double, double> DataProcessor::getAccuracyOverTime(const TargetIntellig
         
         accuracyOverTime[location.time] = distance;
     }
-    
     return accuracyOverTime;
 } 

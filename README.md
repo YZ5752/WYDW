@@ -19,6 +19,29 @@
 - Visual C++ 或 g++ 8.4.0
 - GTK 3.22及以上
 - CMake 3.10及以上
+- mysql 5.7
+
+## 数据库配置
+## 安装mysql5.7
+
+## 修改数据库密码
+```bash
+sudo mysql -u root -p
+ALTER USER 'root'@'localhost' IDENTIFIED BY '123456';
+UPDATE mysql.user SET authentication_string=PASSWORD('123456') WHERE User='root' AND Host = 'localhost';
+FLUSH PRIVILEGES;
+```
+
+## 下载dbeaver
+```bash
+sudo apt install openjdk-11-jre-headless
+wget -O - https://dbeaver.io/debs/dbeaver.gpg.key | sudo apt-key add -
+echo deb https://dbeaver.io/debs/dbeaver-ce / | sudo tee /etc/apt/sources.list.d/dbeaver.list
+sudo apt update
+sudo apt -y install dbeaver-ce
+```
+
+## 在dbeaver中运行database中的sql文件
 
 ## 安装依赖
 
@@ -64,24 +87,34 @@ make run
 
 ## 使用说明
 
-## git上传代码
+## git创建个人分支
+```bash
+git checkout -b dev
 ```
+## 
+例：
+```bash
+git checkout -b yz_dev
+```
+
+## git上传代码
+```bash
 git add .
 git commit -m ''
 git push -u origin dev
 ```
 ## 
 例：
-```
+```bash
 git add .
 git commit -m '新增地图'
 git push -u origin yz_dev
 ```
 
 ## git拉取代码
-```
+```bash
 git fetch
-git merge main
+git merge origin/main
 ```
 
 ### 雷达设备模型
