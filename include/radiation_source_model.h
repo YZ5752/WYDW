@@ -10,10 +10,6 @@ public:
     RadiationSource();
     ~RadiationSource();
 
-    // 设备类型
-    void setDeviceType(const std::string& type);
-    std::string getDeviceType() const;
-
     // 辐射源ID
     void setRadiationId(int id);
     int getRadiationId() const;
@@ -38,49 +34,63 @@ public:
     void setCarrierFrequency(double freq);
     double getCarrierFrequency() const;
 
-    // 频率范围
-    void setFrequencyRange(double min, double max);
-    std::pair<double, double> getFrequencyRange() const;
+    //工作扇区方位角下限
+    void setAzimuthStart(double start);
+    double getAzimuthStart() const;
 
-    // 工作扇区（度）
-    void setWorkSector(double sector);
-    double getWorkSector() const;
+    //工作扇区方位角上限
+    void setAzimuthEnd(double end);
+    double getAzimuthEnd() const;
 
-    // 方位角范围（度）
-    void setAzimuthRange(double start, double end);
-    std::pair<double, double> getAzimuthRange() const;
+    //工作扇区俯仰角下限
+    void setElevationStart(double start);
+    double getElevationStart() const;
 
-    // 俯仰角范围（度）
-    void setElevationRange(double start, double end);
-    std::pair<double, double> getElevationRange() const;
+    //工作扇区俯仰角上限
+    void setElevationEnd(double end);
+    double getElevationEnd() const;
+    
 
-    // 运动参数
+    // 运动速度
     void setMovementSpeed(double speed);
     double getMovementSpeed() const;
+
+    // 运动方位角
     void setMovementAzimuth(double azimuth);
     double getMovementAzimuth() const;
+
+    // 运动俯仰角
     void setMovementElevation(double elevation);
     double getMovementElevation() const;
 
-    // 位置
+    // 经度
     void setLongitude(double longitude);
     double getLongitude() const;
+
+    // 纬度
     void setLatitude(double latitude);
     double getLatitude() const;
+
+    // 高度
     void setAltitude(double altitude);
     double getAltitude() const;
+
+    // 创建时间
+    void setCreatedAt(const std::string& time);
+    std::string getCreatedAt() const;
+
+    // 最后更新时间
+    void setLastUpdated(const std::string& time);
+    std::string getLastUpdated() const;
+
 
 private:
     int m_radiationId;
     std::string m_radiationName;
     bool m_isStationary;
-    std::string m_deviceType;
     double m_transmitPower;
     double m_scanPeriod;
     double m_carrierFrequency;
-    double m_freqMin;
-    double m_freqMax;
-    double m_workSector;
     double m_azimuthStart;
     double m_azimuthEnd;
     double m_elevationStart;
@@ -91,6 +101,8 @@ private:
     double m_longitude;
     double m_latitude;
     double m_altitude;
+    std::string m_createdAt;
+    std::string m_lastUpdated;
 };
 
 // 数据库操作函数
