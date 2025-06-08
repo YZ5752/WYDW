@@ -1,4 +1,4 @@
-# Install script for directory: /home/zhang/Desktop/passivelocation
+# Install script for directory: /home/zhang/Desktop/WYDW
 
 # Set the install prefix
 if(NOT DEFINED CMAKE_INSTALL_PREFIX)
@@ -44,7 +44,7 @@ if("x${CMAKE_INSTALL_COMPONENT}x" STREQUAL "xUnspecifiedx" OR NOT CMAKE_INSTALL_
          FILE "$ENV{DESTDIR}${CMAKE_INSTALL_PREFIX}/bin/passivelocation"
          RPATH "")
   endif()
-  file(INSTALL DESTINATION "${CMAKE_INSTALL_PREFIX}/bin" TYPE EXECUTABLE FILES "/home/zhang/Desktop/passivelocation/build/passivelocation")
+  file(INSTALL DESTINATION "${CMAKE_INSTALL_PREFIX}/bin" TYPE EXECUTABLE FILES "/home/zhang/Desktop/WYDW/build/passivelocation")
   if(EXISTS "$ENV{DESTDIR}${CMAKE_INSTALL_PREFIX}/bin/passivelocation" AND
      NOT IS_SYMLINK "$ENV{DESTDIR}${CMAKE_INSTALL_PREFIX}/bin/passivelocation")
     if(CMAKE_INSTALL_DO_STRIP)
@@ -54,11 +54,11 @@ if("x${CMAKE_INSTALL_COMPONENT}x" STREQUAL "xUnspecifiedx" OR NOT CMAKE_INSTALL_
 endif()
 
 if("x${CMAKE_INSTALL_COMPONENT}x" STREQUAL "xUnspecifiedx" OR NOT CMAKE_INSTALL_COMPONENT)
-  file(INSTALL DESTINATION "${CMAKE_INSTALL_PREFIX}/share/passivelocation/res" TYPE DIRECTORY FILES "/home/zhang/Desktop/passivelocation/res/")
+  file(INSTALL DESTINATION "${CMAKE_INSTALL_PREFIX}/share/passivelocation/res" TYPE DIRECTORY FILES "/home/zhang/Desktop/WYDW/res/")
 endif()
 
 if("x${CMAKE_INSTALL_COMPONENT}x" STREQUAL "xUnspecifiedx" OR NOT CMAKE_INSTALL_COMPONENT)
-  file(INSTALL DESTINATION "${CMAKE_INSTALL_PREFIX}/share/passivelocation/database" TYPE DIRECTORY FILES "/home/zhang/Desktop/passivelocation/database/")
+  file(INSTALL DESTINATION "${CMAKE_INSTALL_PREFIX}/share/passivelocation/database" TYPE DIRECTORY FILES "/home/zhang/Desktop/WYDW/database/")
 endif()
 
 if(CMAKE_INSTALL_COMPONENT)
@@ -69,5 +69,5 @@ endif()
 
 string(REPLACE ";" "\n" CMAKE_INSTALL_MANIFEST_CONTENT
        "${CMAKE_INSTALL_MANIFEST_FILES}")
-file(WRITE "/home/zhang/Desktop/passivelocation/build/${CMAKE_INSTALL_MANIFEST}"
+file(WRITE "/home/zhang/Desktop/WYDW/build/${CMAKE_INSTALL_MANIFEST}"
      "${CMAKE_INSTALL_MANIFEST_CONTENT}")

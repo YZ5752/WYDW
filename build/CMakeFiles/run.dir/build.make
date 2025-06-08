@@ -43,10 +43,10 @@ RM = /usr/bin/cmake -E remove -f
 EQUALS = =
 
 # The top-level source directory on which CMake was run.
-CMAKE_SOURCE_DIR = /home/zhang/Desktop/passivelocation
+CMAKE_SOURCE_DIR = /home/zhang/Desktop/WYDW
 
 # The top-level build directory on which CMake was run.
-CMAKE_BINARY_DIR = /home/zhang/Desktop/passivelocation/build
+CMAKE_BINARY_DIR = /home/zhang/Desktop/WYDW/build
 
 # Utility rule file for run.
 
@@ -54,7 +54,7 @@ CMAKE_BINARY_DIR = /home/zhang/Desktop/passivelocation/build
 include CMakeFiles/run.dir/progress.make
 
 CMakeFiles/run: passivelocation
-	cd /home/zhang/Desktop/passivelocation/build/bin && /home/zhang/Desktop/passivelocation/build/passivelocation
+	cd /home/zhang/Desktop/WYDW/build/bin && /home/zhang/Desktop/WYDW/build/passivelocation
 
 run: CMakeFiles/run
 run: CMakeFiles/run.dir/build.make
@@ -71,6 +71,6 @@ CMakeFiles/run.dir/clean:
 .PHONY : CMakeFiles/run.dir/clean
 
 CMakeFiles/run.dir/depend:
-	cd /home/zhang/Desktop/passivelocation/build && $(CMAKE_COMMAND) -E cmake_depends "Unix Makefiles" /home/zhang/Desktop/passivelocation /home/zhang/Desktop/passivelocation /home/zhang/Desktop/passivelocation/build /home/zhang/Desktop/passivelocation/build /home/zhang/Desktop/passivelocation/build/CMakeFiles/run.dir/DependInfo.cmake --color=$(COLOR)
+	cd /home/zhang/Desktop/WYDW/build && $(CMAKE_COMMAND) -E cmake_depends "Unix Makefiles" /home/zhang/Desktop/WYDW /home/zhang/Desktop/WYDW /home/zhang/Desktop/WYDW/build /home/zhang/Desktop/WYDW/build /home/zhang/Desktop/WYDW/build/CMakeFiles/run.dir/DependInfo.cmake --color=$(COLOR)
 .PHONY : CMakeFiles/run.dir/depend
 

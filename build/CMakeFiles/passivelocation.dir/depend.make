@@ -10,6 +10,7 @@ CMakeFiles/passivelocation.dir/controllers/src/ApplicationController.cpp.o: ../c
 CMakeFiles/passivelocation.dir/controllers/src/ApplicationController.cpp.o: ../controllers/SinglePlatformController.h
 CMakeFiles/passivelocation.dir/controllers/src/ApplicationController.cpp.o: ../controllers/src/ApplicationController.cpp
 CMakeFiles/passivelocation.dir/controllers/src/ApplicationController.cpp.o: ../models/CoordinateModel.h
+CMakeFiles/passivelocation.dir/controllers/src/ApplicationController.cpp.o: ../models/DBConnector.h
 CMakeFiles/passivelocation.dir/controllers/src/ApplicationController.cpp.o: ../models/DataProcessorModel.h
 CMakeFiles/passivelocation.dir/controllers/src/ApplicationController.cpp.o: ../models/LocationResultModel.h
 CMakeFiles/passivelocation.dir/controllers/src/ApplicationController.cpp.o: ../models/RadiationSourceDAO.h
@@ -17,6 +18,7 @@ CMakeFiles/passivelocation.dir/controllers/src/ApplicationController.cpp.o: ../m
 CMakeFiles/passivelocation.dir/controllers/src/ApplicationController.cpp.o: ../models/ReconnaissanceDeviceDAO.h
 CMakeFiles/passivelocation.dir/controllers/src/ApplicationController.cpp.o: ../models/ReconnaissanceDeviceModel.h
 CMakeFiles/passivelocation.dir/controllers/src/ApplicationController.cpp.o: ../models/SimulationModel.h
+CMakeFiles/passivelocation.dir/controllers/src/ApplicationController.cpp.o: ../models/TargetIntelligenceModel.h
 CMakeFiles/passivelocation.dir/controllers/src/ApplicationController.cpp.o: ../views/DataSelectionView.h
 CMakeFiles/passivelocation.dir/controllers/src/ApplicationController.cpp.o: ../views/EvaluationView.h
 CMakeFiles/passivelocation.dir/controllers/src/ApplicationController.cpp.o: ../views/MultiPlatformView.h
@@ -3123,10 +3125,16 @@ CMakeFiles/passivelocation.dir/controllers/src/RadiationSourceModelController.cp
 CMakeFiles/passivelocation.dir/controllers/src/RadiationSourceModelController.cpp.o: /usr/include/pango-1.0/pango/pangocairo.h
 CMakeFiles/passivelocation.dir/controllers/src/RadiationSourceModelController.cpp.o: /usr/lib/x86_64-linux-gnu/glib-2.0/include/glibconfig.h
 
+CMakeFiles/passivelocation.dir/controllers/src/ReconnaissanceDeviceModelController.cpp.o: ../controllers/ApplicationController.h
+CMakeFiles/passivelocation.dir/controllers/src/ReconnaissanceDeviceModelController.cpp.o: ../controllers/ReconnaissanceDeviceModelController.h
+CMakeFiles/passivelocation.dir/controllers/src/ReconnaissanceDeviceModelController.cpp.o: ../controllers/src/ReconnaissanceDeviceModelController.cpp
+CMakeFiles/passivelocation.dir/controllers/src/ReconnaissanceDeviceModelController.cpp.o: ../models/CoordinateModel.h
+CMakeFiles/passivelocation.dir/controllers/src/ReconnaissanceDeviceModelController.cpp.o: ../models/DBConnector.h
+CMakeFiles/passivelocation.dir/controllers/src/ReconnaissanceDeviceModelController.cpp.o: ../models/LocationResultModel.h
 CMakeFiles/passivelocation.dir/controllers/src/ReconnaissanceDeviceModelController.cpp.o: ../models/ReconnaissanceDeviceDAO.h
 CMakeFiles/passivelocation.dir/controllers/src/ReconnaissanceDeviceModelController.cpp.o: ../models/ReconnaissanceDeviceModel.h
+CMakeFiles/passivelocation.dir/controllers/src/ReconnaissanceDeviceModelController.cpp.o: ../models/TargetIntelligenceModel.h
 CMakeFiles/passivelocation.dir/controllers/src/ReconnaissanceDeviceModelController.cpp.o: ../views/ReconnaissanceDeviceModelView.h
-CMakeFiles/passivelocation.dir/controllers/src/ReconnaissanceDeviceModelController.cpp.o: ../controllers/src/ReconnaissanceDeviceModelController.cpp
 CMakeFiles/passivelocation.dir/controllers/src/ReconnaissanceDeviceModelController.cpp.o: /usr/include/atk-1.0/atk/atk-enum-types.h
 CMakeFiles/passivelocation.dir/controllers/src/ReconnaissanceDeviceModelController.cpp.o: /usr/include/atk-1.0/atk/atk.h
 CMakeFiles/passivelocation.dir/controllers/src/ReconnaissanceDeviceModelController.cpp.o: /usr/include/atk-1.0/atk/atkaction.h
@@ -4367,6 +4375,10 @@ CMakeFiles/passivelocation.dir/controllers/src/SinglePlatformController.cpp.o: /
 
 CMakeFiles/passivelocation.dir/controllers/src/main.cpp.o: ../controllers/ApplicationController.h
 CMakeFiles/passivelocation.dir/controllers/src/main.cpp.o: ../controllers/src/main.cpp
+CMakeFiles/passivelocation.dir/controllers/src/main.cpp.o: ../models/CoordinateModel.h
+CMakeFiles/passivelocation.dir/controllers/src/main.cpp.o: ../models/DBConnector.h
+CMakeFiles/passivelocation.dir/controllers/src/main.cpp.o: ../models/LocationResultModel.h
+CMakeFiles/passivelocation.dir/controllers/src/main.cpp.o: ../models/TargetIntelligenceModel.h
 CMakeFiles/passivelocation.dir/controllers/src/main.cpp.o: /usr/include/atk-1.0/atk/atk-enum-types.h
 CMakeFiles/passivelocation.dir/controllers/src/main.cpp.o: /usr/include/atk-1.0/atk/atk.h
 CMakeFiles/passivelocation.dir/controllers/src/main.cpp.o: /usr/include/atk-1.0/atk/atkaction.h
@@ -4984,8 +4996,6 @@ CMakeFiles/passivelocation.dir/controllers/src/main.cpp.o: /usr/lib/x86_64-linux
 CMakeFiles/passivelocation.dir/models/src/DBConnector.cpp.o: ../models/CoordinateModel.h
 CMakeFiles/passivelocation.dir/models/src/DBConnector.cpp.o: ../models/DBConnector.h
 CMakeFiles/passivelocation.dir/models/src/DBConnector.cpp.o: ../models/LocationResultModel.h
-CMakeFiles/passivelocation.dir/models/src/DBConnector.cpp.o: ../models/RadiationSourceModel.h
-CMakeFiles/passivelocation.dir/models/src/DBConnector.cpp.o: ../models/ReconnaissanceDeviceModel.h
 CMakeFiles/passivelocation.dir/models/src/DBConnector.cpp.o: ../models/TargetIntelligenceModel.h
 CMakeFiles/passivelocation.dir/models/src/DBConnector.cpp.o: ../models/src/DBConnector.cpp
 
@@ -4999,7 +5009,6 @@ CMakeFiles/passivelocation.dir/models/src/RadiationSourceDAO.cpp.o: ../models/DB
 CMakeFiles/passivelocation.dir/models/src/RadiationSourceDAO.cpp.o: ../models/LocationResultModel.h
 CMakeFiles/passivelocation.dir/models/src/RadiationSourceDAO.cpp.o: ../models/RadiationSourceDAO.h
 CMakeFiles/passivelocation.dir/models/src/RadiationSourceDAO.cpp.o: ../models/RadiationSourceModel.h
-CMakeFiles/passivelocation.dir/models/src/RadiationSourceDAO.cpp.o: ../models/ReconnaissanceDeviceModel.h
 CMakeFiles/passivelocation.dir/models/src/RadiationSourceDAO.cpp.o: ../models/TargetIntelligenceModel.h
 CMakeFiles/passivelocation.dir/models/src/RadiationSourceDAO.cpp.o: ../models/src/RadiationSourceDAO.cpp
 
@@ -5009,7 +5018,6 @@ CMakeFiles/passivelocation.dir/models/src/RadiationSourceModel.cpp.o: ../models/
 CMakeFiles/passivelocation.dir/models/src/ReconnaissanceDeviceDAO.cpp.o: ../models/CoordinateModel.h
 CMakeFiles/passivelocation.dir/models/src/ReconnaissanceDeviceDAO.cpp.o: ../models/DBConnector.h
 CMakeFiles/passivelocation.dir/models/src/ReconnaissanceDeviceDAO.cpp.o: ../models/LocationResultModel.h
-CMakeFiles/passivelocation.dir/models/src/ReconnaissanceDeviceDAO.cpp.o: ../models/RadiationSourceModel.h
 CMakeFiles/passivelocation.dir/models/src/ReconnaissanceDeviceDAO.cpp.o: ../models/ReconnaissanceDeviceDAO.h
 CMakeFiles/passivelocation.dir/models/src/ReconnaissanceDeviceDAO.cpp.o: ../models/ReconnaissanceDeviceModel.h
 CMakeFiles/passivelocation.dir/models/src/ReconnaissanceDeviceDAO.cpp.o: ../models/TargetIntelligenceModel.h
@@ -5777,6 +5785,10 @@ CMakeFiles/passivelocation.dir/views/components/src/MapView.cpp.o: /usr/include/
 CMakeFiles/passivelocation.dir/views/components/src/MapView.cpp.o: /usr/lib/x86_64-linux-gnu/glib-2.0/include/glibconfig.h
 
 CMakeFiles/passivelocation.dir/views/src/DataSelectionView.cpp.o: ../controllers/ApplicationController.h
+CMakeFiles/passivelocation.dir/views/src/DataSelectionView.cpp.o: ../models/CoordinateModel.h
+CMakeFiles/passivelocation.dir/views/src/DataSelectionView.cpp.o: ../models/DBConnector.h
+CMakeFiles/passivelocation.dir/views/src/DataSelectionView.cpp.o: ../models/LocationResultModel.h
+CMakeFiles/passivelocation.dir/views/src/DataSelectionView.cpp.o: ../models/TargetIntelligenceModel.h
 CMakeFiles/passivelocation.dir/views/src/DataSelectionView.cpp.o: ../views/DataSelectionView.h
 CMakeFiles/passivelocation.dir/views/src/DataSelectionView.cpp.o: ../views/src/DataSelectionView.cpp
 CMakeFiles/passivelocation.dir/views/src/DataSelectionView.cpp.o: /usr/include/atk-1.0/atk/atk-enum-types.h
@@ -6394,6 +6406,10 @@ CMakeFiles/passivelocation.dir/views/src/DataSelectionView.cpp.o: /usr/include/p
 CMakeFiles/passivelocation.dir/views/src/DataSelectionView.cpp.o: /usr/lib/x86_64-linux-gnu/glib-2.0/include/glibconfig.h
 
 CMakeFiles/passivelocation.dir/views/src/EvaluationView.cpp.o: ../controllers/ApplicationController.h
+CMakeFiles/passivelocation.dir/views/src/EvaluationView.cpp.o: ../models/CoordinateModel.h
+CMakeFiles/passivelocation.dir/views/src/EvaluationView.cpp.o: ../models/DBConnector.h
+CMakeFiles/passivelocation.dir/views/src/EvaluationView.cpp.o: ../models/LocationResultModel.h
+CMakeFiles/passivelocation.dir/views/src/EvaluationView.cpp.o: ../models/TargetIntelligenceModel.h
 CMakeFiles/passivelocation.dir/views/src/EvaluationView.cpp.o: ../views/EvaluationView.h
 CMakeFiles/passivelocation.dir/views/src/EvaluationView.cpp.o: ../views/src/EvaluationView.cpp
 CMakeFiles/passivelocation.dir/views/src/EvaluationView.cpp.o: /usr/include/atk-1.0/atk/atk-enum-types.h
@@ -7012,6 +7028,9 @@ CMakeFiles/passivelocation.dir/views/src/EvaluationView.cpp.o: /usr/lib/x86_64-l
 
 CMakeFiles/passivelocation.dir/views/src/MultiPlatformView.cpp.o: ../controllers/ApplicationController.h
 CMakeFiles/passivelocation.dir/views/src/MultiPlatformView.cpp.o: ../models/CoordinateModel.h
+CMakeFiles/passivelocation.dir/views/src/MultiPlatformView.cpp.o: ../models/DBConnector.h
+CMakeFiles/passivelocation.dir/views/src/MultiPlatformView.cpp.o: ../models/LocationResultModel.h
+CMakeFiles/passivelocation.dir/views/src/MultiPlatformView.cpp.o: ../models/TargetIntelligenceModel.h
 CMakeFiles/passivelocation.dir/views/src/MultiPlatformView.cpp.o: ../views/MultiPlatformView.h
 CMakeFiles/passivelocation.dir/views/src/MultiPlatformView.cpp.o: ../views/src/MultiPlatformView.cpp
 CMakeFiles/passivelocation.dir/views/src/MultiPlatformView.cpp.o: /usr/include/atk-1.0/atk/atk-enum-types.h
@@ -7629,7 +7648,11 @@ CMakeFiles/passivelocation.dir/views/src/MultiPlatformView.cpp.o: /usr/include/p
 CMakeFiles/passivelocation.dir/views/src/MultiPlatformView.cpp.o: /usr/lib/x86_64-linux-gnu/glib-2.0/include/glibconfig.h
 
 CMakeFiles/passivelocation.dir/views/src/RadiationSourceModelView.cpp.o: ../controllers/ApplicationController.h
+CMakeFiles/passivelocation.dir/views/src/RadiationSourceModelView.cpp.o: ../models/CoordinateModel.h
+CMakeFiles/passivelocation.dir/views/src/RadiationSourceModelView.cpp.o: ../models/DBConnector.h
+CMakeFiles/passivelocation.dir/views/src/RadiationSourceModelView.cpp.o: ../models/LocationResultModel.h
 CMakeFiles/passivelocation.dir/views/src/RadiationSourceModelView.cpp.o: ../models/RadiationSourceModel.h
+CMakeFiles/passivelocation.dir/views/src/RadiationSourceModelView.cpp.o: ../models/TargetIntelligenceModel.h
 CMakeFiles/passivelocation.dir/views/src/RadiationSourceModelView.cpp.o: ../views/RadiationSourceModelView.h
 CMakeFiles/passivelocation.dir/views/src/RadiationSourceModelView.cpp.o: ../views/src/RadiationSourceModelView.cpp
 CMakeFiles/passivelocation.dir/views/src/RadiationSourceModelView.cpp.o: /usr/include/atk-1.0/atk/atk-enum-types.h
@@ -8247,7 +8270,13 @@ CMakeFiles/passivelocation.dir/views/src/RadiationSourceModelView.cpp.o: /usr/in
 CMakeFiles/passivelocation.dir/views/src/RadiationSourceModelView.cpp.o: /usr/lib/x86_64-linux-gnu/glib-2.0/include/glibconfig.h
 
 CMakeFiles/passivelocation.dir/views/src/ReconnaissanceDeviceModelView.cpp.o: ../controllers/ApplicationController.h
+CMakeFiles/passivelocation.dir/views/src/ReconnaissanceDeviceModelView.cpp.o: ../controllers/ReconnaissanceDeviceModelController.h
+CMakeFiles/passivelocation.dir/views/src/ReconnaissanceDeviceModelView.cpp.o: ../models/CoordinateModel.h
+CMakeFiles/passivelocation.dir/views/src/ReconnaissanceDeviceModelView.cpp.o: ../models/DBConnector.h
+CMakeFiles/passivelocation.dir/views/src/ReconnaissanceDeviceModelView.cpp.o: ../models/LocationResultModel.h
+CMakeFiles/passivelocation.dir/views/src/ReconnaissanceDeviceModelView.cpp.o: ../models/ReconnaissanceDeviceDAO.h
 CMakeFiles/passivelocation.dir/views/src/ReconnaissanceDeviceModelView.cpp.o: ../models/ReconnaissanceDeviceModel.h
+CMakeFiles/passivelocation.dir/views/src/ReconnaissanceDeviceModelView.cpp.o: ../models/TargetIntelligenceModel.h
 CMakeFiles/passivelocation.dir/views/src/ReconnaissanceDeviceModelView.cpp.o: ../views/ReconnaissanceDeviceModelView.h
 CMakeFiles/passivelocation.dir/views/src/ReconnaissanceDeviceModelView.cpp.o: ../views/src/ReconnaissanceDeviceModelView.cpp
 CMakeFiles/passivelocation.dir/views/src/ReconnaissanceDeviceModelView.cpp.o: /usr/include/atk-1.0/atk/atk-enum-types.h
