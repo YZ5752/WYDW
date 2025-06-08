@@ -130,9 +130,7 @@ void UIManager::updateRadiationSourceList(GtkWidget* list) {
             RadiationSource source1;
             source1.setRadiationId(0);
             source1.setRadiationName("数据库错误 - 示例辐射源");
-            source1.setDeviceType("雷达站");
             source1.setIsStationary(true);
-            source1.setTransmitPower(100);
             sources.push_back(source1);
         }
         
@@ -162,31 +160,10 @@ void UIManager::updateRadiationSourceList(GtkWidget* list) {
             // 将数值转换为字符串
             std::ostringstream powerSS;
             powerSS << source.getTransmitPower();
-            
-            // 获取频率范围
-            auto freqRange = source.getFrequencyRange();
-            std::string freqRangeStr = std::to_string(freqRange.first) + "-" + std::to_string(freqRange.second);
-            
-            // 获取方位角范围
-            auto azimuthRange = source.getAzimuthRange();
-            std::string azimuthStr = std::to_string(azimuthRange.first) + "-" + std::to_string(azimuthRange.second);
-            
-            // 设备类型和状态
-            std::string typeStr = source.getDeviceType();
-            if (source.getIsStationary()) {
-                typeStr += "（固定）";
-            } else {
-                typeStr += "（移动）";
-            }
-            
             // 设置列表数据
             gtk_list_store_set(store, &iter, 
                               0, source.getRadiationName().c_str(), 
-                              1, typeStr.c_str(), 
-                              2, powerSS.str().c_str(), 
                               3, "N/A",  // 无天线增益字段，设为N/A
-                              4, freqRangeStr.c_str(), 
-                              5, azimuthStr.c_str(), 
                               6, "编辑", 
                               7, "删除", 
                               -1);
