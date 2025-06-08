@@ -1,4 +1,5 @@
 #include "../MultiPlatformView.h"
+#include "../components/MapView.h"
 #include "../../controllers/ApplicationController.h"
 #include <gtk/gtk.h>
 
@@ -20,8 +21,10 @@ GtkWidget* MultiPlatformView::createView() {
     gtk_widget_set_size_request(mapFrame, 800, 700);
     gtk_box_pack_start(GTK_BOX(m_view), mapFrame, TRUE, TRUE, 0);
     
-    // TODO: 显示地图
-    // 这里需要实现地图显示功能
+    // 显示地图
+    MapView mapView;
+    GtkWidget* mapWidget = mapView.create();
+    gtk_container_add(GTK_CONTAINER(mapFrame), mapWidget);
     
     // 右侧：参数设置和结果区域
     GtkWidget* rightBox = gtk_box_new(GTK_ORIENTATION_VERTICAL, 10);

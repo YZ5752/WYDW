@@ -3,6 +3,12 @@
 #include <gtk/gtk.h>
 #include <string>
 
+// 声明全局回调函数
+extern "C" {
+    void onTechSystemChangedCallback(GtkWidget* widget, gpointer data);
+    void onSinglePlatformSimulationCallback(GtkWidget* widget, gpointer data);
+}
+
 class SinglePlatformView {
 public:
     SinglePlatformView();
@@ -16,6 +22,12 @@ public:
     
     // 更新定位数据显示
     void updateLocationData(const std::string& data);
+
+    // 技术体制变化回调
+    static void onTechSystemChanged(GtkWidget* widget, gpointer data);
+    
+    // 开始仿真回调
+    static void onSinglePlatformSimulation(GtkWidget* widget, gpointer data);
     
     // 更新误差表格
     void updateErrorTable(const std::string& techSystem);
