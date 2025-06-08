@@ -89,6 +89,8 @@ void RadiationSource::setElevationEnd(double end) {
     }
     m_elevationEnd = end;
 }
+double RadiationSource::getElevationEnd() const {return m_elevationEnd;}
+
 //运动速度
 // 注意：根据数据库触发器，如果是固定辐射源，速度必须为0
 void RadiationSource::setMovementSpeed(double speed) {

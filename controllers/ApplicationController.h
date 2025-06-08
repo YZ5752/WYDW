@@ -2,6 +2,7 @@
 
 #include <gtk/gtk.h>
 #include <string>
+#include "../models/DBConnector.h"
 
 // 前向声明
 class SinglePlatformController;

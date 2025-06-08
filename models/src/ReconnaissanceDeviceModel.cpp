@@ -187,28 +187,7 @@ std::string ReconnaissanceDevice::getFreqRangeString() const {
 // 获取角度范围的格式化字符串，包含方位角和俯仰角
 std::string ReconnaissanceDevice::getAngleRangeString() const {
     char buf[128];
-    snprintf(buf, sizeof(buf), "方位角：%.2f-%.2f，俯仰角%.2f-%.2f",
+    snprintf(buf, sizeof(buf), "方位角：%.0f-%.0f，俯仰角：%.0f-%.0f",
              m_angleAzimuthMin, m_angleAzimuthMax, m_angleElevationMin, m_angleElevationMax);
     return std::string(buf);
 }
-
-// 数据库操作-与数据库交互的接口函数
-// 获取所有侦察设备记录
-std::vector<ReconnaissanceDevice> getAllReconnaissanceDevices() {
-    return std::vector<ReconnaissanceDevice>();
-}
-
-// 添加新的侦察设备记录到数据库
-bool addReconnaissanceDevice(const ReconnaissanceDevice& device) {
-    return true;
-}
-
-// 更新现有侦察设备记录
-bool updateReconnaissanceDevice(const ReconnaissanceDevice& device) {
-    return true;
-}
-
-// 根据ID删除侦察设备记录
-bool deleteReconnaissanceDevice(int deviceId) {
-    return true;
-} 

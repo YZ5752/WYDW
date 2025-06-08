@@ -6,31 +6,31 @@
 
 #IncludeRegexTransform: 
 
-/home/zhang/Desktop/WYDW/controllers/ApplicationController.h
+/home/zhang/Desktop/WYDW1/controllers/ApplicationController.h
 gtk/gtk.h
 -
 string
 -
 ../models/DBConnector.h
-/home/zhang/Desktop/WYDW/models/DBConnector.h
+/home/zhang/Desktop/WYDW1/models/DBConnector.h
 
-/home/zhang/Desktop/WYDW/controllers/DataSelectionController.h
+/home/zhang/Desktop/WYDW1/controllers/DataSelectionController.h
 ../views/DataSelectionView.h
-/home/zhang/Desktop/WYDW/views/DataSelectionView.h
+/home/zhang/Desktop/WYDW1/views/DataSelectionView.h
 ../models/DataProcessorModel.h
-/home/zhang/Desktop/WYDW/models/DataProcessorModel.h
+/home/zhang/Desktop/WYDW1/models/DataProcessorModel.h
 string
 -
 vector
 -
 
-/home/zhang/Desktop/WYDW/controllers/EvaluationController.h
+/home/zhang/Desktop/WYDW1/controllers/EvaluationController.h
 ../views/EvaluationView.h
-/home/zhang/Desktop/WYDW/views/EvaluationView.h
+/home/zhang/Desktop/WYDW1/views/EvaluationView.h
 ../models/SimulationModel.h
-/home/zhang/Desktop/WYDW/models/SimulationModel.h
+/home/zhang/Desktop/WYDW1/models/SimulationModel.h
 ../models/DataProcessorModel.h
-/home/zhang/Desktop/WYDW/models/DataProcessorModel.h
+/home/zhang/Desktop/WYDW1/models/DataProcessorModel.h
 string
 -
 vector
@@ -38,39 +38,39 @@ vector
 map
 -
 
-/home/zhang/Desktop/WYDW/controllers/MultiPlatformController.h
+/home/zhang/Desktop/WYDW1/controllers/MultiPlatformController.h
 ../views/MultiPlatformView.h
-/home/zhang/Desktop/WYDW/views/MultiPlatformView.h
+/home/zhang/Desktop/WYDW1/views/MultiPlatformView.h
 ../models/SimulationModel.h
-/home/zhang/Desktop/WYDW/models/SimulationModel.h
+/home/zhang/Desktop/WYDW1/models/SimulationModel.h
 ../models/RadiationSourceModel.h
-/home/zhang/Desktop/WYDW/models/RadiationSourceModel.h
+/home/zhang/Desktop/WYDW1/models/RadiationSourceModel.h
 ../models/ReconnaissanceDeviceModel.h
-/home/zhang/Desktop/WYDW/models/ReconnaissanceDeviceModel.h
+/home/zhang/Desktop/WYDW1/models/ReconnaissanceDeviceModel.h
 string
 -
 vector
 -
 
-/home/zhang/Desktop/WYDW/controllers/RadiationSourceModelController.h
+/home/zhang/Desktop/WYDW1/controllers/RadiationSourceModelController.h
 ../views/RadiationSourceModelView.h
-/home/zhang/Desktop/WYDW/views/RadiationSourceModelView.h
+/home/zhang/Desktop/WYDW1/views/RadiationSourceModelView.h
 ../models/RadiationSourceDAO.h
-/home/zhang/Desktop/WYDW/models/RadiationSourceDAO.h
+/home/zhang/Desktop/WYDW1/models/RadiationSourceDAO.h
 ../models/RadiationSourceModel.h
-/home/zhang/Desktop/WYDW/models/RadiationSourceModel.h
+/home/zhang/Desktop/WYDW1/models/RadiationSourceModel.h
 string
 -
 vector
 -
 
-/home/zhang/Desktop/WYDW/controllers/ReconnaissanceDeviceModelController.h
+/home/zhang/Desktop/WYDW1/controllers/ReconnaissanceDeviceModelController.h
 ../views/ReconnaissanceDeviceModelView.h
-/home/zhang/Desktop/WYDW/views/ReconnaissanceDeviceModelView.h
+/home/zhang/Desktop/WYDW1/views/ReconnaissanceDeviceModelView.h
 ../models/ReconnaissanceDeviceDAO.h
-/home/zhang/Desktop/WYDW/models/ReconnaissanceDeviceDAO.h
+/home/zhang/Desktop/WYDW1/models/ReconnaissanceDeviceDAO.h
 ../models/ReconnaissanceDeviceModel.h
-/home/zhang/Desktop/WYDW/models/ReconnaissanceDeviceModel.h
+/home/zhang/Desktop/WYDW1/models/ReconnaissanceDeviceModel.h
 string
 -
 vector
@@ -78,57 +78,57 @@ vector
 gtk/gtk.h
 -
 
-/home/zhang/Desktop/WYDW/controllers/SinglePlatformController.h
+/home/zhang/Desktop/WYDW1/controllers/SinglePlatformController.h
 ../views/SinglePlatformView.h
-/home/zhang/Desktop/WYDW/views/SinglePlatformView.h
+/home/zhang/Desktop/WYDW1/views/SinglePlatformView.h
 ../models/SimulationModel.h
-/home/zhang/Desktop/WYDW/models/SimulationModel.h
+/home/zhang/Desktop/WYDW1/models/SimulationModel.h
 ../models/RadiationSourceModel.h
-/home/zhang/Desktop/WYDW/models/RadiationSourceModel.h
+/home/zhang/Desktop/WYDW1/models/RadiationSourceModel.h
 ../models/ReconnaissanceDeviceModel.h
-/home/zhang/Desktop/WYDW/models/ReconnaissanceDeviceModel.h
+/home/zhang/Desktop/WYDW1/models/ReconnaissanceDeviceModel.h
 string
 -
 
-/home/zhang/Desktop/WYDW/controllers/src/ApplicationController.cpp
+/home/zhang/Desktop/WYDW1/controllers/src/ApplicationController.cpp
 ../ApplicationController.h
-/home/zhang/Desktop/WYDW/controllers/ApplicationController.h
+/home/zhang/Desktop/WYDW1/controllers/ApplicationController.h
 ../../models/ReconnaissanceDeviceModel.h
-/home/zhang/Desktop/WYDW/models/ReconnaissanceDeviceModel.h
+/home/zhang/Desktop/WYDW1/models/ReconnaissanceDeviceModel.h
 ../../models/RadiationSourceModel.h
-/home/zhang/Desktop/WYDW/models/RadiationSourceModel.h
+/home/zhang/Desktop/WYDW1/models/RadiationSourceModel.h
 ../../views/ReconnaissanceDeviceModelView.h
-/home/zhang/Desktop/WYDW/views/ReconnaissanceDeviceModelView.h
+/home/zhang/Desktop/WYDW1/views/ReconnaissanceDeviceModelView.h
 ../../views/RadiationSourceModelView.h
-/home/zhang/Desktop/WYDW/views/RadiationSourceModelView.h
+/home/zhang/Desktop/WYDW1/views/RadiationSourceModelView.h
 ../../views/SinglePlatformView.h
-/home/zhang/Desktop/WYDW/views/SinglePlatformView.h
+/home/zhang/Desktop/WYDW1/views/SinglePlatformView.h
 ../../views/MultiPlatformView.h
-/home/zhang/Desktop/WYDW/views/MultiPlatformView.h
+/home/zhang/Desktop/WYDW1/views/MultiPlatformView.h
 ../../views/DataSelectionView.h
-/home/zhang/Desktop/WYDW/views/DataSelectionView.h
+/home/zhang/Desktop/WYDW1/views/DataSelectionView.h
 ../../views/EvaluationView.h
-/home/zhang/Desktop/WYDW/views/EvaluationView.h
+/home/zhang/Desktop/WYDW1/views/EvaluationView.h
 ../ReconnaissanceDeviceModelController.h
-/home/zhang/Desktop/WYDW/controllers/ReconnaissanceDeviceModelController.h
+/home/zhang/Desktop/WYDW1/controllers/ReconnaissanceDeviceModelController.h
 ../RadiationSourceModelController.h
-/home/zhang/Desktop/WYDW/controllers/RadiationSourceModelController.h
+/home/zhang/Desktop/WYDW1/controllers/RadiationSourceModelController.h
 ../SinglePlatformController.h
-/home/zhang/Desktop/WYDW/controllers/SinglePlatformController.h
+/home/zhang/Desktop/WYDW1/controllers/SinglePlatformController.h
 ../MultiPlatformController.h
-/home/zhang/Desktop/WYDW/controllers/MultiPlatformController.h
+/home/zhang/Desktop/WYDW1/controllers/MultiPlatformController.h
 ../DataSelectionController.h
-/home/zhang/Desktop/WYDW/controllers/DataSelectionController.h
+/home/zhang/Desktop/WYDW1/controllers/DataSelectionController.h
 ../EvaluationController.h
-/home/zhang/Desktop/WYDW/controllers/EvaluationController.h
+/home/zhang/Desktop/WYDW1/controllers/EvaluationController.h
 iostream
 -
 random
 -
 
-/home/zhang/Desktop/WYDW/controllers/src/DataSelectionController.cpp
+/home/zhang/Desktop/WYDW1/controllers/src/DataSelectionController.cpp
 ../DataSelectionController.h
-/home/zhang/Desktop/WYDW/controllers/DataSelectionController.h
+/home/zhang/Desktop/WYDW1/controllers/DataSelectionController.h
 fstream
 -
 iostream
@@ -136,59 +136,59 @@ iostream
 algorithm
 -
 
-/home/zhang/Desktop/WYDW/controllers/src/EvaluationController.cpp
+/home/zhang/Desktop/WYDW1/controllers/src/EvaluationController.cpp
 ../../models/SimulationModel.h
-/home/zhang/Desktop/WYDW/models/SimulationModel.h
+/home/zhang/Desktop/WYDW1/models/SimulationModel.h
 ../EvaluationController.h
-/home/zhang/Desktop/WYDW/controllers/EvaluationController.h
+/home/zhang/Desktop/WYDW1/controllers/EvaluationController.h
 fstream
 -
 iostream
 -
 
-/home/zhang/Desktop/WYDW/controllers/src/MultiPlatformController.cpp
+/home/zhang/Desktop/WYDW1/controllers/src/MultiPlatformController.cpp
 ../MultiPlatformController.h
-/home/zhang/Desktop/WYDW/controllers/MultiPlatformController.h
+/home/zhang/Desktop/WYDW1/controllers/MultiPlatformController.h
 ../../models/ReconnaissanceDeviceDAO.h
-/home/zhang/Desktop/WYDW/models/ReconnaissanceDeviceDAO.h
+/home/zhang/Desktop/WYDW1/models/ReconnaissanceDeviceDAO.h
 ../../models/RadiationSourceDAO.h
-/home/zhang/Desktop/WYDW/models/RadiationSourceDAO.h
+/home/zhang/Desktop/WYDW1/models/RadiationSourceDAO.h
 iostream
 -
 
-/home/zhang/Desktop/WYDW/controllers/src/RadiationSourceModelController.cpp
+/home/zhang/Desktop/WYDW1/controllers/src/RadiationSourceModelController.cpp
 ../RadiationSourceModelController.h
-/home/zhang/Desktop/WYDW/controllers/RadiationSourceModelController.h
+/home/zhang/Desktop/WYDW1/controllers/RadiationSourceModelController.h
 iostream
 -
 
-/home/zhang/Desktop/WYDW/controllers/src/ReconnaissanceDeviceModelController.cpp
+/home/zhang/Desktop/WYDW1/controllers/src/ReconnaissanceDeviceModelController.cpp
 ../ReconnaissanceDeviceModelController.h
-/home/zhang/Desktop/WYDW/controllers/ReconnaissanceDeviceModelController.h
+/home/zhang/Desktop/WYDW1/controllers/ReconnaissanceDeviceModelController.h
 ../ApplicationController.h
-/home/zhang/Desktop/WYDW/controllers/ApplicationController.h
+/home/zhang/Desktop/WYDW1/controllers/ApplicationController.h
 iostream
 -
 
-/home/zhang/Desktop/WYDW/controllers/src/SinglePlatformController.cpp
+/home/zhang/Desktop/WYDW1/controllers/src/SinglePlatformController.cpp
 ../SinglePlatformController.h
-/home/zhang/Desktop/WYDW/controllers/SinglePlatformController.h
+/home/zhang/Desktop/WYDW1/controllers/SinglePlatformController.h
 ../../models/ReconnaissanceDeviceDAO.h
-/home/zhang/Desktop/WYDW/models/ReconnaissanceDeviceDAO.h
+/home/zhang/Desktop/WYDW1/models/ReconnaissanceDeviceDAO.h
 ../../models/RadiationSourceDAO.h
-/home/zhang/Desktop/WYDW/models/RadiationSourceDAO.h
+/home/zhang/Desktop/WYDW1/models/RadiationSourceDAO.h
 iostream
 -
 
-/home/zhang/Desktop/WYDW/controllers/src/main.cpp
+/home/zhang/Desktop/WYDW1/controllers/src/main.cpp
 ../ApplicationController.h
-/home/zhang/Desktop/WYDW/controllers/ApplicationController.h
+/home/zhang/Desktop/WYDW1/controllers/ApplicationController.h
 iostream
 -
 
-/home/zhang/Desktop/WYDW/models/CoordinateModel.h
+/home/zhang/Desktop/WYDW1/models/CoordinateModel.h
 
-/home/zhang/Desktop/WYDW/models/DBConnector.h
+/home/zhang/Desktop/WYDW1/models/DBConnector.h
 mysql/mysql.h
 -
 string
@@ -198,17 +198,17 @@ vector
 map
 -
 CoordinateModel.h
-/home/zhang/Desktop/WYDW/models/CoordinateModel.h
+/home/zhang/Desktop/WYDW1/models/CoordinateModel.h
 LocationResultModel.h
-/home/zhang/Desktop/WYDW/models/LocationResultModel.h
+/home/zhang/Desktop/WYDW1/models/LocationResultModel.h
 TargetIntelligenceModel.h
-/home/zhang/Desktop/WYDW/models/TargetIntelligenceModel.h
+/home/zhang/Desktop/WYDW1/models/TargetIntelligenceModel.h
 
-/home/zhang/Desktop/WYDW/models/DataProcessorModel.h
+/home/zhang/Desktop/WYDW1/models/DataProcessorModel.h
 LocationResultModel.h
-/home/zhang/Desktop/WYDW/models/LocationResultModel.h
+/home/zhang/Desktop/WYDW1/models/LocationResultModel.h
 CoordinateModel.h
-/home/zhang/Desktop/WYDW/models/CoordinateModel.h
+/home/zhang/Desktop/WYDW1/models/CoordinateModel.h
 vector
 -
 map
@@ -218,17 +218,17 @@ string
 utility
 -
 
-/home/zhang/Desktop/WYDW/models/LocationResultModel.h
+/home/zhang/Desktop/WYDW1/models/LocationResultModel.h
 CoordinateModel.h
-/home/zhang/Desktop/WYDW/models/CoordinateModel.h
+/home/zhang/Desktop/WYDW1/models/CoordinateModel.h
 
-/home/zhang/Desktop/WYDW/models/RadiationSourceDAO.h
+/home/zhang/Desktop/WYDW1/models/RadiationSourceDAO.h
 RadiationSourceModel.h
-/home/zhang/Desktop/WYDW/models/RadiationSourceModel.h
+/home/zhang/Desktop/WYDW1/models/RadiationSourceModel.h
 vector
 -
 
-/home/zhang/Desktop/WYDW/models/RadiationSourceModel.h
+/home/zhang/Desktop/WYDW1/models/RadiationSourceModel.h
 string
 -
 vector
@@ -236,25 +236,25 @@ vector
 utility
 -
 
-/home/zhang/Desktop/WYDW/models/ReconnaissanceDeviceDAO.h
+/home/zhang/Desktop/WYDW1/models/ReconnaissanceDeviceDAO.h
 ReconnaissanceDeviceModel.h
-/home/zhang/Desktop/WYDW/models/ReconnaissanceDeviceModel.h
+/home/zhang/Desktop/WYDW1/models/ReconnaissanceDeviceModel.h
 vector
 -
 
-/home/zhang/Desktop/WYDW/models/ReconnaissanceDeviceModel.h
+/home/zhang/Desktop/WYDW1/models/ReconnaissanceDeviceModel.h
 string
 -
 vector
 -
 
-/home/zhang/Desktop/WYDW/models/SimulationModel.h
+/home/zhang/Desktop/WYDW1/models/SimulationModel.h
 ReconnaissanceDeviceModel.h
-/home/zhang/Desktop/WYDW/models/ReconnaissanceDeviceModel.h
+/home/zhang/Desktop/WYDW1/models/ReconnaissanceDeviceModel.h
 RadiationSourceModel.h
-/home/zhang/Desktop/WYDW/models/RadiationSourceModel.h
+/home/zhang/Desktop/WYDW1/models/RadiationSourceModel.h
 LocationResultModel.h
-/home/zhang/Desktop/WYDW/models/LocationResultModel.h
+/home/zhang/Desktop/WYDW1/models/LocationResultModel.h
 vector
 -
 string
@@ -262,15 +262,15 @@ string
 map
 -
 
-/home/zhang/Desktop/WYDW/models/TargetIntelligenceModel.h
+/home/zhang/Desktop/WYDW1/models/TargetIntelligenceModel.h
 CoordinateModel.h
-/home/zhang/Desktop/WYDW/models/CoordinateModel.h
+/home/zhang/Desktop/WYDW1/models/CoordinateModel.h
 string
 -
 
-/home/zhang/Desktop/WYDW/models/src/DBConnector.cpp
+/home/zhang/Desktop/WYDW1/models/src/DBConnector.cpp
 ../DBConnector.h
-/home/zhang/Desktop/WYDW/models/DBConnector.h
+/home/zhang/Desktop/WYDW1/models/DBConnector.h
 iostream
 -
 fstream
@@ -282,9 +282,9 @@ vector
 string
 -
 
-/home/zhang/Desktop/WYDW/models/src/DataProcessorModel.cpp
+/home/zhang/Desktop/WYDW1/models/src/DataProcessorModel.cpp
 ../DataProcessorModel.h
-/home/zhang/Desktop/WYDW/models/DataProcessorModel.h
+/home/zhang/Desktop/WYDW1/models/DataProcessorModel.h
 iostream
 -
 fstream
@@ -294,19 +294,19 @@ algorithm
 cmath
 -
 
-/home/zhang/Desktop/WYDW/models/src/RadiationSourceDAO.cpp
+/home/zhang/Desktop/WYDW1/models/src/RadiationSourceDAO.cpp
 ../RadiationSourceDAO.h
-/home/zhang/Desktop/WYDW/models/RadiationSourceDAO.h
+/home/zhang/Desktop/WYDW1/models/RadiationSourceDAO.h
 ../DBConnector.h
-/home/zhang/Desktop/WYDW/models/DBConnector.h
+/home/zhang/Desktop/WYDW1/models/DBConnector.h
 iostream
 -
 mysql/mysql.h
 -
 
-/home/zhang/Desktop/WYDW/models/src/RadiationSourceModel.cpp
+/home/zhang/Desktop/WYDW1/models/src/RadiationSourceModel.cpp
 ../RadiationSourceModel.h
-/home/zhang/Desktop/WYDW/models/RadiationSourceModel.h
+/home/zhang/Desktop/WYDW1/models/RadiationSourceModel.h
 iostream
 -
 cstdio
@@ -314,11 +314,11 @@ cstdio
 utility
 -
 
-/home/zhang/Desktop/WYDW/models/src/ReconnaissanceDeviceDAO.cpp
+/home/zhang/Desktop/WYDW1/models/src/ReconnaissanceDeviceDAO.cpp
 ../ReconnaissanceDeviceDAO.h
-/home/zhang/Desktop/WYDW/models/ReconnaissanceDeviceDAO.h
+/home/zhang/Desktop/WYDW1/models/ReconnaissanceDeviceDAO.h
 ../DBConnector.h
-/home/zhang/Desktop/WYDW/models/DBConnector.h
+/home/zhang/Desktop/WYDW1/models/DBConnector.h
 stdexcept
 -
 iostream
@@ -326,17 +326,17 @@ iostream
 mysql/mysql.h
 -
 
-/home/zhang/Desktop/WYDW/models/src/ReconnaissanceDeviceModel.cpp
+/home/zhang/Desktop/WYDW1/models/src/ReconnaissanceDeviceModel.cpp
 ../ReconnaissanceDeviceModel.h
-/home/zhang/Desktop/WYDW/models/ReconnaissanceDeviceModel.h
+/home/zhang/Desktop/WYDW1/models/ReconnaissanceDeviceModel.h
 iostream
 -
 cstdio
 -
 
-/home/zhang/Desktop/WYDW/models/src/SimulationModel.cpp
+/home/zhang/Desktop/WYDW1/models/src/SimulationModel.cpp
 ../SimulationModel.h
-/home/zhang/Desktop/WYDW/models/SimulationModel.h
+/home/zhang/Desktop/WYDW1/models/SimulationModel.h
 iostream
 -
 cmath
@@ -344,7 +344,7 @@ cmath
 random
 -
 
-/home/zhang/Desktop/WYDW/views/DataSelectionView.h
+/home/zhang/Desktop/WYDW1/views/DataSelectionView.h
 gtk/gtk.h
 -
 string
@@ -352,7 +352,7 @@ string
 vector
 -
 
-/home/zhang/Desktop/WYDW/views/EvaluationView.h
+/home/zhang/Desktop/WYDW1/views/EvaluationView.h
 gtk/gtk.h
 -
 string
@@ -362,7 +362,7 @@ vector
 map
 -
 
-/home/zhang/Desktop/WYDW/views/MultiPlatformView.h
+/home/zhang/Desktop/WYDW1/views/MultiPlatformView.h
 gtk/gtk.h
 -
 vector
@@ -370,9 +370,9 @@ vector
 string
 -
 ../models/CoordinateModel.h
-/home/zhang/Desktop/WYDW/models/CoordinateModel.h
+/home/zhang/Desktop/WYDW1/models/CoordinateModel.h
 
-/home/zhang/Desktop/WYDW/views/RadiationSourceModelView.h
+/home/zhang/Desktop/WYDW1/views/RadiationSourceModelView.h
 gtk/gtk.h
 -
 string
@@ -380,9 +380,9 @@ string
 vector
 -
 ../models/RadiationSourceModel.h
-/home/zhang/Desktop/WYDW/models/RadiationSourceModel.h
+/home/zhang/Desktop/WYDW1/models/RadiationSourceModel.h
 
-/home/zhang/Desktop/WYDW/views/ReconnaissanceDeviceModelView.h
+/home/zhang/Desktop/WYDW1/views/ReconnaissanceDeviceModelView.h
 gtk/gtk.h
 -
 string
@@ -390,15 +390,15 @@ string
 vector
 -
 ../models/ReconnaissanceDeviceModel.h
-/home/zhang/Desktop/WYDW/models/ReconnaissanceDeviceModel.h
+/home/zhang/Desktop/WYDW1/models/ReconnaissanceDeviceModel.h
 
-/home/zhang/Desktop/WYDW/views/SinglePlatformView.h
+/home/zhang/Desktop/WYDW1/views/SinglePlatformView.h
 gtk/gtk.h
 -
 string
 -
 
-/home/zhang/Desktop/WYDW/views/components/MapView.h
+/home/zhang/Desktop/WYDW1/views/components/MapView.h
 gtk/gtk.h
 -
 webkit2/webkit2.h
@@ -406,9 +406,9 @@ webkit2/webkit2.h
 string
 -
 
-/home/zhang/Desktop/WYDW/views/components/src/MapView.cpp
+/home/zhang/Desktop/WYDW1/views/components/src/MapView.cpp
 ../MapView.h
-/home/zhang/Desktop/WYDW/views/components/MapView.h
+/home/zhang/Desktop/WYDW1/views/components/MapView.h
 filesystem
 -
 iostream
@@ -416,55 +416,55 @@ iostream
 sstream
 -
 
-/home/zhang/Desktop/WYDW/views/src/DataSelectionView.cpp
+/home/zhang/Desktop/WYDW1/views/src/DataSelectionView.cpp
 ../DataSelectionView.h
-/home/zhang/Desktop/WYDW/views/DataSelectionView.h
+/home/zhang/Desktop/WYDW1/views/DataSelectionView.h
 ../../controllers/ApplicationController.h
-/home/zhang/Desktop/WYDW/controllers/ApplicationController.h
+/home/zhang/Desktop/WYDW1/controllers/ApplicationController.h
 gtk/gtk.h
 -
 
-/home/zhang/Desktop/WYDW/views/src/EvaluationView.cpp
+/home/zhang/Desktop/WYDW1/views/src/EvaluationView.cpp
 ../EvaluationView.h
-/home/zhang/Desktop/WYDW/views/EvaluationView.h
+/home/zhang/Desktop/WYDW1/views/EvaluationView.h
 ../../controllers/ApplicationController.h
-/home/zhang/Desktop/WYDW/controllers/ApplicationController.h
+/home/zhang/Desktop/WYDW1/controllers/ApplicationController.h
 gtk/gtk.h
 -
 
-/home/zhang/Desktop/WYDW/views/src/MultiPlatformView.cpp
+/home/zhang/Desktop/WYDW1/views/src/MultiPlatformView.cpp
 ../MultiPlatformView.h
-/home/zhang/Desktop/WYDW/views/MultiPlatformView.h
+/home/zhang/Desktop/WYDW1/views/MultiPlatformView.h
 ../../controllers/ApplicationController.h
-/home/zhang/Desktop/WYDW/controllers/ApplicationController.h
+/home/zhang/Desktop/WYDW1/controllers/ApplicationController.h
 gtk/gtk.h
 -
 
-/home/zhang/Desktop/WYDW/views/src/RadiationSourceModelView.cpp
+/home/zhang/Desktop/WYDW1/views/src/RadiationSourceModelView.cpp
 ../RadiationSourceModelView.h
-/home/zhang/Desktop/WYDW/views/RadiationSourceModelView.h
+/home/zhang/Desktop/WYDW1/views/RadiationSourceModelView.h
 ../../controllers/ApplicationController.h
-/home/zhang/Desktop/WYDW/controllers/ApplicationController.h
+/home/zhang/Desktop/WYDW1/controllers/ApplicationController.h
 iostream
 -
 
-/home/zhang/Desktop/WYDW/views/src/ReconnaissanceDeviceModelView.cpp
+/home/zhang/Desktop/WYDW1/views/src/ReconnaissanceDeviceModelView.cpp
 ../ReconnaissanceDeviceModelView.h
-/home/zhang/Desktop/WYDW/views/ReconnaissanceDeviceModelView.h
+/home/zhang/Desktop/WYDW1/views/ReconnaissanceDeviceModelView.h
 ../../controllers/ApplicationController.h
-/home/zhang/Desktop/WYDW/controllers/ApplicationController.h
+/home/zhang/Desktop/WYDW1/controllers/ApplicationController.h
 ../../controllers/ReconnaissanceDeviceModelController.h
-/home/zhang/Desktop/WYDW/controllers/ReconnaissanceDeviceModelController.h
+/home/zhang/Desktop/WYDW1/controllers/ReconnaissanceDeviceModelController.h
 iostream
 -
 sstream
 -
 
-/home/zhang/Desktop/WYDW/views/src/SinglePlatformView.cpp
+/home/zhang/Desktop/WYDW1/views/src/SinglePlatformView.cpp
 ../SinglePlatformView.h
-/home/zhang/Desktop/WYDW/views/SinglePlatformView.h
+/home/zhang/Desktop/WYDW1/views/SinglePlatformView.h
 ../components/MapView.h
-/home/zhang/Desktop/WYDW/views/components/MapView.h
+/home/zhang/Desktop/WYDW1/views/components/MapView.h
 gtk/gtk.h
 -
 string

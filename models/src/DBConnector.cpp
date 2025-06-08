@@ -1,5 +1,4 @@
 #include "../DBConnector.h"
-#include "../ReconnaissanceDeviceModel.h"
 #include <iostream>
 #include <fstream>
 #include <mysql/mysql.h>
@@ -99,61 +98,6 @@ bool DBConnector::createTables() {
     */
 }
 
-bool DBConnector::saveReconnaissanceDevice(const ReconnaissanceDevice& device, int& deviceId) {
-    // 简化实现
-    deviceId = 1;
-    return true;
-}
-
-std::vector<ReconnaissanceDevice> DBConnector::getAllReconnaissanceDevices() {
-    std::vector<ReconnaissanceDevice> devices;
-    if (!m_connected || !m_conn) return devices;
-    const char* sql = "SELECT device_id, device_name, is_stationary, baseline_length, noise_psd, sample_rate, freq_range_min, freq_range_max, angle_azimuth_min, angle_azimuth_max, angle_elevation_min, angle_elevation_max, movement_speed, movement_azimuth, movement_elevation, longitude, latitude, altitude FROM reconnaissance_device_models";
-    if (mysql_query(m_conn, sql) != 0) {
-        std::cerr << "MySQL query failed: " << mysql_error(m_conn) << std::endl;
-        return devices;
-    }
-    MYSQL_RES* res = mysql_store_result(m_conn);
-    if (!res) return devices;
-    MYSQL_ROW row;
-    while ((row = mysql_fetch_row(res)) != nullptr) {
-        ReconnaissanceDevice device;
-        int idx = 0;
-        device.setDeviceId(row[idx] ? atoi(row[idx]) : 0); idx++;
-        device.setDeviceName(row[idx] ? row[idx] : ""); idx++;
-        device.setIsStationary(row[idx] ? atoi(row[idx]) != 0 : true); idx++;
-        device.setBaselineLength(row[idx] ? static_cast<float>(atof(row[idx])) : 0); idx++;
-        device.setNoisePsd(row[idx] ? static_cast<float>(atof(row[idx])) : 0); idx++;
-        device.setSampleRate(row[idx] ? static_cast<float>(atof(row[idx])) : 0); idx++;
-        device.setFreqRangeMin(row[idx] ? static_cast<float>(atof(row[idx])) : 0); idx++;
-        device.setFreqRangeMax(row[idx] ? static_cast<float>(atof(row[idx])) : 0); idx++;
-        device.setAngleAzimuthMin(row[idx] ? static_cast<float>(atof(row[idx])) : 0); idx++;
-        device.setAngleAzimuthMax(row[idx] ? static_cast<float>(atof(row[idx])) : 0); idx++;
-        device.setAngleElevationMin(row[idx] ? static_cast<float>(atof(row[idx])) : 0); idx++;
-        device.setAngleElevationMax(row[idx] ? static_cast<float>(atof(row[idx])) : 0); idx++;
-        device.setMovementSpeed(row[idx] ? static_cast<float>(atof(row[idx])) : 0); idx++;
-        device.setMovementAzimuth(row[idx] ? static_cast<float>(atof(row[idx])) : 0); idx++;
-        device.setMovementElevation(row[idx] ? static_cast<float>(atof(row[idx])) : 0); idx++;
-        device.setLongitude(row[idx] ? atof(row[idx]) : 0); idx++;
-        device.setLatitude(row[idx] ? atof(row[idx]) : 0); idx++;
-        device.setAltitude(row[idx] ? atof(row[idx]) : 0); idx++;
-        devices.push_back(device);
-    }
-    mysql_free_result(res);
-    return devices;
-}
-
-bool DBConnector::saveRadiationSource(const RadiationSource& source, int& sourceId) {
-    // 简化实现
-    sourceId = 1;
-    return true;
-}
-
-std::vector<RadiationSource> DBConnector::getAllRadiationSources() {
-    // 简化实现
-    return std::vector<RadiationSource>();
-}
-
 bool DBConnector::saveLocationResult(const LocationResult& result, int deviceId, int sourceId) {
     // 简化实现
     return true;
@@ -211,62 +155,4 @@ bool DBConnector::rollbackTransaction() {
 
 void DBConnector::handleError() {
     if (m_conn) std::cerr << "MySQL Error: " << mysql_error(m_conn) << std::endl;
-}
-
-// 新增
-bool DBConnector::addReconnaissanceDevice(const ReconnaissanceDevice& device) {
-    if (!m_connected || !m_conn) return false;
-    
-    // 转义设备名称，避免SQL注入并处理特殊字符
-    char escaped_name[device.getDeviceName().length()*2+1];
-    mysql_real_escape_string(m_conn, escaped_name, device.getDeviceName().c_str(), device.getDeviceName().length());
-    
-    char sql[512];
-    snprintf(sql, sizeof(sql),
-        "INSERT INTO reconnaissance_device_models (device_name, is_stationary, baseline_length, freq_range_min, freq_range_max, angle_azimuth_min, angle_azimuth_max, angle_elevation_min, angle_elevation_max) "
-        "VALUES ('%s', %d, %f, %f, %f, %f, %f, %f, %f)",
-        escaped_name,
-        device.getIsStationary() ? 1 : 0,
-        device.getBaselineLength(),
-        device.getFreqRangeMin(),
-        device.getFreqRangeMax(),
-        device.getAngleAzimuthMin(),
-        device.getAngleAzimuthMax(),
-        device.getAngleElevationMin(),
-        device.getAngleElevationMax()
-    );
-    return mysql_query(m_conn, sql) == 0;
-}
-
-// 编辑
-bool DBConnector::updateReconnaissanceDevice(const ReconnaissanceDevice& device) {
-    if (!m_connected || !m_conn) return false;
-    
-    // 转义设备名称，避免SQL注入并处理特殊字符
-    char escaped_name[device.getDeviceName().length()*2+1];
-    mysql_real_escape_string(m_conn, escaped_name, device.getDeviceName().c_str(), device.getDeviceName().length());
-    
-    char sql[512];
-    snprintf(sql, sizeof(sql),
-        "UPDATE reconnaissance_device_models SET device_name='%s', is_stationary=%d, baseline_length=%f, freq_range_min=%f, freq_range_max=%f, angle_azimuth_min=%f, angle_azimuth_max=%f, angle_elevation_min=%f, angle_elevation_max=%f WHERE device_id=%d",
-        escaped_name,
-        device.getIsStationary() ? 1 : 0,
-        device.getBaselineLength(),
-        device.getFreqRangeMin(),
-        device.getFreqRangeMax(),
-        device.getAngleAzimuthMin(),
-        device.getAngleAzimuthMax(),
-        device.getAngleElevationMin(),
-        device.getAngleElevationMax(),
-        device.getDeviceId()
-    );
-    return mysql_query(m_conn, sql) == 0;
-}
-
-// 删除
-bool DBConnector::deleteReconnaissanceDevice(int deviceId) {
-    if (!m_connected || !m_conn) return false;
-    char sql[128];
-    snprintf(sql, sizeof(sql), "DELETE FROM reconnaissance_device_models WHERE device_id=%d", deviceId);
-    return mysql_query(m_conn, sql) == 0;
 } 
