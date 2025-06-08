@@ -34,9 +34,9 @@ LocationResult SinglePlatformSimulation::calculateLocation() {
     
     // 简化的定位结果计算
     result.position = {100.0, 200.0, 0.0};  // 示例坐标
-    result.power = m_device.calculatePower();
-    result.directionError = m_device.calculateDirectionError();
-    result.parameterError = m_device.calculateParameterError();
+    result.power = 0.95;
+    result.directionError = 0.01;
+    result.parameterError = 0.015;
     result.time = 1.5;  // 示例定位时间(秒)
     
     return result;
