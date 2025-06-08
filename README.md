@@ -17,8 +17,8 @@
 
 - Ubuntu 18.04 LTS
 - Visual C++ 或 g++ 8.4.0
-- GTK 3.22及以上
-- CMake 3.10及以上
+- GTK 3.22
+- CMake 3.10
 - mysql 5.7
 
 ## 数据库配置
@@ -61,10 +61,10 @@ sudo apt install libmysqlclient-dev
 1. 克隆代码仓库：
 
 ```bash
-git clone git@github.com:YZyh2519/passivelocation.git
+git clone git@github.com:YZyh2519/WYDW.git
 ```
 
-2. 创建构建目录并编译：
+2. 创建构建目录并编译（执行以下命令前将build文件夹下的内容全部删除）：
 
 ```bash
 mkdir build
@@ -132,14 +132,14 @@ git merge origin/main
 ### 单平台仿真
 
 - 从下拉列表中选择雷达设备模型和辐射源模型
-- 选择定位算法（快速定位、基线定位）
+- 选择技术体制（干涉仪、时差）
 - 点击"开始"按钮进行仿真计算
 - 系统将在地图上展示仿真结果，并在右侧显示威力、测向误差、参数测量误差等数据
 
 ### 多平台仿真
 
 - 从下拉列表中选择多个雷达设备模型和辐射源模型
-- 选择定位算法（时差定位、频差定位、测向定位）
+- 选择技术体制（频差、时差）
 - 点击"开始"按钮进行多平台协同仿真计算
 - 系统将在地图上展示仿真结果
 

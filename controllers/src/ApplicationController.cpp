@@ -114,11 +114,11 @@ bool ApplicationController::init(int argc, char** argv) {
     GtkWidget* radiationSourcePage = m_radiationSourceView->createView();
     gtk_notebook_append_page(GTK_NOTEBOOK(m_notebook), radiationSourcePage, radiationSourceTab);
     
-    GtkWidget* singlePlatformTab = gtk_label_new("单平台");
+    GtkWidget* singlePlatformTab = gtk_label_new("单平台仿真");
     GtkWidget* singlePlatformPage = m_singlePlatformView->createView();
     gtk_notebook_append_page(GTK_NOTEBOOK(m_notebook), singlePlatformPage, singlePlatformTab);
     
-    GtkWidget* multiPlatformTab = gtk_label_new("多平台");
+    GtkWidget* multiPlatformTab = gtk_label_new("多平台仿真");
     GtkWidget* multiPlatformPage = m_multiPlatformView->createView();
     gtk_notebook_append_page(GTK_NOTEBOOK(m_notebook), multiPlatformPage, multiPlatformTab);
     
@@ -126,7 +126,7 @@ bool ApplicationController::init(int argc, char** argv) {
     GtkWidget* dataSelectionPage = m_dataSelectionView->createView();
     gtk_notebook_append_page(GTK_NOTEBOOK(m_notebook), dataSelectionPage, dataSelectionTab);
     
-    GtkWidget* evaluationTab = gtk_label_new("评估");
+    GtkWidget* evaluationTab = gtk_label_new("仿真评估");
     GtkWidget* evaluationPage = m_evaluationView->createView();
     gtk_notebook_append_page(GTK_NOTEBOOK(m_notebook), evaluationPage, evaluationTab);
     
