@@ -8,8 +8,6 @@
 #include "CoordinateModel.h" 
 #include "LocationResultModel.h"
 #include "TargetIntelligenceModel.h"
-#include "ReconnaissanceDeviceModel.h"
-#include "RadiationSourceModel.h"
 
 // 数据库连接器
 class DBConnector {
@@ -28,17 +26,8 @@ public:
     // 创建数据库表
     bool createTables();
     
-    // 保存雷达设备模型
-    bool saveReconnaissanceDevice(const ReconnaissanceDevice& device, int& deviceId);
-    
-    // 获取所有雷达设备模型
-    std::vector<ReconnaissanceDevice> getAllReconnaissanceDevices();
-    
-    // 保存辐射源模型
-    bool saveRadiationSource(const RadiationSource& source, int& sourceId);
-    
-    // 获取所有辐射源模型
-    std::vector<RadiationSource> getAllRadiationSources();
+    // 获取MySQL连接句柄
+    MYSQL* getConnection() { return m_conn; }
     
     // 保存定位结果
     bool saveLocationResult(const LocationResult& result, int deviceId, int sourceId);
@@ -68,15 +57,6 @@ public:
     bool beginTransaction();
     bool commitTransaction();
     bool rollbackTransaction();
-
-    // 新增侦察设备
-    bool addReconnaissanceDevice(const ReconnaissanceDevice& device);
-    
-    // 编辑侦察设备
-    bool updateReconnaissanceDevice(const ReconnaissanceDevice& device);
-    
-    // 删除侦察设备
-    bool deleteReconnaissanceDevice(int deviceId);
 
 private:
     DBConnector();

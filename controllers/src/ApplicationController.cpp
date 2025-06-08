@@ -82,6 +82,13 @@ bool ApplicationController::init(int argc, char** argv) {
     g_print("Starting application initialization...\n");
     gtk_init(&argc, &argv);
     
+    // 初始化数据库连接
+    g_print("Initializing database connection...\n");
+    if (!DBConnector::getInstance().init("localhost", "root", "123456", "passive_location", 3306)) {
+        g_print("Failed to connect to database\n");
+        return false;
+    }
+    
     // 创建主窗口
     m_mainWindow = createMainWindow();
     if (!m_mainWindow) {
@@ -104,6 +111,14 @@ bool ApplicationController::init(int argc, char** argv) {
     m_multiPlatformView = new MultiPlatformView();
     m_dataSelectionView = new DataSelectionView();
     m_evaluationView = new EvaluationView();
+    
+    // 初始化控制器
+    g_print("Initializing controllers...\n");
+    m_reconnaissanceDeviceModelController = &ReconnaissanceDeviceModelController::getInstance();
+    m_reconnaissanceDeviceModelController->init(m_reconDeviceView);
+    
+    m_radiationSourceModelController = &RadiationSourceModelController::getInstance();
+    m_radiationSourceModelController->init(m_radiationSourceView);
     
     // 创建各个页面
     GtkWidget* reconDeviceTab = gtk_label_new("侦察设备模型");
@@ -207,39 +222,13 @@ void ApplicationController::updateReconnaissanceDeviceList(GtkWidget* list) {
         return;
     }
     
-    // 获取列表存储
-    GtkListStore* store = GTK_LIST_STORE(gtk_tree_view_get_model(GTK_TREE_VIEW(list)));
-    if (!store) {
-        g_print("Error: Failed to get list store from tree view\n");
-        return;
-    }
+    g_print("ApplicationController: 正在更新侦察设备列表...\n");
     
-    // 清空列表
-    gtk_list_store_clear(store);
+    // 使用控制器加载数据
+    ReconnaissanceDeviceModelController& controller = ReconnaissanceDeviceModelController::getInstance();
+    controller.loadDeviceData();
     
-    // 添加示例数据
-    GtkTreeIter iter;
-    
-    // 如果没有设备，添加提示信息
-    gtk_list_store_append(store, &iter);
-    gtk_list_store_set(store, &iter, 
-                      0, "1", 
-                      1, "侦察设备1", 
-                      2, "型号A", 
-                      3, "1000-2000", 
-                      4, "编辑",
-                      5, "删除",
-                      -1);
-                      
-    gtk_list_store_append(store, &iter);
-    gtk_list_store_set(store, &iter, 
-                      0, "2", 
-                      1, "侦察设备2", 
-                      2, "型号B", 
-                      3, "2000-3000", 
-                      4, "编辑",
-                      5, "删除",
-                      -1);
+    // 控制器会自动更新视图，所以这里不需要再做其他操作
 }
 
 // 更新辐射源列表
