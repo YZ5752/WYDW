@@ -1,9 +1,0 @@
-/home/zhang/Desktop/WYDW1/build/CMakeFiles/install.dir
-/home/zhang/Desktop/WYDW1/build/CMakeFiles/install/strip.dir
-/home/zhang/Desktop/WYDW1/build/CMakeFiles/run.dir
-/home/zhang/Desktop/WYDW1/build/CMakeFiles/passivelocation.dir
-/home/zhang/Desktop/WYDW1/build/CMakeFiles/install/local.dir
-/home/zhang/Desktop/WYDW1/build/CMakeFiles/test.dir
-/home/zhang/Desktop/WYDW1/build/CMakeFiles/list_install_components.dir
-/home/zhang/Desktop/WYDW1/build/CMakeFiles/edit_cache.dir
-/home/zhang/Desktop/WYDW1/build/CMakeFiles/rebuild_cache.dir
