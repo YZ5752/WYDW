@@ -34,7 +34,8 @@ include_directories(
     ${GTK3_INCLUDE_DIRS}
     ${WEBKIT2_INCLUDE_DIRS}
     ${ODBC_INCLUDE_DIRS}
-    ${CMAKE_CURRENT_SOURCE_DIR}/include
+    ${CMAKE_CURRENT_SOURCE_DIR}  # 根目录，可以访问所有MVC目录
+    ${CMAKE_CURRENT_SOURCE_DIR}/models
     ${MYSQL_INCLUDE_DIR}  # 添加 MySQL 头文件路径
 )
 
@@ -44,14 +45,17 @@ link_directories(
     ${WEBKIT2_LIBRARY_DIRS}
 )
 
-# 添加源文件
-file(GLOB SOURCES "src/*.cpp")
-
-# 确保包含ui_static_methods.cpp
-list(APPEND SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/src/ui_static_methods.cpp")
+# 添加MVC架构的源文件
+file(GLOB MODEL_SOURCES "models/src/*.cpp")
+file(GLOB VIEW_SOURCES "views/src/*.cpp" "views/components/src/*.cpp")
+file(GLOB CONTROLLER_SOURCES "controllers/src/*.cpp")
 
 # 创建可执行文件
-add_executable(${PROJECT_NAME} ${SOURCES})
+add_executable(${PROJECT_NAME} 
+    ${MODEL_SOURCES}
+    ${VIEW_SOURCES}
+    ${CONTROLLER_SOURCES}
+)
 
 # 链接库
 target_link_libraries(${PROJECT_NAME} 

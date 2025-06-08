@@ -158,3 +158,105 @@ git merge origin/main
 - 并显示定位精度随时间变化的图表
 - 点击"导出结果"可将评估结果保存为文本文件
 
+# 项目MVC架构说明
+
+本项目采用MVC (Model-View-Controller) 架构进行组织，将代码按照职责分成三个主要部分。
+
+## 架构概述
+
+### 模型层 (Model)
+- 位于 `models/` 目录
+- 负责数据存储、检索和业务逻辑
+- 包含数据库实体、数据访问对象 (DAO)
+- 完全封装与数据库的交互
+
+### 视图层 (View)
+- 位于 `views/` 目录
+- 负责UI展示和用户交互
+- 包含各个页面的视图实现
+- 可复用UI组件位于 `views/components/` 子目录
+
+### 控制器层 (Controller)
+- 位于 `controllers/` 目录
+- 接收用户输入，调用模型处理数据，处理业务逻辑
+- 更新视图显示
+- 每个页面对应一个控制器
+
+## 详细结构
+
+### 模型层
+```
+models/
+├── src/                            # 模型实现文件
+│   ├── DBConnector.cpp             # 数据库连接器实现
+│   ├── DataProcessorModel.cpp      # 数据处理器实现
+│   ├── RadiationSourceModel.cpp    # 辐射源模型实现
+│   ├── ReconnaissanceDeviceModel.cpp # 侦察设备模型实现
+│   └── SimulationModel.cpp         # 模拟模型实现
+├── CoordinateModel.h               # 坐标模型
+├── DataProcessorModel.h            # 数据处理器
+├── DBConnector.h                   # 数据库连接器
+├── LocationResultModel.h           # 定位结果模型
+├── RadiationSourceDAO.h            # 辐射源数据访问对象
+├── RadiationSourceModel.h          # 辐射源模型
+├── ReconnaissanceDeviceDAO.h       # 侦察设备数据访问对象
+├── ReconnaissanceDeviceModel.h     # 侦察设备模型
+├── SimulationManager.h             # 模拟管理器
+├── SimulationModel.h               # 模拟模型
+└── TargetIntelligenceModel.h       # 目标情报模型
+```
+
+### 视图层
+```
+views/
+├── components/                     # 可复用UI组件
+│   ├── src/
+│   │   └── MapView.cpp             # 地图视图组件实现
+│   └── MapView.h                   # 地图视图组件
+├── src/                            # 视图实现文件
+│   ├── DataSelectionView.cpp       # 数据选择视图实现
+│   ├── EvaluationView.cpp          # 评估视图实现
+│   ├── MultiPlatformView.cpp       # 多平台视图实现
+│   ├── RadiationSourceModelView.cpp # 辐射源模型视图实现
+│   └── SinglePlatformView.cpp      # 单平台视图实现
+├── DataSelectionView.h             # 数据选择视图
+├── EvaluationView.h                # 评估视图
+├── MultiPlatformView.h             # 多平台视图
+├── RadiationSourceModelView.h      # 辐射源模型视图
+├── ReconnaissanceDeviceModelView.h # 侦察设备模型视图
+└── SinglePlatformView.h            # 单平台视图
+```
+
+### 控制器层
+```
+controllers/
+├── src/                            # 控制器实现文件
+│   ├── ApplicationController.cpp   # 应用程序控制器实现
+│   ├── DataSelectionController.cpp # 数据选择控制器实现
+│   ├── EvaluationController.cpp    # 评估控制器实现
+│   ├── MultiPlatformController.cpp # 多平台控制器实现
+│   ├── RadiationSourceModelController.cpp # 辐射源模型控制器实现
+│   ├── ReconnaissanceDeviceModelController.cpp # 侦察设备模型控制器实现
+│   └── SinglePlatformController.cpp # 单平台控制器实现
+├── ApplicationController.h         # 应用程序控制器（主控制器）
+├── DataSelectionController.h       # 数据选择控制器
+├── EvaluationController.h          # 评估控制器
+├── MultiPlatformController.h       # 多平台控制器
+├── RadiationSourceModelController.h # 辐射源模型控制器
+├── ReconnaissanceDeviceModelController.h # 侦察设备模型控制器
+└── SinglePlatformController.h      # 单平台控制器
+```
+
+## 文件命名规范
+
+- 头文件（.h）：采用大驼峰命名法，如 `RadiationSourceModel.h`
+- 实现文件（.cpp）：与对应的头文件同名，如 `RadiationSourceModel.cpp`
+- 所有文件按照功能分类放在对应的目录中
+
+## 通信流程
+
+1. 用户在视图层进行操作
+2. 视图层将操作传递给控制器层
+3. 控制器层调用模型层处理数据
+4. 模型层返回处理结果给控制器层
+5. 控制器层更新视图层显示
