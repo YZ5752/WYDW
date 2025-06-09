@@ -1,7 +1,6 @@
 #pragma once
 
 #include "../views/SinglePlatformView.h"
-#include "../models/SimulationModel.h"
 #include "../models/RadiationSourceModel.h"
 #include "../models/ReconnaissanceDeviceModel.h"
 #include <string>
@@ -38,5 +37,4 @@ private:
     SinglePlatformController& operator=(const SinglePlatformController&) = delete;
     
     SinglePlatformView* m_view;
-    SinglePlatformSimulation m_simulation;
 }; 

@@ -81,10 +81,7 @@ ApplicationController::~ApplicationController() {
 bool ApplicationController::init(int argc, char** argv) {
     g_print("Starting application initialization...\n");
     gtk_init(&argc, &argv);
-    
-    // 初始化数据库连接
-    g_print("Initializing database connection...\n");
-    if (!DBConnector::getInstance().init("localhost", "root", "123456", "passive_location", 3306)) {
+    if (!DBConnector::initDefaultConnection()) {
         g_print("Failed to connect to database\n");
         return false;
     }
@@ -214,61 +211,3 @@ void ApplicationController::switchToRadiationSourceModelPage() {
 std::string ApplicationController::getCurrentPage() const {
     return m_currentPage;
 }
-
-// 更新雷达设备列表
-void ApplicationController::updateReconnaissanceDeviceList(GtkWidget* list) {
-    if (!list) {
-        g_print("Error: Null list widget passed to updateReconnaissanceDeviceList\n");
-        return;
-    }
-    
-    g_print("ApplicationController: 正在更新侦察设备列表...\n");
-    
-    // 使用控制器加载数据
-    ReconnaissanceDeviceModelController& controller = ReconnaissanceDeviceModelController::getInstance();
-    controller.loadDeviceData();
-    
-    // 控制器会自动更新视图，所以这里不需要再做其他操作
-}
-
-// 更新辐射源列表
-void ApplicationController::updateRadiationSourceList(GtkWidget* list) {
-    if (!list) {
-        g_print("Error: Null list widget passed to updateRadiationSourceList\n");
-        return;
-    }
-    
-    // 获取列表存储
-    GtkListStore* store = GTK_LIST_STORE(gtk_tree_view_get_model(GTK_TREE_VIEW(list)));
-    if (!store) {
-        g_print("Error: Failed to get list store from tree view\n");
-        return;
-    }
-    
-    // 清空列表
-    gtk_list_store_clear(store);
-    
-    // 添加示例数据
-    GtkTreeIter iter;
-    
-    // 如果没有辐射源，添加提示信息
-    gtk_list_store_append(store, &iter);
-    gtk_list_store_set(store, &iter, 
-                      0, "1", 
-                      1, "辐射源1", 
-                      2, "型号X", 
-                      3, "1500-2500", 
-                      4, "编辑",
-                      5, "删除",
-                      -1);
-                      
-    gtk_list_store_append(store, &iter);
-    gtk_list_store_set(store, &iter, 
-                      0, "2", 
-                      1, "辐射源2", 
-                      2, "型号Y", 
-                      3, "2500-3500", 
-                      4, "编辑",
-                      5, "删除",
-                      -1);
-} 

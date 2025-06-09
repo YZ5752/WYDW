@@ -4,7 +4,7 @@
 #include <gtk/gtk.h>
 
 // 实现MultiPlatformView类
-MultiPlatformView::MultiPlatformView() : m_view(nullptr), m_algoCombo(nullptr), m_platformList(nullptr), m_resultLabel(nullptr), m_errorLabel(nullptr), m_chartArea(nullptr) {
+MultiPlatformView::MultiPlatformView() : m_view(nullptr), m_algoCombo(nullptr),  m_resultLabel(nullptr), m_errorLabel(nullptr){
 }
 
 MultiPlatformView::~MultiPlatformView() {
@@ -157,53 +157,6 @@ GtkWidget* MultiPlatformView::createView() {
     gtk_grid_attach(GTK_GRID(table), m_errorLabel, 1, 2, 1, 1);
     
     return m_view;
-}
-
-// 添加平台到列表
-void MultiPlatformView::addPlatformToList(const std::string& deviceName, const Coordinate& position) {
-    // 实现添加平台到列表的逻辑
-}
-
-// 删除平台从列表
-void MultiPlatformView::removePlatformFromList(int index) {
-    // 实现删除平台从列表的逻辑
-}
-
-// 更新定位结果显示
-void MultiPlatformView::updateLocationResult(const Coordinate& position, double error) {
-    // 实现更新定位结果显示的逻辑
-    if (m_resultLabel && m_errorLabel) {
-        char buf[128];
-        snprintf(buf, sizeof(buf), "坐标: (%.2f, %.2f, %.2f)", position.x, position.y, position.z);
-        gtk_label_set_text(GTK_LABEL(m_resultLabel), buf);
-        
-        snprintf(buf, sizeof(buf), "误差: %.2f 米", error);
-        gtk_label_set_text(GTK_LABEL(m_errorLabel), buf);
-    }
-}
-
-// 显示协同定位精度图表
-void MultiPlatformView::showAccuracyChart(const std::vector<double>& errors) {
-    // 实现显示协同定位精度图表的逻辑
-}
-
-// 获取选择的算法
-std::string MultiPlatformView::getSelectedAlgorithm() const {
-    if (m_algoCombo) {
-        gchar* text = gtk_combo_box_text_get_active_text(GTK_COMBO_BOX_TEXT(m_algoCombo));
-        if (text) {
-            std::string result(text);
-            g_free(text);
-            return result;
-        }
-    }
-    return "";
-}
-
-// 获取平台列表
-std::vector<std::pair<std::string, Coordinate>> MultiPlatformView::getPlatformList() const {
-    // 实现获取平台列表的逻辑
-    return std::vector<std::pair<std::string, Coordinate>>();
 }
 
 // 获取视图控件

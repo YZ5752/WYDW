@@ -92,9 +92,7 @@ GtkWidget* RadiationSourceModelView::createView() {
         GtkWidget* addButton = gtk_button_new_with_label("新增");
         gtk_container_add(GTK_CONTAINER(buttonBox), addButton);
         
-        // 更新列表数据
-        g_print("  Updating radiation source list...\n");
-        ApplicationController::updateRadiationSourceList(m_sourceList);
+    
         
         g_print("Radiation source model UI created successfully\n");
         return m_view;

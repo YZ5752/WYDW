@@ -52,12 +52,6 @@ public:
     
     // 获取当前页面
     std::string getCurrentPage() const;
-    
-    // 更新雷达设备列表
-    static void updateReconnaissanceDeviceList(GtkWidget* list);
-    
-    // 更新辐射源列表
-    static void updateRadiationSourceList(GtkWidget* list);
 
 private:
     ApplicationController();
