@@ -2,6 +2,8 @@
 
 #include <gtk/gtk.h>
 #include <string>
+#include <vector>
+#include "../models/ReconnaissanceDeviceModel.h"
 
 // 声明全局回调函数
 extern "C" {
@@ -32,6 +34,9 @@ public:
     // 更新误差表格
     void updateErrorTable(const std::string& techSystem);
     
+    // 更新侦察设备下拉列表
+    void updateDeviceList(const std::vector<ReconnaissanceDevice>& devices);
+    
     // 获取技术体制选择
     std::string getSelectedTechSystem() const;
     
@@ -59,4 +64,7 @@ private:
     GtkWidget* m_dirDataValue;
     GtkWidget* m_locDataValue;
     GtkWidget* m_errorTable;
+    
+    // 存储侦察设备数据
+    std::vector<ReconnaissanceDevice> m_devices;
 }; 

@@ -1,5 +1,6 @@
 #include "../SinglePlatformView.h"
 #include "../components/MapView.h"
+#include "../../controllers/SinglePlatformController.h"
 #include <gtk/gtk.h>
 #include <string>
 
@@ -66,9 +67,6 @@ GtkWidget* SinglePlatformView::createView() {
     gtk_container_set_border_width(GTK_CONTAINER(radarBox), 10);
     
     GtkWidget* radarCombo = gtk_combo_box_text_new();
-    gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(radarCombo), "侦察设备1");
-    gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(radarCombo), "侦察设备2");
-    gtk_combo_box_set_active(GTK_COMBO_BOX(radarCombo), 0);
     gtk_box_pack_start(GTK_BOX(radarBox), radarCombo, TRUE, TRUE, 5);
     
     // 保存雷达设备下拉框引用
@@ -266,7 +264,30 @@ std::string SinglePlatformView::getSelectedDevice() const {
     gchar* text = gtk_combo_box_text_get_active_text(GTK_COMBO_BOX_TEXT(m_radarCombo));
     std::string result(text ? text : "");
     g_free(text);
-    return result;
+    
+    // 如果设备列表为空，返回空字符串
+    if (m_devices.empty()) {
+        return "";
+    }
+    
+    // 如果结果为空或"无侦察设备"，返回空字符串
+    if (result.empty() || result == "无侦察设备") {
+        return "";
+    }
+    
+    // 确保选中的设备名称存在于设备列表中
+    for (const auto& device : m_devices) {
+        if (device.getDeviceName() == result) {
+            return result;
+        }
+    }
+    
+    // 如果没有匹配的设备，返回第一个设备的名称
+    if (!m_devices.empty()) {
+        return m_devices[0].getDeviceName();
+    }
+    
+    return "";
 }
 
 std::string SinglePlatformView::getSelectedSource() const {
@@ -332,17 +353,38 @@ void SinglePlatformView::onSinglePlatformSimulation(GtkWidget* widget, gpointer 
     SinglePlatformView* view = static_cast<SinglePlatformView*>(data);
     if (!view) return;
     
-    // 获取仿真参数
-    int simulationTime = view->getSimulationTime();
-    std::string techSystem = view->getSelectedTechSystem();
-    std::string device = view->getSelectedDevice();
-    std::string source = view->getSelectedSource();
+    // 调用控制器启动仿真
+    SinglePlatformController::getInstance().startSimulation();
+}
+
+// 更新侦察设备下拉列表
+void SinglePlatformView::updateDeviceList(const std::vector<ReconnaissanceDevice>& devices) {
+    if (!m_radarCombo) {
+        return;
+    }
     
-    // 输出仿真参数
-    g_print("开始单平台仿真...\n");
-    g_print("技术体制: %s\n", techSystem.c_str());
-    g_print("侦察设备: %s\n", device.c_str());
-    g_print("辐射源: %s\n", source.c_str());
-    g_print("仿真时间: %d秒\n", simulationTime);
+    // 保存设备数据
+    m_devices = devices;
     
+    // 清空下拉框
+    GtkComboBox* combo = GTK_COMBO_BOX(m_radarCombo);
+    GtkComboBoxText* comboText = GTK_COMBO_BOX_TEXT(combo);
+    
+    // 移除所有现有项
+    gtk_combo_box_text_remove_all(comboText);
+    
+    // 如果没有设备，添加提示信息
+    if (devices.empty()) {
+        gtk_combo_box_text_append_text(comboText, "无侦察设备");
+        gtk_combo_box_set_active(combo, 0);
+        return;
+    }
+    
+    // 添加设备列表
+    for (const auto& device : devices) {
+        gtk_combo_box_text_append_text(comboText, device.getDeviceName().c_str());
+    }
+    
+    // 默认选择第一项
+    gtk_combo_box_set_active(combo, 0);
 }
