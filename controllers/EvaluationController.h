@@ -1,8 +1,6 @@
 #pragma once
 
 #include "../views/EvaluationView.h"
-#include "../models/SimulationModel.h"
-#include "../models/DataProcessorModel.h"
 #include <string>
 #include <vector>
 #include <map>

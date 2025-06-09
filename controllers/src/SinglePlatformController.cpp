@@ -64,11 +64,11 @@ void SinglePlatformController::startSimulation() {
     g_print("使用侦察设备 ID: %d, 名称: %s\n", device.getDeviceId(), device.getDeviceName().c_str());
     
     // 设置仿真参数
-    m_simulation.setRadarDevice(device);
+   // m_simulation.setRadarDevice(device);
     // m_simulation.setRadiationSource(source);
     
     // 执行仿真
-    LocationResult result = m_simulation.runSimulation();
+   //LocationResult result = m_simulation.runSimulation();
     
     // 更新视图显示结果
     // m_view->updateDirectionData(...);

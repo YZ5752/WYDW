@@ -81,10 +81,7 @@ ApplicationController::~ApplicationController() {
 bool ApplicationController::init(int argc, char** argv) {
     g_print("Starting application initialization...\n");
     gtk_init(&argc, &argv);
-    
-    // 初始化数据库连接
-    g_print("Initializing database connection...\n");
-    if (!DBConnector::getInstance().init("localhost", "root", "123456", "passive_location", 3306)) {
+    if (!DBConnector::initDefaultConnection()) {
         g_print("Failed to connect to database\n");
         return false;
     }
@@ -214,35 +211,3 @@ void ApplicationController::switchToRadiationSourceModelPage() {
 std::string ApplicationController::getCurrentPage() const {
     return m_currentPage;
 }
-
-// 更新雷达设备列表
-void ApplicationController::updateReconnaissanceDeviceList(GtkWidget* list) {
-    if (!list) {
-        g_print("Error: Null list widget passed to updateReconnaissanceDeviceList\n");
-        return;
-    }
-    
-    g_print("ApplicationController: 正在更新侦察设备列表...\n");
-    
-    // 使用控制器加载数据
-    ReconnaissanceDeviceModelController& controller = ReconnaissanceDeviceModelController::getInstance();
-    controller.loadDeviceData();
-    
-    // 控制器会自动更新视图，所以这里不需要再做其他操作
-}
-
-// 更新辐射源列表
-void ApplicationController::updateRadiationSourceList(GtkWidget* list) {
-    if (!list) {
-        g_print("Error: Null list widget passed to updateRadiationSourceList\n");
-        return;
-    }
-    
-    g_print("ApplicationController: 正在更新辐射源列表...\n");
-    
-    // 使用控制器加载数据
-    RadiationSourceModelController& controller = RadiationSourceModelController::getInstance();
-    controller.loadSourceData();
-    
-    // 控制器会自动更新视图，所以这里不需要再做其他操作
-} 

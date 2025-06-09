@@ -121,7 +121,7 @@ GtkWidget* RadiationSourceModelView::createView() {
         updateSourceList(initialSources);
         
         // 调用控制器更新列表
-        ApplicationController::updateRadiationSourceList(m_sourceList);
+       // ApplicationController::updateRadiationSourceList(m_sourceList);
         
         g_print("Radiation source model UI created successfully\n");
         return m_view;

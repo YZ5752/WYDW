@@ -1,4 +1,3 @@
-#include "../../models/SimulationModel.h"
 #include "../EvaluationController.h"
 #include <fstream>
 #include <iostream>
@@ -29,18 +28,6 @@ void EvaluationController::startEvaluation() {
     // 获取视图中选择的参数
     std::string mode = m_view->getSelectedMode();
     std::vector<std::string> metrics = m_view->getSelectedMetrics();
-    
-    // 根据模式设置仿真模式
-    SimulationMode simMode;
-    if (mode == "任务前评估") {
-        simMode = SimulationMode::PRE_MISSION;
-    } else if (mode == "实时评估") {
-        simMode = SimulationMode::REAL_TIME;
-    } else {
-        simMode = SimulationMode::POST_MISSION;
-    }
-    
-    SimulationManager::getInstance().setSimulationMode(simMode);
     
     // TODO: 执行评估
     // ...
