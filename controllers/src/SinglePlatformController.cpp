@@ -33,32 +33,14 @@ void SinglePlatformController::startSimulation() {
     std::string sourceName = m_view->getSelectedSource();
     int simulationTime = m_view->getSimulationTime();
     
-    // TODO: 根据选择的设备和辐射源名称获取对应的模型对象
-    // ReconnaissanceDevice device = ...
-    // RadiationSource source = ...
     
-    // 设置仿真参数
-    // m_simulation.setRadarDevice(device);
-    // m_simulation.setRadiationSource(source);
-    
-    // 执行仿真
-    LocationResult result = m_simulation.runSimulation();
-    
-    // 更新视图显示结果
-    // m_view->updateDirectionData(...);
-    // m_view->updateLocationData(...);
 }
 
 // 加载模型数据
 void SinglePlatformController::loadModelData() {
     if (!m_view) return;
     
-    // TODO: 从DAO加载设备和辐射源数据
-    // std::vector<ReconnaissanceDevice> devices = ReconnaissanceDeviceDAO::getInstance().getAllReconnaissanceDevices();
-    // std::vector<RadiationSource> sources = RadiationSourceDAO::getInstance().getAllRadiationSources();
-    
-    // 更新视图中的设备和辐射源列表
-    // ...
+
 }
 
 // 技术体制变化处理
