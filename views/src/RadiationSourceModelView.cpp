@@ -41,13 +41,23 @@ GtkWidget* RadiationSourceModelView::createView() {
             "名称", 
             "类型", 
             "发射功率(dBm)", 
-            "天线增益(dBi)", 
             "频率范围(MHz)", 
             "方位角范围(°)"
         };
         
+        // 创建列表存储模型
+        GtkListStore* store = gtk_list_store_new(5, 
+            G_TYPE_STRING,  // 名称
+            G_TYPE_STRING,  // 类型
+            G_TYPE_STRING,  // 发射功率
+            G_TYPE_STRING,  // 频率
+            G_TYPE_STRING   // 方位角范围
+        );
+        
         // 创建树形视图
-        m_sourceList = gtk_tree_view_new();
+        m_sourceList = gtk_tree_view_new_with_model(GTK_TREE_MODEL(store));
+        g_object_unref(store);
+        
         gtk_tree_view_set_headers_visible(GTK_TREE_VIEW(m_sourceList), TRUE);
         
         // 创建列
@@ -94,6 +104,23 @@ GtkWidget* RadiationSourceModelView::createView() {
         
         // 更新列表数据
         g_print("  Updating radiation source list...\n");
+        std::vector<RadiationSource> initialSources;
+        
+        // 添加临时测试数据
+        RadiationSource tempSource;
+        tempSource.setRadiationId(0);
+        tempSource.setRadiationName("加载中...");
+        tempSource.setIsStationary(true);
+        tempSource.setTransmitPower(0);
+        tempSource.setCarrierFrequency(0);
+        tempSource.setAzimuthStart(0);
+        tempSource.setAzimuthEnd(0);
+        initialSources.push_back(tempSource);
+        
+        // 初始化显示
+        updateSourceList(initialSources);
+        
+        // 调用控制器更新列表
         ApplicationController::updateRadiationSourceList(m_sourceList);
         
         g_print("Radiation source model UI created successfully\n");
@@ -118,11 +145,10 @@ void RadiationSourceModelView::updateSourceList(const std::vector<RadiationSourc
     m_sources = sources;
     
     // 创建列表存储
-    GtkListStore* store = gtk_list_store_new(6, 
+    GtkListStore* store = gtk_list_store_new(5, 
         G_TYPE_STRING,  // 名称
         G_TYPE_STRING,  // 类型
         G_TYPE_STRING,  // 发射功率
-        G_TYPE_STRING,  // 天线增益
         G_TYPE_STRING,  // 频率范围
         G_TYPE_STRING   // 方位角范围
     );
@@ -132,19 +158,19 @@ void RadiationSourceModelView::updateSourceList(const std::vector<RadiationSourc
         GtkTreeIter iter;
         gtk_list_store_append(store, &iter);
         
-        char powerStr[32], gainStr[32], freqStr[64], azimuthStr[64];
-        snprintf(powerStr, sizeof(powerStr), "%.1f");
-        snprintf(gainStr, sizeof(gainStr), "%.1f");
-        snprintf(freqStr, sizeof(freqStr), "%.1f-%.1f");
-        snprintf(azimuthStr, sizeof(azimuthStr), "%.1f-%.1f");
+        char powerStr[32], freqStr[64], azimuthStr[64];
+        snprintf(powerStr, sizeof(powerStr), "%.1f", source.getTransmitPower());
+        snprintf(freqStr, sizeof(freqStr), "%.1f", source.getCarrierFrequency());
+        snprintf(azimuthStr, sizeof(azimuthStr), "%.1f-%.1f", source.getAzimuthStart(), source.getAzimuthEnd());
+        
+        std::string typeStr = source.getIsStationary() ? "固定" : "移动";
         
         gtk_list_store_set(store, &iter,
             0, source.getRadiationName().c_str(),
-            1, source.getRadiationName().c_str(),
+            1, typeStr.c_str(),
             2, powerStr,
-            3, gainStr,
-            4, freqStr,
-            5, azimuthStr,
+            3, freqStr,
+            4, azimuthStr,
             -1);
     }
     

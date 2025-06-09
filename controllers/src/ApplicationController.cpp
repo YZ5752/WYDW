@@ -238,37 +238,11 @@ void ApplicationController::updateRadiationSourceList(GtkWidget* list) {
         return;
     }
     
-    // 获取列表存储
-    GtkListStore* store = GTK_LIST_STORE(gtk_tree_view_get_model(GTK_TREE_VIEW(list)));
-    if (!store) {
-        g_print("Error: Failed to get list store from tree view\n");
-        return;
-    }
+    g_print("ApplicationController: 正在更新辐射源列表...\n");
     
-    // 清空列表
-    gtk_list_store_clear(store);
+    // 使用控制器加载数据
+    RadiationSourceModelController& controller = RadiationSourceModelController::getInstance();
+    controller.loadSourceData();
     
-    // 添加示例数据
-    GtkTreeIter iter;
-    
-    // 如果没有辐射源，添加提示信息
-    gtk_list_store_append(store, &iter);
-    gtk_list_store_set(store, &iter, 
-                      0, "1", 
-                      1, "辐射源1", 
-                      2, "型号X", 
-                      3, "1500-2500", 
-                      4, "编辑",
-                      5, "删除",
-                      -1);
-                      
-    gtk_list_store_append(store, &iter);
-    gtk_list_store_set(store, &iter, 
-                      0, "2", 
-                      1, "辐射源2", 
-                      2, "型号Y", 
-                      3, "2500-3500", 
-                      4, "编辑",
-                      5, "删除",
-                      -1);
+    // 控制器会自动更新视图，所以这里不需要再做其他操作
 } 
