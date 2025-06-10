@@ -81,9 +81,14 @@ ApplicationController::~ApplicationController() {
 bool ApplicationController::init(int argc, char** argv) {
     g_print("Starting application initialization...\n");
     gtk_init(&argc, &argv);
+    
+    // 初始化数据库连接
+    g_print("Initializing database connection...\n");
     if (!DBConnector::initDefaultConnection()) {
-        g_print("Failed to connect to database\n");
-        return false;
+        g_print("Failed to connect to database, will continue with sample data\n");
+        // 继续执行，使用示例数据
+    } else {
+        g_print("Database connection established successfully\n");
     }
     
     // 创建主窗口
@@ -141,6 +146,11 @@ bool ApplicationController::init(int argc, char** argv) {
     GtkWidget* evaluationTab = gtk_label_new("仿真评估");
     GtkWidget* evaluationPage = m_evaluationView->createView();
     gtk_notebook_append_page(GTK_NOTEBOOK(m_notebook), evaluationPage, evaluationTab);
+    
+    // 加载数据
+    g_print("Loading initial data...\n");
+    m_radiationSourceModelController->loadSourceData();
+    m_reconnaissanceDeviceModelController->loadDeviceData();
     
     // 显示所有控件
     g_print("Showing all widgets...\n");

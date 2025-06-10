@@ -159,6 +159,8 @@ bool ReconnaissanceDeviceDAO::addReconnaissanceDevice(const ReconnaissanceDevice
     );
     
     if (!db.executeSQL(sql)) {
+        std::cerr << "Failed to add reconnaissance device: " << mysql_error(conn) << std::endl;
+        std::cerr << "SQL: " << sql << std::endl;
         return false;
     }
     
