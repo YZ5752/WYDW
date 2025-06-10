@@ -83,31 +83,32 @@ int MapView::addMarker(double longitude, double latitude, const std::string& tit
                       const std::string& description, const std::string& color) {
     if (!m_webView) return -1;
     
+    // 生成唯一的标记ID
+    static int nextMarkerId = 1;
+    int markerId = nextMarkerId++;
+    
     std::stringstream script;
     
     if (m_use3DMap) {
         // Cesium地图添加标记点
         script << "var entity = viewer.entities.add({" 
+               << "id: '" << markerId << "',"
                << "position: Cesium.Cartesian3.fromDegrees(" << longitude << ", " << latitude << "),"
                << "point: {pixelSize: 10, color: Cesium.Color.fromCssColorString('" << color << "')},"
                << "label: {text: '" << title << "', font: '14pt sans-serif', style: Cesium.LabelStyle.FILL_AND_OUTLINE,"
                << "        outlineWidth: 2, verticalOrigin: Cesium.VerticalOrigin.BOTTOM, pixelOffset: new Cesium.Cartesian2(0, -9)},"
                << "description: '" << description << "'"
-               << "});"
-               << "entity.id;";
+               << "});";
     } else {
         // 2D地图添加标记点
         script << "var marker = L.marker([" << latitude << ", " << longitude << "]).addTo(map);"
                << "marker.bindPopup('<b>" << title << "</b><br>" << description << "');"
-               << "window.markerCount = window.markerCount || 0;"
-               << "marker.id = window.markerCount++;"
                << "window.markers = window.markers || {};"
-               << "window.markers[marker.id] = marker;"
-               << "marker.id;";
+               << "window.markers[" << markerId << "] = marker;";
     }
     
     executeScript(script.str());
-    return 0; // 简化处理，实际应该返回JS执行结果中的标记ID
+    return markerId;
 }
 
 // 移除标记点

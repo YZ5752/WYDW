@@ -154,22 +154,3 @@ void RadiationSource::setLastUpdated(const std::string& time) {m_lastUpdated = t
 std::string RadiationSource::getLastUpdated() const {return m_lastUpdated;}
 
 
-// 获取所有辐射源记录
-std::vector<RadiationSource> getAllRadiationSources() {
-    return std::vector<RadiationSource>();
-}
-
-// 添加新的辐射源记录到数据库
-bool addRadiationSource(const RadiationSource& source) {
-    return true;
-}
-
-// 更新现有辐射源记录
-bool updateRadiationSource(const RadiationSource& source) {
-    return true;
-}
-
-// 根据ID删除辐射源记录
-bool deleteRadiationSource(int sourceId) {
-    return true;
-}
