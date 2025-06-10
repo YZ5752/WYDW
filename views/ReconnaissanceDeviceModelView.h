@@ -31,6 +31,9 @@ public:
     // 从编辑对话框获取侦察设备数据
     ReconnaissanceDevice getDeviceFromDialog(GtkWidget* dialog) const;
     
+    // 显示设备详情对话框
+    void showDeviceDetailsDialog(int deviceId);
+    
     // 获取视图控件
     GtkWidget* getView() const;
 

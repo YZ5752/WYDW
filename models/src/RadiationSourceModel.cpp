@@ -152,5 +152,3 @@ std::string RadiationSource::getCreatedAt() const {return m_createdAt;}
 // 最后更新时间
 void RadiationSource::setLastUpdated(const std::string& time) {m_lastUpdated = time;}
 std::string RadiationSource::getLastUpdated() const {return m_lastUpdated;}
-
-
