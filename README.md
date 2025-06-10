@@ -97,7 +97,7 @@ git checkout -b dev
 git checkout -b yz_dev
 ```
 
-## git上传代码
+## git上传代码（执行以下命令前将build文件夹下的内容全部删除）
 ```bash
 git add .
 git commit -m ''
@@ -110,6 +110,19 @@ git add .
 git commit -m '新增地图'
 git push -u origin yz_dev
 ```
+## 如果同时修改代码，先解决冲突后再上传
+```bash
+git fetch
+git merge origin/main
+
+打开冲突代码文件解决冲突
+
+git add .
+git commit -m ''
+git push -u origin dev
+```
+
+## 在github上提Pull Request合并到main分支
 
 ## git拉取代码
 ```bash
