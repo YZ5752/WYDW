@@ -28,7 +28,7 @@ CREATE TABLE `multi_platform_task`  (
   `execution_time` float NOT NULL COMMENT '仿真执行时长（秒）',
   `target_longitude` decimal(9, 6) NOT NULL COMMENT '目标经度（度），范围-180~180',
   `target_latitude` decimal(9, 6) NOT NULL COMMENT '目标纬度（度），范围-90~90',
-  `target_altitude` double NOT NULL COMMENT '目标高度（米，海拔）',
+  `target_altitude` double NOT NULL COMMENT '目标高度（米，大地高）',
   `movement_speed` float NOT NULL COMMENT '运动速度（米/秒），固定设备默认0',
   `movement_azimuth` decimal(5, 2) NOT NULL COMMENT '运动方位角（度，正北为0，顺时针），固定设备默认0',
   `movement_elevation` decimal(4, 2) NOT NULL COMMENT '运动俯仰角（度，水平面为0，向上为正），固定设备默认0',

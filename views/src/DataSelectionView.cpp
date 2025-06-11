@@ -61,12 +61,13 @@ GtkWidget* DataSelectionView::createView() {
     gtk_container_set_border_width(GTK_CONTAINER(dataBox), 10);
     
     // 创建列表存储
-    GtkListStore* store = gtk_list_store_new(4, 
+    GtkListStore* store = gtk_list_store_new(5, 
                                          G_TYPE_BOOLEAN,  // 选择
                                          G_TYPE_STRING,   // 侦察设备
                                          G_TYPE_STRING,   // 测向数据
-                                         G_TYPE_STRING);  // 定位数据
-    
+                                         G_TYPE_STRING,  // 定位数据
+                                         G_TYPE_STRING);  // 任务时间    
+
     // 创建树视图
     m_dataList = gtk_tree_view_new_with_model(GTK_TREE_MODEL(store));
     g_object_unref(store);
@@ -82,40 +83,49 @@ GtkWidget* DataSelectionView::createView() {
     // 侦察设备列
     GtkCellRenderer* textRenderer1 = gtk_cell_renderer_text_new();
     GtkTreeViewColumn* column1 = gtk_tree_view_column_new_with_attributes(
-        "侦察设备", textRenderer1, "text", 1, NULL);
+        "任务类型", textRenderer1, "text", 1, NULL);
     gtk_tree_view_column_set_min_width(column1, 120);
     gtk_tree_view_append_column(GTK_TREE_VIEW(m_dataList), column1);
     
     // 测向数据列
     GtkCellRenderer* textRenderer2 = gtk_cell_renderer_text_new();
     GtkTreeViewColumn* column2 = gtk_tree_view_column_new_with_attributes(
-        "测向数据 (方位角)", textRenderer2, "text", 2, NULL);
+        "测向数据", textRenderer2, "text", 2, NULL);
     gtk_tree_view_column_set_min_width(column2, 150);
     gtk_tree_view_append_column(GTK_TREE_VIEW(m_dataList), column2);
     
     // 定位数据列
     GtkCellRenderer* textRenderer3 = gtk_cell_renderer_text_new();
     GtkTreeViewColumn* column3 = gtk_tree_view_column_new_with_attributes(
-        "定位数据 (经纬度)", textRenderer3, "text", 3, NULL);
+        "定位数据 (经度、纬度、高度)", textRenderer3, "text", 3, NULL);
     gtk_tree_view_column_set_min_width(column3, 200);
     gtk_tree_view_append_column(GTK_TREE_VIEW(m_dataList), column3);
+
+    // 任务时间列
+    GtkCellRenderer* textRenderer4 = gtk_cell_renderer_text_new();
+    GtkTreeViewColumn* column4 = gtk_tree_view_column_new_with_attributes(
+        "任务时间", textRenderer4, "text", 4, NULL);
+    gtk_tree_view_column_set_min_width(column4, 200);
+    gtk_tree_view_append_column(GTK_TREE_VIEW(m_dataList), column4);
     
     // 添加示例数据
     GtkTreeIter iter;
     gtk_list_store_append(store, &iter);
     gtk_list_store_set(store, &iter, 
                       0, FALSE, 
-                      1, "侦察设备1", 
+                      1, "单平台", 
                       2, "方位角: 45°", 
-                      3, "坐标: (116.5, 39.9)", 
+                      3, "坐标: (116.5, 39.9,5000)", 
+                      4, "2025-06-10 17:48", 
                       -1);
     
     gtk_list_store_append(store, &iter);
     gtk_list_store_set(store, &iter, 
                       0, FALSE, 
-                      1, "侦察设备2", 
+                      1, "多平台", 
                       2, "方位角: 130°", 
-                      3, "坐标: (116.4, 39.8)", 
+                      3, "坐标: (116.4, 39.8,4300)", 
+                       4, "2025-06-10 17:48", 
                       -1);
     
     // 滚动窗口

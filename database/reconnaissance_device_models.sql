@@ -39,7 +39,7 @@ CREATE TABLE `reconnaissance_device_models`  (
   `movement_elevation` decimal(4, 2) NOT NULL COMMENT '运动俯仰角（度，水平面为0，向上为正），固定设备默认0',
   `longitude` decimal(9, 6) NOT NULL COMMENT '设备经度（度），范围-180~180',
   `latitude` decimal(9, 6) NOT NULL COMMENT '设备纬度（度），范围-90~90',
-  `altitude` double NOT NULL COMMENT '设备高度（米，海拔）',
+  `altitude` double NOT NULL COMMENT '设备高度（米，大地高）',
   `created_at` datetime(0) NULL DEFAULT CURRENT_TIMESTAMP(0) COMMENT '记录创建时间，默认当前时间',
   `updated_at` datetime(0) NULL DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP(0) COMMENT '记录更新时间，自动更新',
   PRIMARY KEY (`device_id`) USING BTREE,
