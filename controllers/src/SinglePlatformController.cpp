@@ -58,21 +58,56 @@ void SinglePlatformController::startSimulation() {
         return;
     }
     
-    // TODO: 获取辐射源对象
-    // RadiationSource source = ...
+    // 验证侦察设备必须是移动设备
+    if (device.getIsStationary()) {
+        g_print("错误：单平台仿真要求侦察设备必须是移动设备\n");
+        return;
+    }
+    
+    // 获取辐射源对象
+    RadiationSource source;
+    bool sourceFound = false;
+    
+    // 从DAO获取辐射源
+    std::vector<RadiationSource> sources = RadiationSourceDAO::getInstance().getAllRadiationSources();
+    for (const auto& s : sources) {
+        if (s.getRadiationName() == sourceName) {
+            source = s;
+            sourceFound = true;
+            break;
+        }
+    }
+    
+    if (!sourceFound) {
+        g_print("错误：未找到辐射源 '%s'\n", sourceName.c_str());
+        return;
+    }
+    
+    // 验证辐射源必须是固定的
+    if (!source.getIsStationary()) {
+        g_print("错误：单平台仿真要求辐射源必须是固定的\n");
+        return;
+    }
     
     g_print("使用侦察设备 ID: %d, 名称: %s\n", device.getDeviceId(), device.getDeviceName().c_str());
+    g_print("使用辐射源 ID: %d, 名称: %s\n", source.getRadiationId(), source.getRadiationName().c_str());
     
     // 设置仿真参数
-   // m_simulation.setRadarDevice(device);
+    // m_simulation.setRadarDevice(device);
     // m_simulation.setRadiationSource(source);
     
     // 执行仿真
-   //LocationResult result = m_simulation.runSimulation();
+    // LocationResult result = m_simulation.runSimulation();
     
     // 更新视图显示结果
-    // m_view->updateDirectionData(...);
-    // m_view->updateLocationData(...);
+    // 这里使用模拟数据
+    std::string directionData = "方位角: 45.2°, 俯仰角: 12.8°";
+    std::string locationData = "经度: " + std::to_string(source.getLongitude()) + 
+                              "°, 纬度: " + std::to_string(source.getLatitude()) + 
+                              "°, 高度: " + std::to_string(source.getAltitude()) + "m";
+    
+    m_view->updateDirectionData(directionData);
+    m_view->updateLocationData(locationData);
 }
 
 // 加载模型数据
@@ -81,7 +116,7 @@ void SinglePlatformController::loadModelData() {
     
     // 从DAO加载设备和辐射源数据
     std::vector<ReconnaissanceDevice> devices = ReconnaissanceDeviceDAO::getInstance().getAllReconnaissanceDevices();
-   // std::vector<RadiationSource> sources = RadiationSourceDAO::getInstance().getAllRadiationSources();
+    std::vector<RadiationSource> sources = RadiationSourceDAO::getInstance().getAllRadiationSources();
     
     // 更新视图中的设备列表
     if (m_view) {

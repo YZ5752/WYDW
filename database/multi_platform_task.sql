@@ -45,3 +45,8 @@ INSERT INTO `multi_platform_task` VALUES (1, 'TDOA', 1, 7200, 116.500000, 39.950
 INSERT INTO `multi_platform_task` VALUES (2, 'FDOA', 2, 3600, 118.800000, 32.100000, 100, 30, 180.00, 0.00, '2025-06-06 15:42:18');
 
 SET FOREIGN_KEY_CHECKS = 1;
+
+ALTER TABLE multi_platform_task
+ADD COLUMN positioning_distance FLOAT COMMENT '定位距离（米）' AFTER target_altitude,
+ADD COLUMN positioning_time FLOAT COMMENT '定位时间（秒）' AFTER positioning_distance,
+ADD COLUMN positioning_accuracy DECIMAL(8,6) COMMENT '定位精度（米）' AFTER positioning_time;
