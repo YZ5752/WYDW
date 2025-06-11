@@ -1,9 +1,13 @@
 /**
- * @file CoordinateTransform.cpp
- * @brief 坐标系统转换函数实现
+ * @brief 功能：
+ * - 大地坐标转换为空间直角坐标
+ * - 空间直角坐标转换为大地坐标
+ * - 大地坐标系中的速度转换为空间直角坐标系中的速度分量
+ * - 空间直角坐标系中的速度分量转换为大地坐标系中的速度参数
+ * - 计算两个大地坐标点之间的距离
  */
 
-#include "../CoordinateTransform.h"
+#include "CoordinateTransform.h"
 
 using namespace Constants;
 
@@ -122,4 +126,28 @@ COORD3 velocity_xyz2lbh(double l, double b, double vx, double vy, double vz) {
     velocity.p3 = elevation * RAD2DEG;  // 俯仰角（度）
     
     return velocity;
+}
+
+/**
+ * @brief 计算两个大地坐标点之间的距离
+ * @param l1 第一个点的经度(度)
+ * @param b1 第一个点的纬度(度)
+ * @param h1 第一个点的高程(米)
+ * @param l2 第二个点的经度(度)
+ * @param b2 第二个点的纬度(度)
+ * @param h2 第二个点的高程(米)
+ * @return 两点之间的空间距离(米)
+ */
+double calculateDistance(double l1, double b1, double h1, double l2, double b2, double h2) {
+    // 将大地坐标转换为空间直角坐标
+    COORD3 xyz1 = lbh2xyz(l1, b1, h1);
+    COORD3 xyz2 = lbh2xyz(l2, b2, h2);
+    
+    // 计算欧式距离
+    double dx = xyz2.p1 - xyz1.p1;
+    double dy = xyz2.p2 - xyz1.p2;
+    double dz = xyz2.p3 - xyz1.p3;
+    
+    // 返回两点之间的距离
+    return sqrt(dx * dx + dy * dy + dz * dz);
 } 

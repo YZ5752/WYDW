@@ -1,8 +1,3 @@
-/**
- * @file CoordinateTransform.h
- * @brief 坐标系统转换函数
- */
-
 #ifndef COORDINATE_TRANSFORM_H
 #define COORDINATE_TRANSFORM_H
 
@@ -62,5 +57,17 @@ COORD3 velocity_lbh2xyz(double l, double b, double v, double azimuth, double ele
  * @return 大地坐标系中的速度参数(速度大小,方位角,俯仰角)，单位为(米/秒,度,度)
  */
 COORD3 velocity_xyz2lbh(double l, double b, double vx, double vy, double vz);
+
+/**
+ * @brief 计算两个大地坐标点之间的距离
+ * @param l1 第一个点的经度(度)
+ * @param b1 第一个点的纬度(度)
+ * @param h1 第一个点的高程(米)
+ * @param l2 第二个点的经度(度)
+ * @param b2 第二个点的纬度(度)
+ * @param h2 第二个点的高程(米)
+ * @return 两点之间的空间距离(米)
+ */
+double calculateDistance(double l1, double b1, double h1, double l2, double b2, double h2);
 
 #endif // COORDINATE_TRANSFORM_H 
