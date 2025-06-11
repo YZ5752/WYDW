@@ -37,7 +37,7 @@ CREATE TABLE `radiation_source_models`  (
   `movement_elevation` decimal(4, 2) NOT NULL COMMENT '运动俯仰角（度，水平面为0，向上为正），固定设备默认0',
   `longitude` decimal(9, 6) NOT NULL COMMENT '辐射源经度（度），范围-180~180',
   `latitude` decimal(9, 6) NOT NULL COMMENT '辐射源纬度（度），范围-90~90',
-  `altitude` double NOT NULL COMMENT '辐射源高度（米，海拔）',
+  `altitude` double NOT NULL COMMENT '辐射源高度（米，大地高）',
   `created_at` datetime(0) NULL DEFAULT CURRENT_TIMESTAMP(0) COMMENT '记录创建时间，默认当前时间',
   `last_updated` datetime(0) NULL DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP(0) COMMENT '最后更新时间，自动更新',
   PRIMARY KEY (`radiation_id`) USING BTREE,
