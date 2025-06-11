@@ -128,3 +128,9 @@ DELIMITER ;
 
 -- 启用外键检查
 SET FOREIGN_KEY_CHECKS = 1;
+
+ALTER TABLE single_platform_task
+ADD COLUMN max_positioning_distance FLOAT COMMENT '最远定位距离（米）' AFTER target_altitude,
+ADD COLUMN positioning_time FLOAT COMMENT '定位时间（秒）' AFTER max_positioning_distance,
+ADD COLUMN positioning_accuracy DECIMAL(8,6) COMMENT '定位精度（米）' AFTER positioning_time,
+ADD COLUMN direction_finding_accuracy DECIMAL(8,6) COMMENT '测向精度（度）' AFTER angle_error;

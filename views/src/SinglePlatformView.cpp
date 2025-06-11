@@ -1,6 +1,8 @@
 #include "../SinglePlatformView.h"
 #include "../components/MapView.h"
 #include "../../controllers/SinglePlatformController.h"
+#include "../../models/ReconnaissanceDeviceDAO.h"
+#include "../../models/RadiationSourceDAO.h"
 #include <gtk/gtk.h>
 #include <string>
 
@@ -12,10 +14,17 @@ SinglePlatformView::SinglePlatformView() :
     m_timeEntry(nullptr),
     m_dirDataValue(nullptr),
     m_locDataValue(nullptr),
-    m_errorTable(nullptr) {
+    m_errorTable(nullptr),
+    m_mapView(nullptr),
+    m_radarMarker(-1),
+    m_sourceMarker(-1) {
 }
 
 SinglePlatformView::~SinglePlatformView() {
+    if (m_mapView) {
+        delete m_mapView;
+        m_mapView = nullptr;
+    }
 }
 
 GtkWidget* SinglePlatformView::createView() {
@@ -32,8 +41,8 @@ GtkWidget* SinglePlatformView::createView() {
     gtk_box_pack_start(GTK_BOX(container), mapFrame, TRUE, TRUE, 0);
     
     // 显示地图
-    MapView mapView;
-    GtkWidget* mapWidget = mapView.create();
+    m_mapView = new MapView();
+    GtkWidget* mapWidget = m_mapView->create();
     gtk_container_add(GTK_CONTAINER(mapFrame), mapWidget);
     
     // 右侧：参数设置和结果区域
@@ -68,6 +77,7 @@ GtkWidget* SinglePlatformView::createView() {
     
     GtkWidget* radarCombo = gtk_combo_box_text_new();
     gtk_box_pack_start(GTK_BOX(radarBox), radarCombo, TRUE, TRUE, 5);
+    g_signal_connect(radarCombo, "changed", G_CALLBACK(onDeviceComboChangedCallback), this);
     
     // 保存雷达设备下拉框引用
     m_radarCombo = radarCombo;
@@ -81,10 +91,8 @@ GtkWidget* SinglePlatformView::createView() {
     gtk_container_set_border_width(GTK_CONTAINER(sourceBox), 10);
     
     GtkWidget* sourceCombo = gtk_combo_box_text_new();
-    gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(sourceCombo), "辐射源1");
-    gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(sourceCombo), "辐射源2");
-    gtk_combo_box_set_active(GTK_COMBO_BOX(sourceCombo), 0);
     gtk_box_pack_start(GTK_BOX(sourceBox), sourceCombo, TRUE, TRUE, 5);
+    g_signal_connect(sourceCombo, "changed", G_CALLBACK(onSourceComboChangedCallback), this);
     
     // 保存辐射源下拉框引用
     m_sourceCombo = sourceCombo;
@@ -189,6 +197,12 @@ GtkWidget* SinglePlatformView::createView() {
     
     // 初始化误差表格 - 默认显示干涉仪体制的误差项
     updateErrorTable("干涉仪体制");
+    
+    // 加载数据并填充下拉框
+    m_devices = ReconnaissanceDeviceDAO::getInstance().getAllReconnaissanceDevices();
+    m_sources = RadiationSourceDAO::getInstance().getAllRadiationSources();
+    updateDeviceCombo();
+    updateSourceCombo();
     
     return container;
 }
@@ -310,6 +324,147 @@ GtkWidget* SinglePlatformView::getErrorTable() const {
     return m_errorTable;
 }
 
+// 更新侦察设备下拉列表
+void SinglePlatformView::updateDeviceList(const std::vector<ReconnaissanceDevice>& devices) {
+    // 保存设备数据
+    m_devices = devices;
+    
+    // 更新下拉框
+    updateDeviceCombo();
+}
+
+// 更新侦察设备下拉框内容
+void SinglePlatformView::updateDeviceCombo() {
+    if (!m_radarCombo) {
+        return;
+    }
+    
+    // 清空下拉框
+    gtk_combo_box_text_remove_all(GTK_COMBO_BOX_TEXT(m_radarCombo));
+    
+    // 如果没有设备，添加提示信息
+    if (m_devices.empty()) {
+        gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(m_radarCombo), "无侦察设备");
+        gtk_combo_box_set_active(GTK_COMBO_BOX(m_radarCombo), 0);
+        return;
+    }
+    
+    // 添加设备列表 - 只能选择移动设备
+    for (const auto& dev : m_devices) {
+        // 只显示移动设备
+        if (dev.getIsStationary()) continue;
+        
+        gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(m_radarCombo), dev.getDeviceName().c_str());
+    }
+    
+    // 默认选择第一项
+    gtk_combo_box_set_active(GTK_COMBO_BOX(m_radarCombo), 0);
+    
+    // 更新地图标记
+    updateRadarMarker();
+}
+
+// 更新辐射源下拉框内容
+void SinglePlatformView::updateSourceCombo() {
+    if (!m_sourceCombo) {
+        return;
+    }
+    
+    // 清空下拉框
+    gtk_combo_box_text_remove_all(GTK_COMBO_BOX_TEXT(m_sourceCombo));
+    
+    // 如果没有辐射源，添加提示信息
+    if (m_sources.empty()) {
+        gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(m_sourceCombo), "无辐射源");
+        gtk_combo_box_set_active(GTK_COMBO_BOX(m_sourceCombo), 0);
+        return;
+    }
+    
+    // 添加辐射源列表 - 只能选择固定辐射源
+    for (const auto& src : m_sources) {
+        // 只显示固定辐射源
+        if (!src.getIsStationary()) continue;
+        
+        gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(m_sourceCombo), src.getRadiationName().c_str());
+    }
+    
+    // 默认选择第一项
+    gtk_combo_box_set_active(GTK_COMBO_BOX(m_sourceCombo), 0);
+    
+    // 更新地图标记
+    updateSourceMarker();
+}
+
+// 更新侦察设备地图标记
+void SinglePlatformView::updateRadarMarker() {
+    if (!m_mapView) return;
+    
+    // 先移除旧标记
+    if (m_radarMarker != -1) {
+        m_mapView->removeMarker(m_radarMarker);
+        m_radarMarker = -1;
+    }
+    
+    // 获取当前选中的设备名称
+    gchar* name = gtk_combo_box_text_get_active_text(GTK_COMBO_BOX_TEXT(m_radarCombo));
+    if (!name) return;
+    
+    std::string selName = name;
+    g_free(name);
+    
+    // 查找对应的设备并添加标记
+    for (const auto& dev : m_devices) {
+        if (dev.getDeviceName() == selName) {
+            m_radarMarker = m_mapView->addMarker(dev.getLongitude(), dev.getLatitude(), selName, "", "red");
+            break;
+        }
+    }
+}
+
+// 更新辐射源地图标记
+void SinglePlatformView::updateSourceMarker() {
+    if (!m_mapView) return;
+    
+    // 先移除旧标记
+    if (m_sourceMarker != -1) {
+        m_mapView->removeMarker(m_sourceMarker);
+        m_sourceMarker = -1;
+    }
+    
+    // 获取当前选中的辐射源名称
+    gchar* name = gtk_combo_box_text_get_active_text(GTK_COMBO_BOX_TEXT(m_sourceCombo));
+    if (!name) return;
+    
+    std::string selName = name;
+    g_free(name);
+    
+    // 查找对应的辐射源并添加标记
+    for (const auto& src : m_sources) {
+        if (src.getRadiationName() == selName) {
+            m_sourceMarker = m_mapView->addMarker(src.getLongitude(), src.getLatitude(), selName, "", "blue");
+            break;
+        }
+    }
+}
+
+// 侦察设备下拉框回调
+extern "C" void onDeviceComboChangedCallback(GtkWidget* widget, gpointer data) {
+    // 获取SinglePlatformView实例
+    SinglePlatformView* view = static_cast<SinglePlatformView*>(data);
+    if (view) {
+        view->updateRadarMarker();
+    }
+}
+
+// 辐射源下拉框回调
+extern "C" void onSourceComboChangedCallback(GtkWidget* widget, gpointer data) {
+    // 获取SinglePlatformView实例
+    SinglePlatformView* view = static_cast<SinglePlatformView*>(data);
+    if (view) {
+        view->updateSourceMarker();
+    }
+}
+
 // 全局回调函数实现
 extern "C" {
     void onTechSystemChangedCallback(GtkWidget* widget, gpointer data) {
@@ -345,6 +500,10 @@ void SinglePlatformView::onTechSystemChanged(GtkWidget* widget, gpointer data) {
     // 更新误差表格
     view->updateErrorTable(techSystem);
     
+    // 更新设备和辐射源下拉框
+    view->updateDeviceCombo();
+    view->updateSourceCombo();
+    
     g_print("技术体制已更改为: %s\n", techSystem.c_str());
 }
 
@@ -355,36 +514,4 @@ void SinglePlatformView::onSinglePlatformSimulation(GtkWidget* widget, gpointer 
     
     // 调用控制器启动仿真
     SinglePlatformController::getInstance().startSimulation();
-}
-
-// 更新侦察设备下拉列表
-void SinglePlatformView::updateDeviceList(const std::vector<ReconnaissanceDevice>& devices) {
-    if (!m_radarCombo) {
-        return;
-    }
-    
-    // 保存设备数据
-    m_devices = devices;
-    
-    // 清空下拉框
-    GtkComboBox* combo = GTK_COMBO_BOX(m_radarCombo);
-    GtkComboBoxText* comboText = GTK_COMBO_BOX_TEXT(combo);
-    
-    // 移除所有现有项
-    gtk_combo_box_text_remove_all(comboText);
-    
-    // 如果没有设备，添加提示信息
-    if (devices.empty()) {
-        gtk_combo_box_text_append_text(comboText, "无侦察设备");
-        gtk_combo_box_set_active(combo, 0);
-        return;
-    }
-    
-    // 添加设备列表
-    for (const auto& device : devices) {
-        gtk_combo_box_text_append_text(comboText, device.getDeviceName().c_str());
-    }
-    
-    // 默认选择第一项
-    gtk_combo_box_set_active(combo, 0);
 }

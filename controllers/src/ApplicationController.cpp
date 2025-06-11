@@ -151,7 +151,7 @@ bool ApplicationController::init(int argc, char** argv) {
     g_print("Loading initial data...\n");
     m_radiationSourceModelController->loadSourceData();
     m_reconnaissanceDeviceModelController->loadDeviceData();
-    
+
     // 显示所有控件
     g_print("Showing all widgets...\n");
     gtk_widget_show_all(m_mainWindow);

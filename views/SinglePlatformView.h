@@ -4,11 +4,15 @@
 #include <string>
 #include <vector>
 #include "../models/ReconnaissanceDeviceModel.h"
+#include "../models/RadiationSourceModel.h"
+#include "components/MapView.h"
 
 // 声明全局回调函数
 extern "C" {
     void onTechSystemChangedCallback(GtkWidget* widget, gpointer data);
     void onSinglePlatformSimulationCallback(GtkWidget* widget, gpointer data);
+    void onDeviceComboChangedCallback(GtkWidget* widget, gpointer data);
+    void onSourceComboChangedCallback(GtkWidget* widget, gpointer data);
 }
 
 class SinglePlatformView {
@@ -36,6 +40,18 @@ public:
     
     // 更新侦察设备下拉列表
     void updateDeviceList(const std::vector<ReconnaissanceDevice>& devices);
+    
+    // 更新侦察设备下拉框内容
+    void updateDeviceCombo();
+    
+    // 更新辐射源下拉框内容
+    void updateSourceCombo();
+    
+    // 更新侦察设备地图标记
+    void updateRadarMarker();
+    
+    // 更新辐射源地图标记
+    void updateSourceMarker();
     
     // 获取技术体制选择
     std::string getSelectedTechSystem() const;
@@ -65,6 +81,16 @@ private:
     GtkWidget* m_locDataValue;
     GtkWidget* m_errorTable;
     
+    // 地图视图
+    MapView* m_mapView;
+    
+    // 地图标记点ID
+    int m_radarMarker;
+    int m_sourceMarker;
+    
     // 存储侦察设备数据
     std::vector<ReconnaissanceDevice> m_devices;
+    
+    // 存储辐射源数据
+    std::vector<RadiationSource> m_sources;
 }; 
