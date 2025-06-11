@@ -24,13 +24,61 @@
       padding: 0;
       overflow: hidden;
     }
+    
+    /* 标尺样式 */
+    .distance-legend {
+      position: absolute;
+      bottom: 40px;
+      left: 10px;
+      background-color: rgba(42, 42, 42, 0.8);
+      color: white;
+      padding: 5px 8px;
+      border-radius: 4px;
+      font-size: 14px;
+      z-index: 999;
+      text-align: center;
+    }
+    
+    .scale-bar {
+      height: 3px;
+      background-color: white;
+      margin-top: 5px;
+      position: relative;
+      margin-left: 1px;
+      margin-right: 1px;
+    }
+    
+    .scale-bar:before, .scale-bar:after {
+      content: '';
+      position: absolute;
+      width: 2px;
+      height: 10px;
+      background-color: white;
+      top: -3.5px;
+    }
+    
+    .scale-bar:before {
+      left: -1px;
+    }
+    
+    .scale-bar:after {
+      right: -1px;
+    }
   </style>
   <script>
     // 设置Cesium ion访问令牌
     Cesium.Ion.defaultAccessToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiIyMTUwM2VmMi1mMmY0LTQwYTYtOWU5OC1mYTlhYTQ1MzFkY2QiLCJpZCI6MzA5ODE3LCJpYXQiOjE3NDkxOTk2Mjh9.Hkkpi8oEP1rLg6y3yd3T5b3gOOrfuHIHqSbSlH3wPds';
     
-    // 创建谷歌地图图层
-    var googleUrl = "http://mt1.google.cn/vt/lyrs=s&hl=zh-CN&x={x}&y={y}&z={z}&s=Gali";
+    // 创建离线瓦片地图提供者
+    var offlineImageryProvider = new Cesium.UrlTemplateImageryProvider({
+        url: 'map/{z}/{x}/{y}.png',  // 使用相对路径z格式
+        tilingScheme: new Cesium.WebMercatorTilingScheme(),
+        minimumLevel: 0,
+        maximumLevel: 11,  // 根据map文件夹中的最大级别设置
+        credit: new Cesium.Credit('本地离线瓦片地图')
+    });
+    
+    // 创建Cesium查看器
     var viewer = new Cesium.Viewer('cesiumContainer', {
         baseLayerPicker: false,
         geocoder: false,
@@ -40,35 +88,23 @@
         animation: false,
         timeline: false,
         fullscreenButton: false,
-        imageryProvider: new Cesium.UrlTemplateImageryProvider({url: googleUrl})
+        imageryProvider: offlineImageryProvider
     });
     
-    // // 定义天地图图层
-    // var tiandiLayer = new Cesium.WebMapTileServiceImageryProvider({
-    //   url: "http://t0.tianditu.com/img_w/wmts?service=wmts&request=GetTile&version=1.0.0&LAYER=img&tileMatrixSet=w&TileMatrix={TileMatrix}&TileRow={TileRow}&TileCol={TileCol}&style=default&format=tiles&tk=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiIyMTUwM2VmMi1mMmY0LTQwYTYtOWU5OC1mYTlhYTQ1MzFkY2QiLCJpZCI6MzA5ODE3LCJpYXQiOjE3NDkxOTk2Mjh9.Hkkpi8oEP1rLg6y3yd3T5b3gOOrfuHIHqSbSlH3wPds",
-    //   layer: "img",
-    //   style: "default",
-    //   format: "tiles",
-    //   tileMatrixSetID: "w",
-    //   credit: new Cesium.Credit("天地图全球影像服务"),
-    //   subdomains: ["t0", "t1", "t2", "t3", "t4", "t5", "t6", "t7"],
-    //   maximumLevel: 18,
-    // });
-
-    // // 尝试添加本地地图图层
-    // try {
-    //   var localLayer = viewer.scene.imageryLayers.addImageryProvider(
-    //     new Cesium.UrlTemplateImageryProvider({
-    //       url: "ditu/{z}/{x}/{y}.png",
-    //       tilingScheme: new Cesium.WebMercatorTilingScheme(),
-    //       fileExtension: "png",
-    //       minimumLevel: 0,
-    //       maximumLevel: 20,
-    //     })
-    //   );
-    // } catch(e) {
-    //   console.log("加载本地地图图层失败:", e);
-    // }
+    // 可选：添加谷歌地图作为额外图层（如果有网络连接）
+    try {
+      var googleLayer = viewer.imageryLayers.addImageryProvider(
+        new Cesium.UrlTemplateImageryProvider({
+          url: "http://mt1.google.cn/vt/lyrs=s&hl=zh-CN&x={x}&y={y}&z={z}&s=Gali",
+          tilingScheme: new Cesium.WebMercatorTilingScheme(),
+          maximumLevel: 18
+        })
+      );
+      // 默认隐藏谷歌图层，仅在需要时显示
+      googleLayer.show = false;
+    } catch(e) {
+      console.log("加载谷歌地图图层失败:", e);
+    }
 
     // 尝试添加高德地图图层
     try {
@@ -79,6 +115,8 @@
           tilingScheme: new Cesium.WebMercatorTilingScheme(),
         })
       );
+      // 默认隐藏高德图层，仅在需要时显示
+      gaodeLayer.show = false;
     } catch(e) {
       console.log("加载高德地图图层失败:", e);
     }
@@ -142,6 +180,104 @@
         coordinateInfoElement.innerHTML = '经度: ' + longitudeStr + '°, 纬度: ' + latitudeStr + '°';
       }
     }, Cesium.ScreenSpaceEventType.MOUSE_MOVE);
+    
+    // 创建标尺元素
+    function createDistanceLegend() {
+      var distanceLegendDiv = document.createElement('div');
+      distanceLegendDiv.className = 'distance-legend';
+      
+      var distanceLabel = document.createElement('div');
+      distanceLabel.id = 'distanceLabel';
+      distanceLabel.textContent = '0 km';
+      distanceLegendDiv.appendChild(distanceLabel);
+      
+      var scaleBar = document.createElement('div');
+      scaleBar.className = 'scale-bar';
+      scaleBar.id = 'scaleBar';
+      distanceLegendDiv.appendChild(scaleBar);
+      
+      document.body.appendChild(distanceLegendDiv);
+      return distanceLegendDiv;
+    }
+    
+    // 更新标尺
+    function updateDistanceLegend() {
+      var distanceLegendDiv = document.querySelector('.distance-legend');
+      var distanceLabel = document.getElementById('distanceLabel');
+      var scaleBar = document.getElementById('scaleBar');
+      
+      if (!distanceLegendDiv) {
+        distanceLegendDiv = createDistanceLegend();
+        distanceLabel = document.getElementById('distanceLabel');
+        scaleBar = document.getElementById('scaleBar');
+      }
+      
+      // 获取视图中心点
+      var center = new Cesium.Cartesian2(
+        viewer.canvas.clientWidth / 2,
+        viewer.canvas.clientHeight / 2
+      );
+      
+      var leftPoint = new Cesium.Cartesian2(
+        center.x - 100,
+        center.y
+      );
+      
+      // 将屏幕坐标转换为地理坐标
+      var centerCartesian = viewer.camera.pickEllipsoid(center);
+      var leftCartesian = viewer.camera.pickEllipsoid(leftPoint);
+      
+      if (centerCartesian && leftCartesian) {
+        // 计算两点之间的距离
+        var centerCartographic = Cesium.Cartographic.fromCartesian(centerCartesian);
+        var leftCartographic = Cesium.Cartographic.fromCartesian(leftCartesian);
+        
+        var geodesic = new Cesium.EllipsoidGeodesic(
+          new Cesium.Cartographic(centerCartographic.longitude, centerCartographic.latitude),
+          new Cesium.Cartographic(leftCartographic.longitude, leftCartographic.latitude)
+        );
+        
+        var distance = geodesic.surfaceDistance;
+        
+        // 根据距离选择合适的单位和标尺长度
+        var label;
+        var width = 100; // 标尺固定宽度为100px
+        
+        // 计算标尺表示的距离值（四舍五入到合适的数值）
+        if (distance >= 100000) {
+          // 超过100公里，以100公里为单位
+          var km = Math.round(distance / 100000) * 100;
+          label = km + ' km';
+        } else if (distance >= 10000) {
+          // 10-100公里，以10公里为单位
+          var km = Math.round(distance / 10000) * 10;
+          label = km + ' km';
+        } else if (distance >= 1000) {
+          // 1-10公里，以1公里为单位
+          var km = Math.round(distance / 1000);
+          label = km + ' km';
+        } else {
+          // 不足1公里，以100米为单位
+          var m = Math.round(distance / 100) * 100;
+          if (m === 0) m = 100;
+          label = m + ' m';
+        }
+        
+        // 更新标尺
+        distanceLabel.textContent = label;
+        scaleBar.style.width = width + 'px';
+      }
+    }
+    
+    // 创建标尺
+    createDistanceLegend();
+    
+    // 视图变化时更新标尺
+    viewer.camera.changed.addEventListener(updateDistanceLegend);
+    viewer.scene.preRender.addEventListener(updateDistanceLegend);
+    
+    // 初始更新
+    updateDistanceLegend();
   </script>
 </body>
 
