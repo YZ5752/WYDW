@@ -29,7 +29,7 @@ CREATE TABLE `single_platform_task`  (
   `execution_time` float NOT NULL COMMENT '仿真执行时长（秒）',
   `target_longitude` decimal(9, 6) NOT NULL COMMENT '目标经度（度），范围-180~180',
   `target_latitude` decimal(9, 6) NOT NULL COMMENT '目标纬度（度），范围-90~90',
-  `target_altitude` double NOT NULL COMMENT '目标高度（米，海拔）',
+  `target_altitude` double NOT NULL COMMENT '目标高度（米，大地高）',
   `target_angle` decimal(8, 5) NOT NULL COMMENT '测向数据（度，正北为0，顺时针）',
   `angle_error` decimal(8, 6) NOT NULL COMMENT '测向误差（度），正数',
   `created_at` datetime(0) NULL DEFAULT CURRENT_TIMESTAMP(0) COMMENT '任务创建时间，默认当前时间',
