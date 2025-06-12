@@ -15,7 +15,8 @@ using namespace Constants;
 COORD3 lbh2xyz(double l, double b, double h) {
     double N; // 卯酉圈曲率半径
     COORD3 xyz(0, 0, 0);
-    l = l * DEG2RAD; // 转为弧度
+    l = l * DE
+    G2RAD; // 转为弧度
     b = b * DEG2RAD;
     N = a / sqrt(1.0 - e_squared * sin(b) * sin(b));
     xyz.p1 = (N + h) * cos(b) * cos(l);  // X
