@@ -50,11 +50,20 @@ file(GLOB MODEL_SOURCES "models/src/*.cpp")
 file(GLOB VIEW_SOURCES "views/src/*.cpp" "views/components/src/*.cpp")
 file(GLOB CONTROLLER_SOURCES "controllers/src/*.cpp")
 
+# 确保CoordinateTransform.cpp被包含
+set(COORDINATE_TRANSFORM_SRC "${CMAKE_CURRENT_SOURCE_DIR}/utils/CoordinateTransform.cpp")
+if(EXISTS ${COORDINATE_TRANSFORM_SRC})
+    message(STATUS "Found CoordinateTransform.cpp: ${COORDINATE_TRANSFORM_SRC}")
+else()
+    message(FATAL_ERROR "CoordinateTransform.cpp not found at: ${COORDINATE_TRANSFORM_SRC}")
+endif()
+
 # 创建可执行文件
 add_executable(${PROJECT_NAME} 
     ${MODEL_SOURCES}
     ${VIEW_SOURCES}
     ${CONTROLLER_SOURCES}
+    ${COORDINATE_TRANSFORM_SRC}  # 显式添加CoordinateTransform.cpp
 )
 
 # 链接库

@@ -122,6 +122,14 @@ bool ApplicationController::init(int argc, char** argv) {
     m_radiationSourceModelController = &RadiationSourceModelController::getInstance();
     m_radiationSourceModelController->init(m_radiationSourceView);
     
+    // 初始化单平台控制器
+    m_singlePlatformController = &SinglePlatformController::getInstance();
+    m_singlePlatformController->init(m_singlePlatformView);
+    
+    // 初始化多平台控制器
+    m_multiPlatformController = &MultiPlatformController::getInstance();
+    m_multiPlatformController->init(m_multiPlatformView);
+    
     // 创建各个页面
     GtkWidget* reconDeviceTab = gtk_label_new("侦察设备模型");
     GtkWidget* reconDevicePage = m_reconDeviceView->createView();

@@ -70,6 +70,17 @@ public:
     
     // 获取误差表格控件
     GtkWidget* getErrorTable() const;
+    
+    // 显示错误信息
+    void showErrorMessage(const std::string& message);
+    
+    // 获取地图视图
+    MapView* getMapView() const;
+    
+    // 设备移动动画
+    void animateDeviceMovement(const ReconnaissanceDevice& device, 
+                              const std::vector<std::pair<double, double>>& trajectoryPoints, 
+                              int simulationTime);
 
 private:
     GtkWidget* m_view;
@@ -93,4 +104,7 @@ private:
     
     // 存储辐射源数据
     std::vector<RadiationSource> m_sources;
+    
+    // 轨迹线ID
+    int m_trajectoryLineId;
 }; 

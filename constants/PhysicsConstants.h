@@ -15,6 +15,7 @@ namespace Constants {
     const double DEG2RAD = PI/180.0;
     const double RAD2DEG = 180.0/PI;
     const double a = 6378137.0000;  // CGCS2000长半轴
+    const double EARTH_RADIUS = a;  // 地球半径（米），使用长半轴作为近似值
     const double e_squared = 0.00669438002290;  // CGCS2000第一偏心率平方
 
     // SNR阈值信号,如果辐射源与侦察站之间的信噪比小于5dB，则无法接收信号
