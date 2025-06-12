@@ -29,7 +29,7 @@
     .distance-legend {
       position: absolute;
       bottom: 40px;
-      left: 10px;
+      right: 10px;
       background-color: rgba(42, 42, 42, 0.8);
       color: white;
       padding: 5px 8px;
@@ -69,13 +69,13 @@
     // 设置Cesium ion访问令牌
     Cesium.Ion.defaultAccessToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiIyMTUwM2VmMi1mMmY0LTQwYTYtOWU5OC1mYTlhYTQ1MzFkY2QiLCJpZCI6MzA5ODE3LCJpYXQiOjE3NDkxOTk2Mjh9.Hkkpi8oEP1rLg6y3yd3T5b3gOOrfuHIHqSbSlH3wPds';
     
-    // 创建离线瓦片地图提供者
-    var offlineImageryProvider = new Cesium.UrlTemplateImageryProvider({
-        url: 'map/{z}/{x}/{y}.png',  // 使用相对路径z格式
-        tilingScheme: new Cesium.WebMercatorTilingScheme(),
-        minimumLevel: 0,
-        maximumLevel: 11,  // 根据map文件夹中的最大级别设置
-        credit: new Cesium.Credit('本地离线瓦片地图')
+    // 创建离线瓦片地图提供者 - 使用res/map目录下的TMS格式瓦片
+    var offlineImageryProvider = new Cesium.TileMapServiceImageryProvider({
+        url: './map',  // 使用相对路径指向res/map目录
+        fileExtension: 'jpg',
+        credit: new Cesium.Credit('本地离线瓦片地图'),
+        tilingScheme: new Cesium.GeographicTilingScheme(), // 使用地理坐标系统 (EPSG:4326)
+        maximumLevel: 7 // 根据map文件夹中实际可用的最大级别设置
     });
     
     // 创建Cesium查看器

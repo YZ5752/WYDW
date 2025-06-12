@@ -50,7 +50,7 @@ void MapView::setCenter(double longitude, double latitude, double height) {
         // Cesium地图的设置中心点方法
         script << "viewer.camera.flyTo({" 
                << "destination: Cesium.Cartesian3.fromDegrees(" << longitude << ", " << latitude << ", " << height << "),"
-               << "orientation: {heading: 0.0, pitch: -0.5, roll: 0.0}});";
+               << "orientation: {heading: 0.0, pitch: 0, roll: 0.0}});";
     } else {
         // 2D地图的设置中心点方法
         script << "map.setView([" << latitude << ", " << longitude << "], " << height << ");";
@@ -90,14 +90,47 @@ int MapView::addMarker(double longitude, double latitude, const std::string& tit
     std::stringstream script;
     
     if (m_use3DMap) {
+        // 从描述中提取高度信息（如果有）
+        double height = 0.0;
+        size_t heightPos = description.find("高度:");
+        if (heightPos != std::string::npos) {
+            size_t valueStart = description.find_first_of("0123456789.", heightPos);
+            if (valueStart != std::string::npos) {
+                size_t valueEnd = description.find_first_not_of("0123456789.", valueStart);
+                if (valueEnd != std::string::npos) {
+                    std::string heightStr = description.substr(valueStart, valueEnd - valueStart);
+                    try {
+                        height = std::stod(heightStr);
+                    } catch (...) {
+                        // 转换失败，使用默认高度0
+                    }
+                }
+            }
+        }
+        
         // Cesium地图添加标记点
         script << "var entity = viewer.entities.add({" 
                << "id: '" << markerId << "',"
-               << "position: Cesium.Cartesian3.fromDegrees(" << longitude << ", " << latitude << "),"
-               << "point: {pixelSize: 10, color: Cesium.Color.fromCssColorString('" << color << "')},"
+               << "position: Cesium.Cartesian3.fromDegrees(" << longitude << ", " << latitude << ", " << height << "),"
+               << "point: {pixelSize: 10, color: Cesium.Color.fromCssColorString('" << color << "'), outlineColor: Cesium.Color.BLACK, outlineWidth: 2},"
                << "label: {text: '" << title << "', font: '14pt sans-serif', style: Cesium.LabelStyle.FILL_AND_OUTLINE,"
-               << "        outlineWidth: 2, verticalOrigin: Cesium.VerticalOrigin.BOTTOM, pixelOffset: new Cesium.Cartesian2(0, -9)},"
-               << "description: '" << description << "'"
+               << "        outlineWidth: 2, verticalOrigin: Cesium.VerticalOrigin.BOTTOM, pixelOffset: new Cesium.Cartesian2(0, -9),"
+               << "        showBackground: true, backgroundColor: new Cesium.Color(0.165, 0.165, 0.165, 0.7)},"
+               << "billboard: {image: 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgd2lkdGg9IjI0IiBoZWlnaHQ9IjI0Ij48Y2lyY2xlIGN4PSIxMiIgY3k9IjEyIiByPSIxMCIgZmlsbD0iIzAwMCIvPjxjaXJjbGUgY3g9IjEyIiBjeT0iMTIiIHI9IjgiIGZpbGw9IiIgLz48L3N2Zz4=',"
+               << "        width: 32, height: 32, verticalOrigin: Cesium.VerticalOrigin.BOTTOM, color: Cesium.Color.fromCssColorString('" << color << "')},"
+               << "description: '" << description << "',"
+               << "});"
+               
+               // 添加垂直线连接标记点和地面
+               << "viewer.entities.add({"
+               << "  polyline: {"
+               << "    positions: [Cesium.Cartesian3.fromDegrees(" << longitude << ", " << latitude << ", 0), "
+               << "                Cesium.Cartesian3.fromDegrees(" << longitude << ", " << latitude << ", " << height << ")],"
+               << "    width: 1,"
+               << "    material: new Cesium.PolylineDashMaterialProperty({"
+               << "      color: Cesium.Color.fromCssColorString('" << color << "')"
+               << "    })"
+               << "  }"
                << "});";
     } else {
         // 2D地图添加标记点
