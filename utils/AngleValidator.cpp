@@ -88,13 +88,13 @@ bool validateAngle(const std::vector<int>& deviceIds, int sourceId, std::string&
     RadiationSource source = radiationSourceDAO.getRadiationSourceById(sourceId);
     
     // 获取辐射源的位置和工作扇区
-    double sourceLongitude = source.longitude;
-    double sourceLatitude = source.latitude;
-    double sourceAltitude = source.altitude;
-    double sourceAzimuthStart = source.azimuthStartAngle;
-    double sourceAzimuthEnd = source.azimuthEndAngle;
-    double sourceElevationStart = source.elevationStartAngle;
-    double sourceElevationEnd = source.elevationEndAngle;
+    double sourceLongitude = source.getLongitude();
+    double sourceLatitude = source.getLatitude();
+    double sourceAltitude = source.getAltitude();
+    double sourceAzimuthStart = source.getAzimuthStart();
+    double sourceAzimuthEnd = source.getAzimuthEnd();
+    double sourceElevationStart = source.getElevationStart();
+    double sourceElevationEnd = source.getElevationEnd();
     
     // 获取辐射源空间直角坐标
     COORD3 sourceXYZ = lbh2xyz(sourceLongitude, sourceLatitude, sourceAltitude);
@@ -108,13 +108,13 @@ bool validateAngle(const std::vector<int>& deviceIds, int sourceId, std::string&
         ReconnaissanceDevice device = deviceDAO.getReconnaissanceDeviceById(deviceId);
         
         // 获取设备的位置和接收角度范围
-        double deviceLongitude = device.longitude;
-        double deviceLatitude = device.latitude;
-        double deviceAltitude = device.altitude;
-        double deviceAzimuthMin = device.angleAzimuthMin;
-        double deviceAzimuthMax = device.angleAzimuthMax;
-        double deviceElevationMin = device.angleElevationMin;
-        double deviceElevationMax = device.angleElevationMax;
+        double deviceLongitude = device.getLongitude();
+        double deviceLatitude = device.getLatitude();
+        double deviceAltitude = device.getAltitude();
+        double deviceAzimuthMin = device.getAngleAzimuthMin();
+        double deviceAzimuthMax = device.getAngleAzimuthMax();
+        double deviceElevationMin = device.getAngleElevationMin();
+        double deviceElevationMax = device.getAngleElevationMax();
         
         // 获取设备空间直角坐标
         COORD3 deviceXYZ = lbh2xyz(deviceLongitude, deviceLatitude, deviceAltitude);
@@ -141,10 +141,10 @@ bool validateAngle(const std::vector<int>& deviceIds, int sourceId, std::string&
         // 判断角度验证是否通过
         if (!receiverCanHear) {
             std::stringstream ss;
-            ss << "角度验证失败：设备 " << deviceId << " (" << device.deviceName << ") "
+            ss << "角度验证失败：设备 " << deviceId << " (" << device.getDeviceName() << ") "
                << "的接收角度范围为 方位角[" << deviceAzimuthMin << "°~" << deviceAzimuthMax << "°], "
                << "俯仰角[" << deviceElevationMin << "°~" << deviceElevationMax << "°], "
-               << "而辐射源 " << sourceId << " (" << source.radiationName << ") "
+               << "而辐射源 " << sourceId << " (" << source.getRadiationName() << ") "
                << "相对于该设备的方位角为 " << std::fixed << std::setprecision(2) << azimuthToEmitter << "°, "
                << "俯仰角为 " << std::fixed << std::setprecision(2) << elevationToEmitter << "°";
             failMessage = ss.str();
@@ -153,10 +153,10 @@ bool validateAngle(const std::vector<int>& deviceIds, int sourceId, std::string&
         
         if (!emitterCanTransmit) {
             std::stringstream ss;
-            ss << "角度验证失败：辐射源 " << sourceId << " (" << source.radiationName << ") "
+            ss << "角度验证失败：辐射源 " << sourceId << " (" << source.getRadiationName() << ") "
                << "的工作扇区范围为 方位角[" << sourceAzimuthStart << "°~" << sourceAzimuthEnd << "°], "
                << "俯仰角[" << sourceElevationStart << "°~" << sourceElevationEnd << "°], "
-               << "无法覆盖到设备 " << deviceId << " (" << device.deviceName << "), "
+               << "无法覆盖到设备 " << deviceId << " (" << device.getDeviceName() << "), "
                << "设备相对于辐射源的方位角为 " << std::fixed << std::setprecision(2) << azimuthToReceiver << "°, "
                << "俯仰角为 " << std::fixed << std::setprecision(2) << elevationToReceiver << "°";
             failMessage = ss.str();

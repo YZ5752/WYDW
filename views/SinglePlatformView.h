@@ -6,6 +6,7 @@
 #include "../models/ReconnaissanceDeviceModel.h"
 #include "../models/RadiationSourceModel.h"
 #include "components/MapView.h"
+#include "../models/TrajectorySimulator.h"
 
 // 声明全局回调函数
 extern "C" {
@@ -81,6 +82,18 @@ public:
     void animateDeviceMovement(const ReconnaissanceDevice& device, 
                               const std::vector<std::pair<double, double>>& trajectoryPoints, 
                               int simulationTime);
+    
+    // 显示仿真结果参数
+    void showSimulationResult(double lon, double lat, double alt, double az, double el);
+    
+    // 清空仿真结果参数
+    void clearSimulationResult();
+    
+    // 设置仿真结果缓存
+    void setSimulationResult(double lon, double lat, double alt, double az, double el);
+    
+    // 获取仿真结果缓存
+    bool getSimulationResult(double& lon, double& lat, double& alt, double& az, double& el);
 
 private:
     GtkWidget* m_view;
@@ -107,4 +120,14 @@ private:
     
     // 轨迹线ID
     int m_trajectoryLineId;
+
+    // 仿真结果参数label
+    GtkWidget* m_resultLon;
+    GtkWidget* m_resultLat;
+    GtkWidget* m_resultAlt;
+    GtkWidget* m_resultAz;
+    GtkWidget* m_resultEl;
+
+    double m_lastLon = 0, m_lastLat = 0, m_lastAlt = 0, m_lastAz = 0, m_lastEl = 0;
+    bool m_hasResult = false;
 }; 

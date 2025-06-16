@@ -89,11 +89,11 @@ bool validateSNR(const std::vector<int>& deviceIds, int sourceId, std::string& f
     RadiationSource source = radiationSourceDAO.getRadiationSourceById(sourceId);
     
     // 获取辐射源的位置、发射功率和载波频率
-    double sourceLongitude = source.longitude;
-    double sourceLatitude = source.latitude;
-    double sourceAltitude = source.altitude;
-    double sourcePower = source.transmitPower;   
-    double sourceFrequency = source.carrierFrequency; 
+    double sourceLongitude = source.getLongitude();
+    double sourceLatitude = source.getLatitude();
+    double sourceAltitude = source.getAltitude();
+    double sourcePower = source.getTransmitPower();   
+    double sourceFrequency = source.getCarrierFrequency(); 
     
     // 获取侦察设备DAO实例
     ReconnaissanceDeviceDAO& deviceDAO = ReconnaissanceDeviceDAO::getInstance();
@@ -107,9 +107,10 @@ bool validateSNR(const std::vector<int>& deviceIds, int sourceId, std::string& f
         // 获取设备信息
         ReconnaissanceDevice device = deviceDAO.getReconnaissanceDeviceById(deviceId);
         
+        
         // 更新频率范围交集
-        intersectFreqMin = std::max(intersectFreqMin, device.freqRangeMin);
-        intersectFreqMax = std::min(intersectFreqMax, device.freqRangeMax);
+        intersectFreqMin = std::max(intersectFreqMin, static_cast<double>(device.getFreqRangeMin()));
+        intersectFreqMax = std::min(intersectFreqMax, static_cast<double>(device.getFreqRangeMax()));
     }
     
     // 检查交集是否有效
@@ -129,10 +130,10 @@ bool validateSNR(const std::vector<int>& deviceIds, int sourceId, std::string& f
         ReconnaissanceDevice device = deviceDAO.getReconnaissanceDeviceById(deviceId);
         
         // 获取设备的位置，噪声功率谱密度
-        double deviceLongitude = device.longitude;
-        double deviceLatitude = device.latitude;
-        double deviceAltitude = device.altitude;
-        double deviceNoisePSD = device.noisePSD;  
+        double deviceLongitude = device.getLongitude();
+        double deviceLatitude = device.getLatitude();
+        double deviceAltitude = device.getAltitude();
+        double deviceNoisePSD = device.getNoisePsd();  
         
         // 1. 计算两点之间的距离
         double di = calculateDistance(
@@ -151,8 +152,8 @@ bool validateSNR(const std::vector<int>& deviceIds, int sourceId, std::string& f
         // 4. 判断信噪比是否超过阈值
         if (snr < Constants::SNR_THRESHOLD) {
             std::stringstream ss;
-            ss << "SNR验证失败：辐射源 " << source.radiationName
-               << "与侦察设备 " << device.deviceName
+            ss << "SNR验证失败：辐射源 " << source.getRadiationName()
+               << "与侦察设备 " << device.getDeviceName()
                << "之间的距离不能超过 " << std::fixed << std::setprecision(2) << max_distance << " 米，"
                << "当前距离为 " << std::fixed << std::setprecision(2) << di << " 米，"
                << "信噪比为 " << std::fixed << std::setprecision(2) << snr << " dB，"

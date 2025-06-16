@@ -45,25 +45,79 @@ link_directories(
     ${WEBKIT2_LIBRARY_DIRS}
 )
 
-# 添加MVC架构的源文件
-file(GLOB MODEL_SOURCES "models/src/*.cpp")
-file(GLOB VIEW_SOURCES "views/src/*.cpp" "views/components/src/*.cpp")
-file(GLOB CONTROLLER_SOURCES "controllers/src/*.cpp")
-
-# 确保CoordinateTransform.cpp被包含
-set(COORDINATE_TRANSFORM_SRC "${CMAKE_CURRENT_SOURCE_DIR}/utils/CoordinateTransform.cpp")
-if(EXISTS ${COORDINATE_TRANSFORM_SRC})
-    message(STATUS "Found CoordinateTransform.cpp: ${COORDINATE_TRANSFORM_SRC}")
+# 添加main.cpp
+set(MAIN_SRC "${CMAKE_CURRENT_SOURCE_DIR}/controllers/src/main.cpp")
+if(EXISTS ${MAIN_SRC})
+    message(STATUS "Found main.cpp: ${MAIN_SRC}")
 else()
-    message(FATAL_ERROR "CoordinateTransform.cpp not found at: ${COORDINATE_TRANSFORM_SRC}")
+    message(FATAL_ERROR "main.cpp not found at: ${MAIN_SRC}")
 endif()
+
+# 添加MVC架构的源文件
+file(GLOB MODEL_SOURCES 
+    "${CMAKE_CURRENT_SOURCE_DIR}/models/src/*.cpp"
+)
+
+file(GLOB MODEL_HEADERS
+    "${CMAKE_CURRENT_SOURCE_DIR}/models/*.h"
+)
+
+file(GLOB VIEW_SOURCES 
+    "${CMAKE_CURRENT_SOURCE_DIR}/views/src/*.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/views/components/src/*.cpp"
+)
+
+file(GLOB CONTROLLER_SOURCES 
+    "${CMAKE_CURRENT_SOURCE_DIR}/controllers/src/*.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/controllers/*.cpp"
+)
+
+# 添加所有工具类源文件
+set(UTILS_SOURCES
+    "${CMAKE_CURRENT_SOURCE_DIR}/utils/CoordinateTransform.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/utils/SimulationValidator.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/utils/SNRValidator.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/utils/AngleValidator.cpp"
+)
+
+# 检查文件存在
+foreach(src_file ${UTILS_SOURCES})
+    if(EXISTS ${src_file})
+        message(STATUS "Found utility source: ${src_file}")
+    else()
+        message(FATAL_ERROR "Source file not found: ${src_file}")
+    endif()
+endforeach()
+
+# 打印找到的源文件（调试用）
+message(STATUS "Found controller sources:")
+foreach(src ${CONTROLLER_SOURCES})
+    message(STATUS "  ${src}")
+endforeach()
+
+message(STATUS "Found model sources:")
+foreach(src ${MODEL_SOURCES})
+    message(STATUS "  ${src}")
+endforeach()
+
+message(STATUS "Found model headers:")
+foreach(src ${MODEL_HEADERS})
+    message(STATUS "  ${src}")
+endforeach()
+
+message(STATUS "Found view sources:")
+foreach(src ${VIEW_SOURCES})
+    message(STATUS "  ${src}")
+endforeach()
 
 # 创建可执行文件
 add_executable(${PROJECT_NAME} 
+    ${MAIN_SRC}
     ${MODEL_SOURCES}
+    ${MODEL_HEADERS}
     ${VIEW_SOURCES}
     ${CONTROLLER_SOURCES}
-    ${COORDINATE_TRANSFORM_SRC}  # 显式添加CoordinateTransform.cpp
+    ${UTILS_SOURCES}
 )
 
 # 链接库
