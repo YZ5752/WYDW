@@ -30,15 +30,15 @@ bool SimulationValidator::validateAll(const std::vector<int>& deviceIds, int sou
     RadiationSource source = radiationSourceDAO.getRadiationSourceById(sourceId);
     
     // 获取辐射源的各项参数
-    double sourceFrequency = source.carrierFrequency;  // 载波频率(GHz)
-    double sourceLongitude = source.longitude;         // 经度
-    double sourceLatitude = source.latitude;           // 纬度
-    double sourceAltitude = source.altitude;           // 高度
-    double sourcePower = source.transmitPower;         // 发射功率
-    double sourceAzimuthStart = source.azimuthStartAngle;    // 工作扇区方位角下限
-    double sourceAzimuthEnd = source.azimuthEndAngle;        // 工作扇区方位角上限
-    double sourceElevationStart = source.elevationStartAngle; // 工作扇区俯仰角下限
-    double sourceElevationEnd = source.elevationEndAngle;     // 工作扇区俯仰角上限
+    double sourceFrequency = source.getCarrierFrequency();  // 载波频率(GHz)
+    double sourceLongitude = source.getLongitude();         // 经度
+    double sourceLatitude = source.getLatitude();           // 纬度
+    double sourceAltitude = source.getAltitude();           // 高度
+    double sourcePower = source.getTransmitPower();         // 发射功率
+    double sourceAzimuthStart = source.getAzimuthStart();    // 工作扇区方位角下限
+    double sourceAzimuthEnd = source.getAzimuthEnd();        // 工作扇区方位角上限
+    double sourceElevationStart = source.getElevationStart(); // 工作扇区俯仰角下限
+    double sourceElevationEnd = source.getElevationEnd();     // 工作扇区俯仰角上限
     
     // 获取辐射源空间直角坐标
     COORD3 sourceXYZ = lbh2xyz(sourceLongitude, sourceLatitude, sourceAltitude);
@@ -53,8 +53,8 @@ bool SimulationValidator::validateAll(const std::vector<int>& deviceIds, int sou
         ReconnaissanceDevice device = deviceDAO.getReconnaissanceDeviceById(deviceId);
         
         // 更新频率范围交集
-        intersectFreqMin = std::max(intersectFreqMin, device.freqRangeMin);
-        intersectFreqMax = std::min(intersectFreqMax, device.freqRangeMax);
+        intersectFreqMin = std::max(intersectFreqMin, static_cast<double>(device.getFreqRangeMin()));
+        intersectFreqMax = std::min(intersectFreqMax, static_cast<double>(device.getFreqRangeMax()));
     }
     
     // 检查交集是否有效
@@ -74,23 +74,23 @@ bool SimulationValidator::validateAll(const std::vector<int>& deviceIds, int sou
         ReconnaissanceDevice device = deviceDAO.getReconnaissanceDeviceById(deviceId);
         
         // 获取设备的各项参数
-        double minFreq = device.freqRangeMin;           // 侦收频率范围下限
-        double maxFreq = device.freqRangeMax;           // 侦收频率范围上限
-        double deviceLongitude = device.longitude;      // 经度
-        double deviceLatitude = device.latitude;        // 纬度
-        double deviceAltitude = device.altitude;        // 高度
-        double deviceNoisePSD = device.noisePSD;        // 噪声功率谱密度(dBm/Hz)
-        double deviceAzimuthMin = device.angleAzimuthMin;      // 方位角下限
-        double deviceAzimuthMax = device.angleAzimuthMax;      // 方位角上限
-        double deviceElevationMin = device.angleElevationMin;  // 俯仰角下限
-        double deviceElevationMax = device.angleElevationMax;  // 俯仰角上限
+        double minFreq = device.getFreqRangeMin();           // 侦收频率范围下限
+        double maxFreq = device.getFreqRangeMax();           // 侦收频率范围上限
+        double deviceLongitude = device.getLongitude();      // 经度
+        double deviceLatitude = device.getLatitude();        // 纬度
+        double deviceAltitude = device.getAltitude();        // 高度
+        double deviceNoisePSD = device.getNoisePsd();        // 噪声功率谱密度(dBm/Hz)
+        double deviceAzimuthMin = device.getAngleAzimuthMin();      // 方位角下限
+        double deviceAzimuthMax = device.getAngleAzimuthMax();      // 方位角上限
+        double deviceElevationMin = device.getAngleElevationMin();  // 俯仰角下限
+        double deviceElevationMax = device.getAngleElevationMax();  // 俯仰角上限
         
         // ============ 1. 频率验证 ============
         if (sourceFrequency < minFreq || sourceFrequency > maxFreq) {
             std::stringstream ss;
-            ss << "频率验证失败：侦察设备 "<< device.deviceName
+            ss << "频率验证失败：侦察设备 "<< device.getDeviceName()
                << "的接收频率范围为 " << minFreq << "~" << maxFreq << " GHz，"
-               << "无法接收辐射源 " << source.radiationName
+               << "无法接收辐射源 " << source.getRadiationName() 
                << "的频率 " << sourceFrequency << " GHz";
             failMessage = ss.str();
             return false;
@@ -120,10 +120,10 @@ bool SimulationValidator::validateAll(const std::vector<int>& deviceIds, int sou
         
         if (!receiverCanHear) {
             std::stringstream ss;
-            ss << "角度验证失败：设备 " << device.deviceName 
+            ss << "角度验证失败：设备 " << device.getDeviceName() 
                << "的接收角度范围为 方位角[" << deviceAzimuthMin << "°~" << deviceAzimuthMax << "°], "
                << "俯仰角[" << deviceElevationMin << "°~" << deviceElevationMax << "°], "
-               << "而辐射源 " << source.radiationName
+               << "而辐射源 " << source.getRadiationName()
                << "相对于该设备的方位角为 " << std::fixed << std::setprecision(2) << azimuthToEmitter << "°, "
                << "俯仰角为 " << std::fixed << std::setprecision(2) << elevationToEmitter << "°";
             failMessage = ss.str();
@@ -132,10 +132,10 @@ bool SimulationValidator::validateAll(const std::vector<int>& deviceIds, int sou
         
         if (!emitterCanTransmit) {
             std::stringstream ss;
-            ss << "角度验证失败：辐射源 " << source.radiationName 
+            ss << "角度验证失败：辐射源 " << source.getRadiationName()
                << "的工作扇区范围为 方位角[" << sourceAzimuthStart << "°~" << sourceAzimuthEnd << "°], "
                << "俯仰角[" << sourceElevationStart << "°~" << sourceElevationEnd << "°], "
-               << "而设备 " << device.deviceName
+               << "而设备 " << device.getDeviceName()
                << "相对于辐射源的方位角为 " << std::fixed << std::setprecision(2) << azimuthToReceiver << "°, "
                << "俯仰角为 " << std::fixed << std::setprecision(2) << elevationToReceiver << "°";
             failMessage = ss.str();
@@ -158,8 +158,8 @@ bool SimulationValidator::validateAll(const std::vector<int>& deviceIds, int sou
         // 判断SNR是否超过阈值
         if (snr < Constants::SNR_THRESHOLD) {
             std::stringstream ss;
-            ss << "SNR验证失败：辐射源 " << source.radiationName
-               << "与侦察设备 " << device.deviceName
+            ss << "SNR验证失败：辐射源 " << source.getRadiationName()
+               << "与侦察设备 " << device.getDeviceName()
                << "之间的距离不能超过 " << std::fixed << std::setprecision(2) << max_distance << " 米，"
                << "当前距离为 " << std::fixed << std::setprecision(2) << distance << " 米，"
                << "信噪比为 " << std::fixed << std::setprecision(2) << snr << " dB，"

@@ -20,7 +20,13 @@ SinglePlatformView::SinglePlatformView() :
     m_mapView(nullptr),
     m_radarMarker(-1),
     m_sourceMarker(-1),
-    m_trajectoryLineId(-1) {
+    m_trajectoryLineId(-1),
+    m_hasResult(false),
+    m_lastLon(0),
+    m_lastLat(0),
+    m_lastAlt(0),
+    m_lastAz(0),
+    m_lastEl(0) {
 }
 
 SinglePlatformView::~SinglePlatformView() {
@@ -150,36 +156,47 @@ GtkWidget* SinglePlatformView::createView() {
     GtkWidget* resultBox = gtk_box_new(GTK_ORIENTATION_VERTICAL, 5);
     gtk_container_add(GTK_CONTAINER(resultFrame), resultBox);
     gtk_container_set_border_width(GTK_CONTAINER(resultBox), 10);
-    
-    // 创建表格
-    GtkWidget* table = gtk_grid_new();
-    gtk_grid_set_row_spacing(GTK_GRID(table), 5);
-    gtk_grid_set_column_spacing(GTK_GRID(table), 10);
-    gtk_box_pack_start(GTK_BOX(resultBox), table, TRUE, TRUE, 0);
-    
-    // 添加表头
-    GtkWidget* dirDataLabel = gtk_label_new("测向数据");
-    gtk_widget_set_halign(dirDataLabel, GTK_ALIGN_START);
-    gtk_grid_attach(GTK_GRID(table), dirDataLabel, 0, 1, 1, 1);
-    
-    GtkWidget* locDataLabel = gtk_label_new("定位数据");
-    gtk_widget_set_halign(locDataLabel, GTK_ALIGN_START);
-    gtk_grid_attach(GTK_GRID(table), locDataLabel, 0, 2, 1, 1);
-    
-    // 添加结果值（初始为空）    
-    GtkWidget* dirDataValue = gtk_label_new("--");
-    gtk_widget_set_halign(dirDataValue, GTK_ALIGN_END);
-    gtk_grid_attach(GTK_GRID(table), dirDataValue, 1, 1, 1, 1);
-    
-    // 保存测向数据标签引用
-    m_dirDataValue = dirDataValue;
-    
-    GtkWidget* locDataValue = gtk_label_new("--");
-    gtk_widget_set_halign(locDataValue, GTK_ALIGN_END);
-    gtk_grid_attach(GTK_GRID(table), locDataValue, 1, 2, 1, 1);
-    
-    // 保存定位数据标签引用
-    m_locDataValue = locDataValue;
+
+    // 创建纵向参数列表
+    GtkWidget* grid = gtk_grid_new();
+    gtk_grid_set_row_spacing(GTK_GRID(grid), 5);
+    gtk_grid_set_column_spacing(GTK_GRID(grid), 10);
+    gtk_box_pack_start(GTK_BOX(resultBox), grid, TRUE, TRUE, 0);
+
+    GtkWidget* labelLon = gtk_label_new("经度:");
+    gtk_widget_set_halign(labelLon, GTK_ALIGN_START);
+    gtk_grid_attach(GTK_GRID(grid), labelLon, 0, 0, 1, 1);
+    m_resultLon = gtk_label_new("--");
+    gtk_widget_set_halign(m_resultLon, GTK_ALIGN_END);
+    gtk_grid_attach(GTK_GRID(grid), m_resultLon, 1, 0, 1, 1);
+
+    GtkWidget* labelLat = gtk_label_new("纬度:");
+    gtk_widget_set_halign(labelLat, GTK_ALIGN_START);
+    gtk_grid_attach(GTK_GRID(grid), labelLat, 0, 1, 1, 1);
+    m_resultLat = gtk_label_new("--");
+    gtk_widget_set_halign(m_resultLat, GTK_ALIGN_END);
+    gtk_grid_attach(GTK_GRID(grid), m_resultLat, 1, 1, 1, 1);
+
+    GtkWidget* labelAlt = gtk_label_new("高度:");
+    gtk_widget_set_halign(labelAlt, GTK_ALIGN_START);
+    gtk_grid_attach(GTK_GRID(grid), labelAlt, 0, 2, 1, 1);
+    m_resultAlt = gtk_label_new("--");
+    gtk_widget_set_halign(m_resultAlt, GTK_ALIGN_END);
+    gtk_grid_attach(GTK_GRID(grid), m_resultAlt, 1, 2, 1, 1);
+
+    GtkWidget* labelAz = gtk_label_new("方位角:");
+    gtk_widget_set_halign(labelAz, GTK_ALIGN_START);
+    gtk_grid_attach(GTK_GRID(grid), labelAz, 0, 3, 1, 1);
+    m_resultAz = gtk_label_new("--");
+    gtk_widget_set_halign(m_resultAz, GTK_ALIGN_END);
+    gtk_grid_attach(GTK_GRID(grid), m_resultAz, 1, 3, 1, 1);
+
+    GtkWidget* labelEl = gtk_label_new("俯仰角:");
+    gtk_widget_set_halign(labelEl, GTK_ALIGN_START);
+    gtk_grid_attach(GTK_GRID(grid), labelEl, 0, 4, 1, 1);
+    m_resultEl = gtk_label_new("--");
+    gtk_widget_set_halign(m_resultEl, GTK_ALIGN_END);
+    gtk_grid_attach(GTK_GRID(grid), m_resultEl, 1, 4, 1, 1);
     
     // 误差结果区域
     GtkWidget* errorFrame = gtk_frame_new("误差分析");
@@ -548,216 +565,120 @@ void SinglePlatformView::animateDeviceMovement(const ReconnaissanceDevice& devic
                                             int simulationTime) {
     if (!m_mapView || trajectoryPoints.empty()) return;
     
-    // 保存当前相机视角
-    std::string saveCameraScript = 
-        "window.savedCameraPosition = viewer.camera.position.clone();"
-        "window.savedCameraHeading = viewer.camera.heading;"
-        "window.savedCameraPitch = viewer.camera.pitch;"
-        "window.savedCameraRoll = viewer.camera.roll;";
-    m_mapView->executeScript(saveCameraScript);
+    g_print("开始设备移动动画，轨迹点数量: %zu\n", trajectoryPoints.size());
     
-    // 只清除设备实体，保留辐射源标记
-    std::string cleanupScript = 
-        "// 移除设备实体，但保留其他标记点 "
-        "if (window.deviceEntity) { "
-        "  viewer.entities.remove(window.deviceEntity); "
-        "  window.deviceEntity = null; "
-        "} "
-        "// 移除设备轨迹线 "
-        "if (window.deviceTrailEntities) { "
-        "  for (var i = 0; i < window.deviceTrailEntities.length; i++) { "
-        "    viewer.entities.remove(window.deviceTrailEntities[i]); "
-        "  } "
-        "  window.deviceTrailEntities = []; "
-        "} else { "
-        "  window.deviceTrailEntities = []; "
-        "} "
-        "// 移除事件监听器 "
-        "if (viewer.scene.preRender.numberOfListeners > 0) { "
-        "  // 移除之前的事件监听器 "
-        "  var listeners = viewer.scene.preRender._listeners; "
-        "  if (listeners && listeners.length > 0) { "
-        "    for (var i = listeners.length - 1; i >= 0; i--) { "
-        "      viewer.scene.preRender.removeEventListener(listeners[i]); "
-        "    } "
-        "  } "
-        "} "
-        "if (viewer.clock.onTick.numberOfListeners > 0) { "
-        "  var listeners = viewer.clock.onTick._listeners; "
-        "  if (listeners && listeners.length > 0) { "
-        "    for (var i = listeners.length - 1; i >= 0; i--) { "
-        "      viewer.clock.onTick.removeEventListener(listeners[i]); "
-        "    } "
-        "  } "
-        "}";
-    m_mapView->executeScript(cleanupScript);
+    // 获取定位数据和测向数据的文本
+    const gchar* locDataStr = gtk_label_get_text(GTK_LABEL(m_locDataValue));
+    const gchar* dirDataStr = gtk_label_get_text(GTK_LABEL(m_dirDataValue));
     
-    // 获取设备高度
-    double deviceAltitude = device.getAltitude();
+    // 解析定位数据（经度、纬度、高度）
+    double calculatedLongitude = 0;
+    double calculatedLatitude = 0;
+    double calculatedAltitude = 0;
     
-    // 获取设备初始位置
-    double initialLongitude = trajectoryPoints[0].first;
-    double initialLatitude = trajectoryPoints[0].second;
-    
-    // 不使用animateDeviceMovement显示航迹线，而是使用JavaScript定时器每秒更新设备位置
-    std::stringstream script;
-    
-    // 恢复之前保存的视角，确保不会变化
-    script << "// 恢复保存的相机视角，确保不会变化"
-           << "if (window.savedCameraPosition) {"
-           << "  viewer.camera.setView({"
-           << "    destination: window.savedCameraPosition,"
-           << "    orientation: {"
-           << "      heading: window.savedCameraHeading,"
-           << "      pitch: window.savedCameraPitch,"
-           << "      roll: window.savedCameraRoll"
-           << "    }"
-           << "  });"
-           << "  // 禁用相机自动跟踪设备"
-           << "  viewer.scene.screenSpaceCameraController.enableZoom = true;"
-           << "  viewer.scene.screenSpaceCameraController.enableTilt = true;"
-           << "  viewer.scene.screenSpaceCameraController.enableRotate = true;"
-           << "  viewer.scene.screenSpaceCameraController.enableTranslate = true;"
-           << "}"
-           
-           // 创建实时更新设备位置的功能
-           << "window.deviceTrailEntities = window.deviceTrailEntities || [];"
-           << "var currentIndex = 0;"
-           << "var trajectoryPoints = [";
-    
-    // 添加所有轨迹点
-    for (size_t i = 0; i < trajectoryPoints.size(); i++) {
-        if (i > 0) script << ", ";
-        script << "[" << trajectoryPoints[i].first << ", " << trajectoryPoints[i].second << "]";
+    if (locDataStr && strstr(locDataStr, "经度:") != NULL) {
+        sscanf(locDataStr, "经度: %lf°, 纬度: %lf°, 高度: %lf", 
+               &calculatedLongitude, &calculatedLatitude, &calculatedAltitude);
+        g_print("解析定位结果: 经度=%.6f°, 纬度=%.6f°, 高度=%.2fm\n", 
+                calculatedLongitude, calculatedLatitude, calculatedAltitude);
+    } else {
+        g_print("无法解析定位结果，使用默认值\n");
+        // 使用辐射源位置作为默认值（在实际应用中这是不可能的，但这里仅用于可视化）
+        for (const auto& src : m_sources) {
+            if (src.getRadiationName() == getSelectedSource()) {
+                calculatedLongitude = src.getLongitude();
+                calculatedLatitude = src.getLatitude();
+                calculatedAltitude = src.getAltitude();
+                break;
+            }
+        }
     }
     
-    script << "];"
-           << "var updateInterval = " << (simulationTime * 1000) / (trajectoryPoints.size() - 1) << ";" // 计算更新间隔（毫秒）
-           
-           // 创建轨迹线
-           << "var positions = [];"
-           << "for (var i = 0; i < trajectoryPoints.length; i++) {"
-           << "  positions.push(Cesium.Cartesian3.fromDegrees(trajectoryPoints[i][0], trajectoryPoints[i][1], " << deviceAltitude << "));"
-           << "}"
-           
-           << "var pathEntity = viewer.entities.add({"
-           << "  polyline: {"
-           << "    positions: positions,"
-           << "    width: 2,"
-           << "    material: new Cesium.PolylineGlowMaterialProperty({"
-           << "      glowPower: 0.2,"
-           << "      color: Cesium.Color.YELLOW"
-           << "    })"
-           << "  }"
-           << "});"
-           << "window.deviceTrailEntities.push(pathEntity);"
-           
-           // 更新设备位置的函数
-           << "function updateDevicePosition() {"
-           << "  if (currentIndex >= trajectoryPoints.length) {"
-           << "    console.log('Simulation completed');"
-           << "    return;"
-           << "  }"
-           
-           << "  var longitude = trajectoryPoints[currentIndex][0];"
-           << "  var latitude = trajectoryPoints[currentIndex][1];"
-           
-           // 确保相机位置保持不变
-           << "  if (window.savedCameraPosition) {"
-           << "    viewer.camera.setView({"
-           << "      destination: window.savedCameraPosition,"
-           << "      orientation: {"
-           << "        heading: window.savedCameraHeading,"
-           << "        pitch: window.savedCameraPitch,"
-           << "        roll: window.savedCameraRoll"
-           << "      }"
-           << "    });"
-           << "  }"
-           
-           // 删除旧的设备实体
-           << "  if (window.deviceEntity) {"
-           << "    viewer.entities.remove(window.deviceEntity);"
-           << "  }"
-           
-           // 创建新的设备实体
-           << "  window.deviceEntity = viewer.entities.add({"
-           << "    position: Cesium.Cartesian3.fromDegrees(longitude, latitude, " << deviceAltitude << "),"
-           << "    point: {"
-           << "      pixelSize: 15,"
-           << "      color: Cesium.Color.RED,"
-           << "      outlineColor: Cesium.Color.WHITE,"
-           << "      outlineWidth: 2"
-           << "    },"
-           << "    label: {"
-           << "      text: '" << device.getDeviceName() << "\\n高度: " << std::fixed << std::setprecision(2) << deviceAltitude 
-           << "米\\n位置: ' + longitude.toFixed(6) + '°, ' + latitude.toFixed(6) + '°',"
-           << "      font: '14pt sans-serif',"
-           << "      style: Cesium.LabelStyle.FILL_AND_OUTLINE,"
-           << "      outlineWidth: 2,"
-           << "      verticalOrigin: Cesium.VerticalOrigin.BOTTOM,"
-           << "      pixelOffset: new Cesium.Cartesian2(0, -20),"
-           << "      showBackground: true,"
-           << "      backgroundColor: new Cesium.Color(0.165, 0.165, 0.165, 0.7)"
-           << "    },"
-           << "    billboard: {"
-           << "      image: 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgd2lkdGg9IjI0IiBoZWlnaHQ9IjI0Ij48Y2lyY2xlIGN4PSIxMiIgY3k9IjEyIiByPSIxMCIgZmlsbD0iIzAwMCIvPjxjaXJjbGUgY3g9IjEyIiBjeT0iMTIiIHI9IjgiIGZpbGw9IiIgLz48L3N2Zz4=',"
-           << "      width: 32,"
-           << "      height: 32,"
-           << "      verticalOrigin: Cesium.VerticalOrigin.BOTTOM,"
-           << "      color: Cesium.Color.RED"
-           << "    }"
-           << "  });"
-           
-           // 添加垂直线连接标记点和地面
-           << "  var verticalLineEntity = viewer.entities.add({"
-           << "    polyline: {"
-           << "      positions: [Cesium.Cartesian3.fromDegrees(longitude, latitude, 0), "
-           << "                  Cesium.Cartesian3.fromDegrees(longitude, latitude, " << deviceAltitude << ")],"
-           << "      width: 1,"
-           << "      material: new Cesium.PolylineDashMaterialProperty({"
-           << "        color: Cesium.Color.RED"
-           << "      })"
-           << "    }"
-           << "  });"
-           << "  window.deviceTrailEntities.push(verticalLineEntity);"
-           
-           // 更新索引并安排下一次更新
-           << "  currentIndex++;"
-           << "  if (currentIndex < trajectoryPoints.length) {"
-           << "    setTimeout(updateDevicePosition, updateInterval);" // 使用计算的更新间隔
-           << "  } else {"
-           << "    console.log('Simulation completed');"
-           << "    // 添加最终位置标记"
-           << "    var finalLongitude = trajectoryPoints[trajectoryPoints.length - 1][0];"
-           << "    var finalLatitude = trajectoryPoints[trajectoryPoints.length - 1][1];"
-           << "    var finalEntity = viewer.entities.add({"
-           << "      position: Cesium.Cartesian3.fromDegrees(finalLongitude, finalLatitude, " << deviceAltitude << "),"
-           << "      point: {"
-           << "        pixelSize: 10,"
-           << "        color: Cesium.Color.GREEN,"
-           << "        outlineColor: Cesium.Color.BLACK,"
-           << "        outlineWidth: 2"
-           << "      },"
-           << "      label: {"
-           << "        text: '最终位置\\n高度: " << std::fixed << std::setprecision(2) << deviceAltitude << "米',"
-           << "        font: '14pt sans-serif',"
-           << "        style: Cesium.LabelStyle.FILL_AND_OUTLINE,"
-           << "        outlineWidth: 2,"
-           << "        verticalOrigin: Cesium.VerticalOrigin.BOTTOM,"
-           << "        pixelOffset: new Cesium.Cartesian2(0, -9),"
-           << "        showBackground: true,"
-           << "        backgroundColor: new Cesium.Color(0.165, 0.165, 0.165, 0.7)"
-           << "      }"
-           << "    });"
-           << "    window.deviceTrailEntities.push(finalEntity);"
-           << "  }"
-           << "}"
-           
-           // 启动更新设备位置的循环
-           << "updateDevicePosition();";
+    // 获取辐射源的位置和名称
+    double radiationSourceLongitude = 0;
+    double radiationSourceLatitude = 0;
+    double radiationSourceAltitude = 0;
+    std::string sourceName = "辐射源";
+    bool sourceFound = false;
     
-    // 执行脚本
-    m_mapView->executeScript(script.str());
+    for (const auto& src : m_sources) {
+        if (src.getRadiationName() == getSelectedSource()) {
+            radiationSourceLongitude = src.getLongitude();
+            radiationSourceLatitude = src.getLatitude();
+            radiationSourceAltitude = src.getAltitude();
+            sourceName = src.getRadiationName();
+            sourceFound = true;
+            break;
+        }
+    }
     
-    g_print("设备移动仿真已启动，仿真时间: %d秒\n", simulationTime);
+    if (!sourceFound) {
+        g_print("警告：未找到辐射源位置，使用默认值\n");
+    }
+    
+    // 使用TrajectorySimulator执行动画，并在动画结束时回调显示参数
+    auto self = this;
+    TrajectorySimulator::getInstance().animateDeviceMovement(
+        m_mapView,
+        device,
+        trajectoryPoints,
+        simulationTime,
+        calculatedLongitude,
+        calculatedLatitude,
+        calculatedAltitude,
+        sourceName,
+        radiationSourceLongitude,
+        radiationSourceLatitude,
+        radiationSourceAltitude
+    );
+    // 动画结束后显示参数（直接从缓存读取）
+    g_timeout_add(simulationTime * 1000 + 1200, [](gpointer data) -> gboolean {
+        auto* view = static_cast<SinglePlatformView*>(data);
+        double lon=0, lat=0, alt=0, az=0, el=0;
+        if (view->getSimulationResult(lon, lat, alt, az, el)) {
+            view->showSimulationResult(lon, lat, alt, az, el);
+        }
+        return G_SOURCE_REMOVE;
+    }, self);
+}
+
+void SinglePlatformView::showSimulationResult(double lon, double lat, double alt, double az, double el) {
+    char buf[64];
+    snprintf(buf, sizeof(buf), "%.6f°", lon);
+    gtk_label_set_text(GTK_LABEL(m_resultLon), buf);
+    snprintf(buf, sizeof(buf), "%.6f°", lat);
+    gtk_label_set_text(GTK_LABEL(m_resultLat), buf);
+    snprintf(buf, sizeof(buf), "%.2fm", alt);
+    gtk_label_set_text(GTK_LABEL(m_resultAlt), buf);
+    snprintf(buf, sizeof(buf), "%.2f°", az);
+    gtk_label_set_text(GTK_LABEL(m_resultAz), buf);
+    snprintf(buf, sizeof(buf), "%.2f°", el);
+    gtk_label_set_text(GTK_LABEL(m_resultEl), buf);
+}
+
+void SinglePlatformView::clearSimulationResult() {
+    gtk_label_set_text(GTK_LABEL(m_resultLon), "--");
+    gtk_label_set_text(GTK_LABEL(m_resultLat), "--");
+    gtk_label_set_text(GTK_LABEL(m_resultAlt), "--");
+    gtk_label_set_text(GTK_LABEL(m_resultAz), "--");
+    gtk_label_set_text(GTK_LABEL(m_resultEl), "--");
+}
+
+void SinglePlatformView::setSimulationResult(double lon, double lat, double alt, double az, double el) {
+    m_lastLon = lon;
+    m_lastLat = lat;
+    m_lastAlt = alt;
+    m_lastAz = az;
+    m_lastEl = el;
+    m_hasResult = true;
+}
+
+bool SinglePlatformView::getSimulationResult(double& lon, double& lat, double& alt, double& az, double& el) {
+    if (!m_hasResult) return false;
+    lon = m_lastLon;
+    lat = m_lastLat;
+    alt = m_lastAlt;
+    az = m_lastAz;
+    el = m_lastEl;
+    return true;
 }
