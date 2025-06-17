@@ -20,7 +20,8 @@ namespace Constants {
 
     // SNR阈值信号,如果辐射源与侦察站之间的信噪比小于5dB，则无法接收信号
     const double SNR_THRESHOLD = 5.0;  // SNR阈值 (dB)
-    
+    // 采样参数
+    const int SAMPLING_POINTS = 4096;  // 采样点数
 }
 
 #endif // PHYSICS_CONSTANTS_H 

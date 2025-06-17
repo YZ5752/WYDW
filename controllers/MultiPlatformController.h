@@ -3,6 +3,7 @@
 #include "../views/MultiPlatformView.h"
 #include "../models/RadiationSourceModel.h"
 #include "../models/ReconnaissanceDeviceModel.h"
+#include "../models/FDOAalgorithm.h"
 #include <string>
 #include <vector>
 
@@ -20,6 +21,12 @@ public:
     
     // 获取视图
     MultiPlatformView* getView() const;
+
+    // 开始仿真
+    void startSimulation(const std::vector<std::string>& deviceNames,
+                        const std::string& sourceName,
+                        const std::string& systemType,
+                        double simulationTime);
 
 private:
     MultiPlatformController();

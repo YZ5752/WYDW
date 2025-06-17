@@ -1,5 +1,6 @@
 #include "../MultiPlatformView.h"
 #include "../../controllers/ApplicationController.h"
+#include "../../controllers/MultiPlatformController.h"
 #include "../../models/ReconnaissanceDeviceDAO.h"
 #include "../../models/RadiationSourceDAO.h"
 #include <gtk/gtk.h>
@@ -133,28 +134,24 @@ GtkWidget* MultiPlatformView::createView() {
     gtk_container_add(GTK_CONTAINER(resultFrame), resultBox);
     gtk_container_set_border_width(GTK_CONTAINER(resultBox), 10);
     
-    // 创建结果表格
-    GtkWidget* table = gtk_grid_new();
-    gtk_grid_set_row_spacing(GTK_GRID(table), 5);
-    gtk_grid_set_column_spacing(GTK_GRID(table), 10);
-    gtk_box_pack_start(GTK_BOX(resultBox), table, TRUE, TRUE, 0);
+    // 创建结果标签
+    m_resultLabel = gtk_label_new("");
+    gtk_label_set_line_wrap(GTK_LABEL(m_resultLabel), TRUE);
+    gtk_label_set_line_wrap_mode(GTK_LABEL(m_resultLabel), PANGO_WRAP_WORD);
+    gtk_label_set_justify(GTK_LABEL(m_resultLabel), GTK_JUSTIFY_LEFT);
+    gtk_label_set_xalign(GTK_LABEL(m_resultLabel), 0.0);
+    gtk_label_set_yalign(GTK_LABEL(m_resultLabel), 0.0);
     
-    // 添加表格内容
-    GtkWidget* dirDataLabel = gtk_label_new("测向数据");
-    gtk_widget_set_halign(dirDataLabel, GTK_ALIGN_START);
-    gtk_grid_attach(GTK_GRID(table), dirDataLabel, 0, 1, 1, 1);
+    // 设置结果标签的最小高度，确保有足够空间显示所有内容
+    gtk_widget_set_size_request(m_resultLabel, -1, 300);
     
-    GtkWidget* locDataLabel = gtk_label_new("定位数据");
-    gtk_widget_set_halign(locDataLabel, GTK_ALIGN_START);
-    gtk_grid_attach(GTK_GRID(table), locDataLabel, 0, 2, 1, 1);
+    // 设置结果标签的边距
+    gtk_widget_set_margin_start(m_resultLabel, 5);
+    gtk_widget_set_margin_end(m_resultLabel, 5);
+    gtk_widget_set_margin_top(m_resultLabel, 5);
+    gtk_widget_set_margin_bottom(m_resultLabel, 5);
     
-    m_resultLabel = gtk_label_new("--");
-    gtk_widget_set_halign(m_resultLabel, GTK_ALIGN_END);
-    gtk_grid_attach(GTK_GRID(table), m_resultLabel, 1, 1, 1, 1);
-    
-    m_errorLabel = gtk_label_new("--");
-    gtk_widget_set_halign(m_errorLabel, GTK_ALIGN_END);
-    gtk_grid_attach(GTK_GRID(table), m_errorLabel, 1, 2, 1, 1);
+    gtk_box_pack_start(GTK_BOX(resultBox), m_resultLabel, TRUE, TRUE, 0);
     
     // 默认只显示3个侦察设备下拉框
     for (int i = 0; i < 4; ++i) {
@@ -310,9 +307,97 @@ void MultiPlatformView::onStartSimulation() {
         return; // 如果检查不通过，直接返回
     }
     
-    // TODO: 实际的仿真逻辑
-    // 这里只是演示，实际应该调用相应的仿真控制器
-    gtk_label_set_text(GTK_LABEL(m_resultLabel), "仿真已开始...");
+    // 获取选中的技术体制
+    gchar* systemType = gtk_combo_box_text_get_active_text(GTK_COMBO_BOX_TEXT(m_algoCombo));
+    if (!systemType) {
+        GtkWidget* dialog = gtk_message_dialog_new(
+            GTK_WINDOW(gtk_widget_get_toplevel(m_view)),
+            GTK_DIALOG_MODAL,
+            GTK_MESSAGE_WARNING,
+            GTK_BUTTONS_OK,
+            "请选择技术体制"
+        );
+        gtk_dialog_run(GTK_DIALOG(dialog));
+        gtk_widget_destroy(dialog);
+        return;
+    }
+    
+    // 获取选中的辐射源
+    gchar* sourceName = gtk_combo_box_text_get_active_text(GTK_COMBO_BOX_TEXT(m_sourceCombo));
+    if (!sourceName) {
+        g_free(systemType);
+        GtkWidget* dialog = gtk_message_dialog_new(
+            GTK_WINDOW(gtk_widget_get_toplevel(m_view)),
+            GTK_DIALOG_MODAL,
+            GTK_MESSAGE_WARNING,
+            GTK_BUTTONS_OK,
+            "请选择辐射源模型"
+        );
+        gtk_dialog_run(GTK_DIALOG(dialog));
+        gtk_widget_destroy(dialog);
+        return;
+    }
+    
+    // 获取选中的侦察设备
+    std::vector<std::string> deviceNames;
+    int requiredRadars = (strcmp(systemType, "时差体制") == 0) ? 4 : 3;
+    for (int i = 0; i < requiredRadars; ++i) {
+        gchar* deviceName = gtk_combo_box_text_get_active_text(GTK_COMBO_BOX_TEXT(m_radarCombo[i]));
+        if (deviceName) {
+            deviceNames.push_back(deviceName);
+            g_free(deviceName);
+        }
+    }
+    
+    // 获取仿真时间
+    double simulationTime = 20.0; // 默认值
+    GtkWidget* timeEntry = nullptr;
+    
+    // 遍历所有子控件找到时间输入框
+    GtkWidget* timeFrame = gtk_widget_get_parent(m_radarFrame[0]);
+    GtkWidget* timeBox = gtk_bin_get_child(GTK_BIN(timeFrame));
+    if (GTK_IS_BOX(timeBox)) {
+        GList* children = gtk_container_get_children(GTK_CONTAINER(timeBox));
+        for (GList* l = children; l != NULL; l = l->next) {
+            GtkWidget* child = GTK_WIDGET(l->data);
+            if (GTK_IS_ENTRY(child)) {
+                timeEntry = child;
+                break;
+            }
+        }
+        g_list_free(children);
+    }
+    
+    if (timeEntry) {
+        const char* timeStr = gtk_entry_get_text(GTK_ENTRY(timeEntry));
+        if (timeStr && *timeStr) {
+            try {
+                simulationTime = std::stod(timeStr);
+            } catch (const std::exception& e) {
+                GtkWidget* dialog = gtk_message_dialog_new(
+                    GTK_WINDOW(gtk_widget_get_toplevel(m_view)),
+                    GTK_DIALOG_MODAL,
+                    GTK_MESSAGE_WARNING,
+                    GTK_BUTTONS_OK,
+                    "仿真时间格式无效，使用默认值20秒"
+                );
+                gtk_dialog_run(GTK_DIALOG(dialog));
+                gtk_widget_destroy(dialog);
+            }
+        }
+    }
+    
+    // 调用控制器开始仿真
+    MultiPlatformController::getInstance().startSimulation(
+        deviceNames,
+        sourceName,
+        systemType,
+        simulationTime
+    );
+    
+    // 释放内存
+    g_free(systemType);
+    g_free(sourceName);
 }
 
 // 检查雷达侦察模型是否有效
@@ -371,4 +456,11 @@ bool MultiPlatformView::checkRadarModels() {
     }
     
     return true;
+}
+
+// 更新仿真结果显示
+void MultiPlatformView::updateResult(const std::string& result) {
+    if (m_resultLabel) {
+        gtk_label_set_markup(GTK_LABEL(m_resultLabel), result.c_str());
+    }
 } 

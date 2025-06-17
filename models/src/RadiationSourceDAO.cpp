@@ -230,4 +230,4 @@ bool RadiationSourceDAO::deleteRadiationSource(int sourceId) {
     snprintf(sql, sizeof(sql), "DELETE FROM radiation_source_models WHERE radiation_id=%d", sourceId);
     
     return db.executeSQL(sql);
-} 
+}

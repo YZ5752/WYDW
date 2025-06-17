@@ -18,6 +18,9 @@ public:
     // 获取视图控件
     GtkWidget* getView() const;
 
+    // 更新仿真结果显示
+    void updateResult(const std::string& result);
+
 private:
     GtkWidget* m_view;//主视图
     GtkWidget* m_algoCombo;//技术体制
