@@ -64,6 +64,7 @@ bool DBConnector::executeSQL(const std::string& sql) {
         std::cerr << "MySQL query failed: " << mysql_error(m_conn) << std::endl;
         return false;
     }
+    // 不要在这里处理 SELECT 结果集
     return true;
 }
 

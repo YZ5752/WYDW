@@ -36,32 +36,8 @@ std::vector<RadiationSource> RadiationSourceDAO::getAllRadiationSources() {
     
     std::cout << "RadiationSourceDAO: Executing SQL: " << sql << std::endl;
     
-    if (!db.executeSQL(sql)) {
+    if (mysql_query(conn, sql)) {
         std::cerr << "RadiationSourceDAO: Failed to execute query - " << mysql_error(conn) << std::endl;
-        
-        // 检查表是否存在
-        if (db.executeSQL("SHOW TABLES LIKE 'radiation_source_models'")) {
-            MYSQL_RES* res = mysql_store_result(conn);
-            if (!res || mysql_num_rows(res) == 0) {
-                std::cerr << "RadiationSourceDAO: Table 'radiation_source_models' does not exist" << std::endl;
-                if (res) mysql_free_result(res);
-            } else {
-                if (res) mysql_free_result(res);
-            }
-        }
-        
-        // 添加一些示例数据供测试
-        RadiationSource source1;
-        source1.setRadiationId(1);
-        source1.setRadiationName("示例辐射源1");
-        source1.setIsStationary(true);
-        source1.setTransmitPower(500.0);
-        source1.setCarrierFrequency(2400.0);
-        source1.setAzimuthStart(0.0);
-        source1.setAzimuthEnd(360.0);
-        
-        sources.push_back(source1);
-        std::cout << "RadiationSourceDAO: Returning sample radiation source for testing" << std::endl;
         return sources;
     }
     
@@ -102,34 +78,42 @@ std::vector<RadiationSource> RadiationSourceDAO::getAllRadiationSources() {
 
 RadiationSource RadiationSourceDAO::getRadiationSourceById(int sourceId) {
     std::cout << "RadiationSourceDAO: Getting radiation source with ID " << sourceId << std::endl;
-    
-    RadiationSource source;
+
     DBConnector& db = DBConnector::getInstance();
-    
-    char sql[256];
-    snprintf(sql, sizeof(sql), 
+    MYSQL* conn = db.getConnection();
+
+    // 打印当前数据库名
+    if (mysql_query(conn, "SELECT DATABASE()") == 0) {
+        MYSQL_RES* res_dbname = mysql_store_result(conn);
+        if (res_dbname) {
+            MYSQL_ROW row_dbname = mysql_fetch_row(res_dbname);
+            if (row_dbname && row_dbname[0]) {
+                std::cout << "当前数据库: " << row_dbname[0] << std::endl;
+            }
+            mysql_free_result(res_dbname);
+        }
+    }
+
+    RadiationSource source;
+
+    char sql[512];
+    snprintf(sql, sizeof(sql),
         "SELECT radiation_id, radiation_name, is_stationary, transmit_power, scan_period, carrier_frequency, "
         "azimuth_start_angle, azimuth_end_angle, elevation_start_angle, elevation_end_angle, movement_speed, movement_azimuth, "
-        "movement_elevation, longitude, latitude, altitude FROM radiation_source_models WHERE radiation_id=%d", 
+        "movement_elevation, longitude, latitude, altitude FROM radiation_source_models WHERE radiation_id=%d",
         sourceId);
-    
-    if (!db.executeSQL(sql)) {
-        std::cerr << "Failed to execute query for getRadiationSourceById" << std::endl;
+
+    if (mysql_query(conn, sql)) {
+        std::cerr << "MySQL query failed: " << mysql_error(conn) << std::endl;
         return source;
     }
-    
-    MYSQL* conn = db.getConnection();
-    if (!conn) {
-        std::cerr << "No valid connection for getRadiationSourceById" << std::endl;
-        return source;
-    }
-    
+
     MYSQL_RES* res = mysql_store_result(conn);
     if (!res) {
-        std::cerr << "Failed to store result for getRadiationSourceById" << std::endl;
+        std::cerr << "Failed to store result for getRadiationSourceById: " << mysql_error(conn) << std::endl;
         return source;
     }
-    
+
     MYSQL_ROW row = mysql_fetch_row(res);
     if (row) {
         int idx = 0;
@@ -139,10 +123,10 @@ RadiationSource RadiationSourceDAO::getRadiationSourceById(int sourceId) {
         source.setTransmitPower(row[idx] ? atof(row[idx]) : 0); idx++;
         source.setScanPeriod(row[idx] ? atof(row[idx]) : 0); idx++;
         source.setCarrierFrequency(row[idx] ? atof(row[idx]) : 0); idx++;
-        source.setAzimuthStart(row[idx] ? atof(row[idx]) : 0); idx++;  // azimuth_start_angle
-        source.setAzimuthEnd(row[idx] ? atof(row[idx]) : 0); idx++;    // azimuth_end_angle
-        source.setElevationStart(row[idx] ? atof(row[idx]) : 0); idx++; // elevation_start_angle
-        source.setElevationEnd(row[idx] ? atof(row[idx]) : 0); idx++;  // elevation_end_angle
+        source.setAzimuthStart(row[idx] ? atof(row[idx]) : 0); idx++;
+        source.setAzimuthEnd(row[idx] ? atof(row[idx]) : 0); idx++;
+        source.setElevationStart(row[idx] ? atof(row[idx]) : 0); idx++;
+        source.setElevationEnd(row[idx] ? atof(row[idx]) : 0); idx++;
         source.setMovementSpeed(row[idx] ? atof(row[idx]) : 0); idx++;
         source.setMovementAzimuth(row[idx] ? atof(row[idx]) : 0); idx++;
         source.setMovementElevation(row[idx] ? atof(row[idx]) : 0); idx++;
@@ -151,6 +135,7 @@ RadiationSource RadiationSourceDAO::getRadiationSourceById(int sourceId) {
         source.setAltitude(row[idx] ? atof(row[idx]) : 0); idx++;
     }
     mysql_free_result(res);
+
     return source;
 }
 

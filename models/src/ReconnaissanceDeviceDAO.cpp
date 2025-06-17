@@ -24,26 +24,17 @@ ReconnaissanceDeviceDAO::~ReconnaissanceDeviceDAO() {
 std::vector<ReconnaissanceDevice> ReconnaissanceDeviceDAO::getAllReconnaissanceDevices() {
     std::vector<ReconnaissanceDevice> devices;
     DBConnector& db = DBConnector::getInstance();
-    
-    const char* sql = "SELECT device_id, device_name, is_stationary, baseline_length, noise_psd, sample_rate, freq_range_min, freq_range_max, angle_azimuth_min, angle_azimuth_max, angle_elevation_min, angle_elevation_max, movement_speed, movement_azimuth, movement_elevation, longitude, latitude, altitude FROM reconnaissance_device_models";
-    
-    if (!db.executeSQL(sql)) {
-        std::cerr << "Failed to execute query for getAllReconnaissanceDevices" << std::endl;
-        return devices;
-    }
-    
     MYSQL* conn = db.getConnection();
-    if (!conn) {
-        std::cerr << "No valid connection for getAllReconnaissanceDevices" << std::endl;
+    const char* sql = "SELECT device_id, device_name, is_stationary, baseline_length, noise_psd, sample_rate, freq_range_min, freq_range_max, angle_azimuth_min, angle_azimuth_max, angle_elevation_min, angle_elevation_max, movement_speed, movement_azimuth, movement_elevation, longitude, latitude, altitude FROM reconnaissance_device_models";
+    if (mysql_query(conn, sql)) {
+        std::cerr << "Failed to execute query for getAllReconnaissanceDevices: " << mysql_error(conn) << std::endl;
         return devices;
     }
-    
     MYSQL_RES* res = mysql_store_result(conn);
     if (!res) {
-        std::cerr << "Failed to store result for getAllReconnaissanceDevices" << std::endl;
+        std::cerr << "Failed to store result for getAllReconnaissanceDevices: " << mysql_error(conn) << std::endl;
         return devices;
     }
-    
     MYSQL_ROW row;
     while ((row = mysql_fetch_row(res)) != nullptr) {
         ReconnaissanceDevice device;
@@ -76,29 +67,20 @@ std::vector<ReconnaissanceDevice> ReconnaissanceDeviceDAO::getAllReconnaissanceD
 ReconnaissanceDevice ReconnaissanceDeviceDAO::getReconnaissanceDeviceById(int deviceId) {
     ReconnaissanceDevice device;
     DBConnector& db = DBConnector::getInstance();
-    
-    char sql[256];
-    snprintf(sql, sizeof(sql), 
-        "SELECT device_id, device_name, is_stationary, baseline_length, noise_psd, sample_rate, freq_range_min, freq_range_max, angle_azimuth_min, angle_azimuth_max, angle_elevation_min, angle_elevation_max, movement_speed, movement_azimuth, movement_elevation, longitude, latitude, altitude FROM reconnaissance_device_models WHERE device_id=%d", 
-        deviceId);
-    
-    if (!db.executeSQL(sql)) {
-        std::cerr << "Failed to execute query for getReconnaissanceDeviceById" << std::endl;
-        return device;
-    }
-    
     MYSQL* conn = db.getConnection();
-    if (!conn) {
-        std::cerr << "No valid connection for getReconnaissanceDeviceById" << std::endl;
+    char sql[512];
+    snprintf(sql, sizeof(sql),
+        "SELECT device_id, device_name, is_stationary, baseline_length, noise_psd, sample_rate, freq_range_min, freq_range_max, angle_azimuth_min, angle_azimuth_max, angle_elevation_min, angle_elevation_max, movement_speed, movement_azimuth, movement_elevation, longitude, latitude, altitude FROM reconnaissance_device_models WHERE device_id=%d",
+        deviceId);
+    if (mysql_query(conn, sql)) {
+        std::cerr << "Failed to execute query for getReconnaissanceDeviceById: " << mysql_error(conn) << std::endl;
         return device;
     }
-    
     MYSQL_RES* res = mysql_store_result(conn);
     if (!res) {
-        std::cerr << "Failed to store result for getReconnaissanceDeviceById" << std::endl;
+        std::cerr << "Failed to store result for getReconnaissanceDeviceById: " << mysql_error(conn) << std::endl;
         return device;
     }
-    
     MYSQL_ROW row = mysql_fetch_row(res);
     if (row) {
         int idx = 0;
