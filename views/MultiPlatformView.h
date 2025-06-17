@@ -29,6 +29,7 @@ private:
     GtkWidget* m_sourceCombo;   // 辐射源下拉框
     GtkWidget* m_resultLabel;//仿真结果
     GtkWidget* m_errorLabel;//误差结果
+    GtkWidget* m_timeEntry;    // 仿真时间输入框
     std::vector<ReconnaissanceDevice> m_devices; // 设备数据
     std::vector<RadiationSource> m_sources;      // 辐射源数据
     MapView* m_mapView = nullptr; // 地图对象
