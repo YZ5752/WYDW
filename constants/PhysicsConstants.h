@@ -19,9 +19,9 @@ namespace Constants {
     const double e_squared = 0.00669438002290;  // CGCS2000第一偏心率平方
 
     // SNR阈值信号,如果辐射源与侦察站之间的信噪比小于5dB，则无法接收信号
-    const double SNR_THRESHOLD = 5.0;  // SNR阈值 (dB)
-    // 采样参数
-    const int SAMPLING_POINTS = 4096;  // 采样点数
+    const double SNR_THRESHOLD = 1;  // SNR阈值 (dB)
+    //频差分辨力
+    const double FREQUENCY_RESOLUTION = 100;  // 频差分辨力 (Hz)
 }
 
 #endif // PHYSICS_CONSTANTS_H 

@@ -8,6 +8,7 @@
 #include "../models/ReconnaissanceDeviceModel.h"
 #include "../models/RadiationSourceModel.h"
 #include "../utils/Vector3.h"
+#include "../utils/SimulationValidator.h"
 
 class FDOAalgorithm {
 public:
