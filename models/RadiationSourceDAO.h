@@ -11,6 +11,9 @@ public:
     // 获取所有辐射源模型
     std::vector<RadiationSource> getAllRadiationSources();
     
+    // 通过名称获取辐射源ID
+    int getRadiationSourceIdByName(const std::string& name);
+    
     // 通过ID获取辐射源
     RadiationSource getRadiationSourceById(int sourceId);
     

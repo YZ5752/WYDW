@@ -195,4 +195,4 @@ bool ReconnaissanceDeviceDAO::deleteReconnaissanceDevice(int deviceId) {
     snprintf(sql, sizeof(sql), "DELETE FROM reconnaissance_device_models WHERE device_id=%d", deviceId);
     
     return db.executeSQL(sql);
-} 
+}

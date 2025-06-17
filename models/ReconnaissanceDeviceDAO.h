@@ -7,8 +7,11 @@ class ReconnaissanceDeviceDAO {
 public:
     static ReconnaissanceDeviceDAO& getInstance();
     
-    // 获取所有侦察设备模型
+    // 获取所有侦察设备
     std::vector<ReconnaissanceDevice> getAllReconnaissanceDevices();
+    
+    // 通过名称获取侦察设备ID
+    int getReconnaissanceDeviceIdByName(const std::string& name);
     
     // 通过ID获取侦察设备
     ReconnaissanceDevice getReconnaissanceDeviceById(int deviceId);

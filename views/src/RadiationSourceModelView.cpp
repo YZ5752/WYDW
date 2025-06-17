@@ -1,6 +1,7 @@
 #include "../RadiationSourceModelView.h"
 #include "../../controllers/ApplicationController.h"
 #include "../../controllers/RadiationSourceModelController.h"
+#include "../../models/RadiationSourceDAO.h"
 #include <iostream>
 
 // 回调函数
@@ -227,11 +228,15 @@ GtkWidget* RadiationSourceModelView::createEditDialog(const RadiationSource& sou
     GtkWidget* contentArea = gtk_dialog_get_content_area(GTK_DIALOG(dialog));
     gtk_container_set_border_width(GTK_CONTAINER(contentArea), 10);
     
+    // 创建主容器
+    GtkWidget* mainBox = gtk_box_new(GTK_ORIENTATION_VERTICAL, 10);
+    gtk_container_add(GTK_CONTAINER(contentArea), mainBox);
+    
     // 创建表单网格
     GtkWidget* grid = gtk_grid_new();
     gtk_grid_set_row_spacing(GTK_GRID(grid), 10);
     gtk_grid_set_column_spacing(GTK_GRID(grid), 10);
-    gtk_container_add(GTK_CONTAINER(contentArea), grid);
+    gtk_box_pack_start(GTK_BOX(mainBox), grid, TRUE, TRUE, 0);
     
     // 辐射源名称
     GtkWidget* nameLabel = gtk_label_new("名称:");
@@ -470,7 +475,7 @@ RadiationSource RadiationSourceModelView::getSourceFromDialog(GtkWidget* dialog)
 
 // 更新辐射源列表
 void RadiationSourceModelView::updateSourceList(const std::vector<RadiationSource>& sources) {
-    m_sources = sources;
+    m_sources = sources;  // 保存完整的辐射源信息
     
     std::cout << "RadiationSourceModelView: 更新辐射源列表，共 " << sources.size() << " 条数据" << std::endl;
     

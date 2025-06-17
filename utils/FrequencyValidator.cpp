@@ -15,7 +15,7 @@ bool validateFrequency(const std::vector<int>& deviceIds, int sourceId, std::str
     RadiationSource source = radiationSourceDAO.getRadiationSourceById(sourceId);
     
     // 获取辐射源的载波频率
-    double sourceFrequency = source.carrierFrequency;
+    double sourceFrequency = source.getCarrierFrequency();
     
     // 获取侦察设备DAO实例
     ReconnaissanceDeviceDAO& deviceDAO = ReconnaissanceDeviceDAO::getInstance();
@@ -26,15 +26,15 @@ bool validateFrequency(const std::vector<int>& deviceIds, int sourceId, std::str
         ReconnaissanceDevice device = deviceDAO.getReconnaissanceDeviceById(deviceId);
         
         // 获取侦察设备的频率范围
-        double minFreq = device.freqRangeMin;
-        double maxFreq = device.freqRangeMax;
+        double minFreq = device.getFreqRangeMin();
+        double maxFreq = device.getFreqRangeMax();
         
         // 判断辐射源频率是否在侦察设备的频率范围内
         if (sourceFrequency < minFreq || sourceFrequency > maxFreq) {
             std::stringstream ss;
-            ss << "频率验证失败：侦察设备 "<< device.deviceName
+            ss << "频率验证失败：侦察设备 "<< device.getDeviceName()
                << "的接收频率范围为 " << minFreq << "~" << maxFreq << " GHz，"
-               << "无法接收辐射源 " << source.radiationName
+               << "无法接收辐射源 " << source.getRadiationName()
                << "的频率 " << sourceFrequency << " GHz";
             failMessage = ss.str();
             return false;
@@ -43,4 +43,4 @@ bool validateFrequency(const std::vector<int>& deviceIds, int sourceId, std::str
     
     // 所有设备都通过验证，返回true
     return true;
-} 
+}
