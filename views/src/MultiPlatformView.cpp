@@ -7,7 +7,7 @@
 #include <algorithm>
 
 // 实现MultiPlatformView类
-MultiPlatformView::MultiPlatformView() : m_view(nullptr), m_algoCombo(nullptr),  m_resultLabel(nullptr), m_errorLabel(nullptr), m_mapView(nullptr), m_sourceMarker(-1) {
+MultiPlatformView::MultiPlatformView() : m_view(nullptr), m_algoCombo(nullptr),  m_resultLabel(nullptr), m_errorLabel(nullptr), m_mapView(nullptr), m_sourceMarker(-1), m_timeEntry(nullptr) {
     // 初始化数组
     for (int i = 0; i < 4; ++i) {
         m_radarMarkers[i] = -1;
@@ -100,6 +100,9 @@ GtkWidget* MultiPlatformView::createView() {
     GtkWidget* timeEntry = gtk_entry_new();
     gtk_entry_set_text(GTK_ENTRY(timeEntry), "20");
     gtk_box_pack_start(GTK_BOX(timeBox), timeEntry, TRUE, TRUE, 5);
+    
+    // 保存时间输入框引用
+    m_timeEntry = timeEntry;
     
     // 开始按钮
     GtkWidget* startButton = gtk_button_new_with_label("开始");
@@ -351,25 +354,8 @@ void MultiPlatformView::onStartSimulation() {
     
     // 获取仿真时间
     double simulationTime = 20.0; // 默认值
-    GtkWidget* timeEntry = nullptr;
-    
-    // 遍历所有子控件找到时间输入框
-    GtkWidget* timeFrame = gtk_widget_get_parent(m_radarFrame[0]);
-    GtkWidget* timeBox = gtk_bin_get_child(GTK_BIN(timeFrame));
-    if (GTK_IS_BOX(timeBox)) {
-        GList* children = gtk_container_get_children(GTK_CONTAINER(timeBox));
-        for (GList* l = children; l != NULL; l = l->next) {
-            GtkWidget* child = GTK_WIDGET(l->data);
-            if (GTK_IS_ENTRY(child)) {
-                timeEntry = child;
-                break;
-            }
-        }
-        g_list_free(children);
-    }
-    
-    if (timeEntry) {
-        const char* timeStr = gtk_entry_get_text(GTK_ENTRY(timeEntry));
+    if (m_timeEntry) {
+        const char* timeStr = gtk_entry_get_text(GTK_ENTRY(m_timeEntry));
         if (timeStr && *timeStr) {
             try {
                 simulationTime = std::stod(timeStr);

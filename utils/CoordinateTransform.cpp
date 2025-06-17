@@ -13,33 +13,70 @@ using namespace Constants;
 
 // 大地坐标转换为空间直角坐标
 COORD3 lbh2xyz(double l, double b, double h) {
-    double N; // 卯酉圈曲率半径
     COORD3 xyz(0, 0, 0);
-    l = l * DEG2RAD; // 转为弧度
+    
+    // 将角度转换为弧度
+    l = l * DEG2RAD;
     b = b * DEG2RAD;
-    N = a / sqrt(1.0 - e_squared * sin(b) * sin(b));
-    xyz.p1 = (N + h) * cos(b) * cos(l);  // X
-    xyz.p2 = (N + h) * cos(b) * sin(l);  // Y
-    xyz.p3 = (N * (1 - e_squared) + h) * sin(b); // Z
+    
+    // 计算辅助参数
+    double sin_b = sin(b);
+    double cos_b = cos(b);
+    double sin_l = sin(l);
+    double cos_l = cos(l);
+    
+    // 计算卯酉圈曲率半径
+    double N = a / sqrt(1.0 - e_squared * sin_b * sin_b);
+    
+    // 计算空间直角坐标
+    xyz.p1 = (N + h) * cos_b * cos_l;  // X
+    xyz.p2 = (N + h) * cos_b * sin_l;  // Y
+    xyz.p3 = (N * (1 - e_squared) + h) * sin_b; // Z
+    
     return xyz;
 }
 
 // 空间直角坐标转换为大地坐标
 COORD3 xyz2lbh(double x, double y, double z) {
-    double b0, b, N, R;
-    double err;
     COORD3 lbh;
-    R = sqrt(x * x + y * y);
-    b0 = atan2(z, R);
-    do {
-        N = a / sqrt(1.0 - e_squared * sin(b0) * sin(b0));
-        b = atan2(z + N * e_squared * sin(b0), R);
-        err = b - b0;
-        b0 = b;
-    } while (fabs(err) > 0.0001 / 3600 * DEG2RAD);
-    lbh.p2 = b * RAD2DEG;          // B
-    lbh.p1 = atan2(y, x) * RAD2DEG; // L
-    lbh.p3 = R / cos(b) - N;         // H
+    
+    // 计算经度
+    lbh.p1 = atan2(y, x) * RAD2DEG;
+    
+    // 计算辅助参数
+    double p = sqrt(x * x + y * y);
+    double e2 = e_squared;
+    double a2 = a * a;
+    double b2 = a2 * (1 - e2);
+    
+    // 初始纬度估计
+    double b = atan2(z, p * (1 - e2));
+    
+    // 迭代计算纬度
+    double N, h, b_old;
+    int max_iter = 10;
+    double tolerance = 1e-12;
+    
+    for (int i = 0; i < max_iter; i++) {
+        b_old = b;
+        double sin_b = sin(b);
+        N = a / sqrt(1 - e2 * sin_b * sin_b);
+        h = p / cos(b) - N;
+        b = atan2(z, p * (1 - e2 * N / (N + h)));
+        
+        if (fabs(b - b_old) < tolerance) {
+            break;
+        }
+    }
+    
+    // 设置纬度（转换为度）
+    lbh.p2 = b * RAD2DEG;
+    
+    // 计算最终高度
+    double sin_b = sin(b);
+    N = a / sqrt(1 - e2 * sin_b * sin_b);
+    lbh.p3 = p / cos(b) - N;
+    
     return lbh;
 }
 
@@ -59,18 +96,23 @@ COORD3 velocity_lbh2xyz(double l, double b, double v, double azimuth, double ele
     double vU = v * sin(elevation);                 // 天向分量
     
     // 计算局部坐标系到空间直角坐标系的旋转矩阵
-    // 旋转矩阵的三个列向量分别表示东、北、天方向在XYZ坐标系中的投影
-    double R11 = -sin(l);
-    double R12 = -sin(b) * cos(l);
-    double R13 = cos(b) * cos(l);
+    double sin_l = sin(l);
+    double cos_l = cos(l);
+    double sin_b = sin(b);
+    double cos_b = cos(b);
     
-    double R21 = cos(l);
-    double R22 = -sin(b) * sin(l);
-    double R23 = cos(b) * sin(l);
+    // 旋转矩阵（从东北天到XYZ）
+    double R11 = -sin_l;
+    double R12 = -sin_b * cos_l;
+    double R13 = cos_b * cos_l;
+    
+    double R21 = cos_l;
+    double R22 = -sin_b * sin_l;
+    double R23 = cos_b * sin_l;
     
     double R31 = 0;
-    double R32 = cos(b);
-    double R33 = sin(b);
+    double R32 = cos_b;
+    double R33 = sin_b;
     
     // 将局部坐标系（东北天）中的速度分量转换到空间直角坐标系（XYZ）
     velocity.p1 = R11 * vE + R12 * vN + R13 * vU;  // vx
@@ -89,23 +131,28 @@ COORD3 velocity_xyz2lbh(double l, double b, double vx, double vy, double vz) {
     b = b * DEG2RAD;
     
     // 计算局部坐标系到空间直角坐标系的旋转矩阵
-    double R11 = -sin(l);
-    double R12 = -sin(b) * cos(l);
-    double R13 = cos(b) * cos(l);
+    double sin_l = sin(l);
+    double cos_l = cos(l);
+    double sin_b = sin(b);
+    double cos_b = cos(b);
     
-    double R21 = cos(l);
-    double R22 = -sin(b) * sin(l);
-    double R23 = cos(b) * sin(l);
+    // 旋转矩阵（从XYZ到东北天）
+    double R11 = -sin_l;
+    double R12 = cos_l;
+    double R13 = 0;
     
-    double R31 = 0;
-    double R32 = cos(b);
-    double R33 = sin(b);
+    double R21 = -sin_b * cos_l;
+    double R22 = -sin_b * sin_l;
+    double R23 = cos_b;
+    
+    double R31 = cos_b * cos_l;
+    double R32 = cos_b * sin_l;
+    double R33 = sin_b;
     
     // 将空间直角坐标系（XYZ）中的速度分量转换到局部坐标系（东北天）
-    // 使用旋转矩阵的转置（即逆矩阵）
-    double vE = R11 * vx + R21 * vy + R31 * vz;  // 东向分量
-    double vN = R12 * vx + R22 * vy + R32 * vz;  // 北向分量
-    double vU = R13 * vx + R23 * vy + R33 * vz;  // 天向分量
+    double vE = R11 * vx + R12 * vy + R13 * vz;  // 东向分量
+    double vN = R21 * vx + R22 * vy + R23 * vz;  // 北向分量
+    double vU = R31 * vx + R32 * vy + R33 * vz;  // 天向分量
     
     // 计算速度大小
     double v = sqrt(vE * vE + vN * vN + vU * vU);
