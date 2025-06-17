@@ -157,6 +157,23 @@ GtkWidget* SinglePlatformView::createView() {
     gtk_container_add(GTK_CONTAINER(resultFrame), resultBox);
     gtk_container_set_border_width(GTK_CONTAINER(resultBox), 10);
 
+    // 创建方向和位置数据显示标签（用于定位和测向数据的传递）
+    GtkWidget* dirDataBox = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 5);
+    gtk_box_pack_start(GTK_BOX(resultBox), dirDataBox, FALSE, FALSE, 0);
+    GtkWidget* dirDataLabel = gtk_label_new("方向数据:");
+    gtk_box_pack_start(GTK_BOX(dirDataBox), dirDataLabel, FALSE, FALSE, 0);
+    m_dirDataValue = gtk_label_new("");
+    gtk_box_pack_start(GTK_BOX(dirDataBox), m_dirDataValue, TRUE, TRUE, 0);
+    gtk_widget_set_no_show_all(dirDataBox, TRUE);  // 默认不显示
+    
+    GtkWidget* locDataBox = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 5);
+    gtk_box_pack_start(GTK_BOX(resultBox), locDataBox, FALSE, FALSE, 0);
+    GtkWidget* locDataLabel = gtk_label_new("位置数据:");
+    gtk_box_pack_start(GTK_BOX(locDataBox), locDataLabel, FALSE, FALSE, 0);
+    m_locDataValue = gtk_label_new("");
+    gtk_box_pack_start(GTK_BOX(locDataBox), m_locDataValue, TRUE, TRUE, 0);
+    gtk_widget_set_no_show_all(locDataBox, TRUE);  // 默认不显示
+
     // 创建纵向参数列表
     GtkWidget* grid = gtk_grid_new();
     gtk_grid_set_row_spacing(GTK_GRID(grid), 5);
@@ -258,6 +275,10 @@ void SinglePlatformView::updateErrorTable(const std::string& techSystem) {
             GtkWidget* errorLabel = gtk_label_new(errorItems[i]);
             gtk_widget_set_halign(errorLabel, GTK_ALIGN_START);
             gtk_grid_attach(GTK_GRID(m_errorTable), errorLabel, 0, i, 1, 1);
+            
+            GtkWidget* errorValue = gtk_label_new("--");
+            gtk_widget_set_halign(errorValue, GTK_ALIGN_END);
+            gtk_grid_attach(GTK_GRID(m_errorTable), errorValue, 1, i, 1, 1);
         }
     } else if (techSystem == "干涉仪体制" || techSystem.find("干涉") != std::string::npos) {
         // 干涉仪体制误差项：对中误差、姿态测量误差、圆锥效应误差、天线阵测向误差、测向误差
@@ -269,6 +290,10 @@ void SinglePlatformView::updateErrorTable(const std::string& techSystem) {
             GtkWidget* errorLabel = gtk_label_new(errorItems[i]);
             gtk_widget_set_halign(errorLabel, GTK_ALIGN_START);
             gtk_grid_attach(GTK_GRID(m_errorTable), errorLabel, 0, i, 1, 1);
+            
+            GtkWidget* errorValue = gtk_label_new("--");
+            gtk_widget_set_halign(errorValue, GTK_ALIGN_END);
+            gtk_grid_attach(GTK_GRID(m_errorTable), errorValue, 1, i, 1, 1);
         }
     } 
     
@@ -576,11 +601,33 @@ void SinglePlatformView::animateDeviceMovement(const ReconnaissanceDevice& devic
     double calculatedLatitude = 0;
     double calculatedAltitude = 0;
     
-    if (locDataStr && strstr(locDataStr, "经度:") != NULL) {
-        sscanf(locDataStr, "经度: %lf°, 纬度: %lf°, 高度: %lf", 
-               &calculatedLongitude, &calculatedLatitude, &calculatedAltitude);
-        g_print("解析定位结果: 经度=%.6f°, 纬度=%.6f°, 高度=%.2fm\n", 
+    // 优先使用缓存中的结果，避免解析失败
+    if (m_hasResult) {
+        calculatedLongitude = m_lastLon;
+        calculatedLatitude = m_lastLat;
+        calculatedAltitude = m_lastAlt;
+        g_print("使用缓存的定位结果: 经度=%.6f°, 纬度=%.6f°, 高度=%.2fm\n", 
                 calculatedLongitude, calculatedLatitude, calculatedAltitude);
+    }
+    // 尝试从标签解析
+    else if (locDataStr && strstr(locDataStr, "经度:") != NULL) {
+        if (sscanf(locDataStr, "经度: %lf°, 纬度: %lf°, 高度: %lfm", 
+               &calculatedLongitude, &calculatedLatitude, &calculatedAltitude) == 3) {
+            g_print("解析定位结果: 经度=%.6f°, 纬度=%.6f°, 高度=%.2fm\n", 
+                    calculatedLongitude, calculatedLatitude, calculatedAltitude);
+        } else {
+            g_print("解析定位结果失败，格式不匹配: %s\n", locDataStr);
+            // 使用辐射源位置作为默认值
+            g_print("无法解析定位结果，使用默认值\n");
+            for (const auto& src : m_sources) {
+                if (src.getRadiationName() == getSelectedSource()) {
+                    calculatedLongitude = src.getLongitude();
+                    calculatedLatitude = src.getLatitude();
+                    calculatedAltitude = src.getAltitude();
+                    break;
+                }
+            }
+        }
     } else {
         g_print("无法解析定位结果，使用默认值\n");
         // 使用辐射源位置作为默认值（在实际应用中这是不可能的，但这里仅用于可视化）
@@ -662,6 +709,15 @@ void SinglePlatformView::clearSimulationResult() {
     gtk_label_set_text(GTK_LABEL(m_resultAlt), "--");
     gtk_label_set_text(GTK_LABEL(m_resultAz), "--");
     gtk_label_set_text(GTK_LABEL(m_resultEl), "--");
+    
+    // 清空误差分析表格中的结果值
+    if (m_errorTable) {
+        // 获取当前技术体制
+        std::string techSystem = getSelectedTechSystem();
+        
+        // 重新初始化误差表格 - 仅显示标签，不显示数值
+        updateErrorTable(techSystem);
+    }
 }
 
 void SinglePlatformView::setSimulationResult(double lon, double lat, double alt, double az, double el) {

@@ -23,7 +23,7 @@ SinglePlatformController& SinglePlatformController::getInstance() {
 }
 
 // 构造函数
-SinglePlatformController::SinglePlatformController() : m_view(nullptr) {
+SinglePlatformController::SinglePlatformController() : m_view(nullptr), m_lastErrorFactors() {
     // 初始化随机数种子
     srand(time(NULL));
 }
@@ -206,7 +206,12 @@ void SinglePlatformController::startSimulation() {
         result = SinglePlatformTDOA::getInstance().runSimulation(deviceCopy, source, simulationTime);
     } 
     
-    // 更新视图显示结果
+    // 先设置仿真结果到缓存，确保animateDeviceMovement可以使用
+    m_view->setSimulationResult(result.longitude, result.latitude, result.altitude, result.azimuth, result.elevation);
+    g_print("已设置仿真结果到缓存：经度=%.6f°, 纬度=%.6f°, 高度=%.2fm, 方位角=%.2f°, 俯仰角=%.2f°\n",
+            result.longitude, result.latitude, result.altitude, result.azimuth, result.elevation);
+    
+    // 更新视图显示结果文本
     char directionBuffer[100];
     sprintf(directionBuffer, "方位角: %.2f°, 俯仰角: %.2f°", result.azimuth, result.elevation);
     std::string directionData(directionBuffer);
@@ -216,31 +221,93 @@ void SinglePlatformController::startSimulation() {
     std::string locationData(locationBuffer);
     m_view->updateDirectionData(directionData);
     m_view->updateLocationData(locationData);
-    // 保存仿真结果到缓存
-    m_view->setSimulationResult(result.longitude, result.latitude, result.altitude, result.azimuth, result.elevation);
     
-    // 更新误差表格
-    if (techSystem == "干涉仪体制") {
-        // 更新干涉仪体制误差表格
-        const char* errorNames[] = {
-            "对中误差", "姿态测量误差", "圆锥效应误差", "天线阵测向误差", "测向误差"
-        };
+    // 保存误差因素以便在仿真结束后显示
+    std::vector<double> errorFactors = result.errorFactors;
+    std::string currentTechSystem = techSystem;
+    
+    // 在动画结束后才显示结果参数和误差分析
+    g_timeout_add(simulationTime * 1000 + 1200, [](gpointer data) -> gboolean {
+        auto* controller = static_cast<SinglePlatformController*>(data);
+        if (!controller || !controller->getView()) {
+            return G_SOURCE_REMOVE;
+        }
         
-        GtkWidget* errorTable = m_view->getErrorTable();
-        if (errorTable && result.errorFactors.size() >= 5) {
-            for (int i = 0; i < 5; i++) {
-                char errorBuffer[50];
-                sprintf(errorBuffer, "%.4f", result.errorFactors[i]);
+        SinglePlatformView* view = controller->getView();
+        
+        // 显示仿真结果参数（这部分已在SinglePlatformView::animateDeviceMovement中实现）
+        
+        // 更新误差表格
+        std::string techSystem = view->getSelectedTechSystem();
+        GtkWidget* errorTable = view->getErrorTable();
+        
+        if (errorTable) {
+            // 获取保存的误差因素数据
+            std::vector<double> errorFactors = controller->getLastErrorFactors();
+            
+            if (techSystem == "干涉仪体制" && errorFactors.size() >= 5) {
+                // 查找已存在的误差值标签
+                GList* children = gtk_container_get_children(GTK_CONTAINER(errorTable));
+                GtkWidget* errorLabels[5] = {nullptr}; // 存储找到的标签引用
                 
-                GtkWidget* errorValue = gtk_label_new(errorBuffer);
-                gtk_widget_set_halign(errorValue, GTK_ALIGN_END);
-                gtk_grid_attach(GTK_GRID(errorTable), errorValue, 1, i, 1, 1);
+                // 找出所有值标签的引用
+                for (GList* iter = children; iter != NULL; iter = g_list_next(iter)) {
+                    GtkWidget* child = GTK_WIDGET(iter->data);
+                    int row, col;
+                    gtk_container_child_get(GTK_CONTAINER(errorTable), child, 
+                                           "top-attach", &row, 
+                                           "left-attach", &col, NULL);
+                    if (col == 1 && row >= 0 && row < 5) {
+                        errorLabels[row] = child;
+                    }
+                }
+                g_list_free(children);
+                
+                // 更新每个标签的文本，直接设置文本而不是添加新标签
+                for (int i = 0; i < 5; i++) {
+                    if (errorLabels[i]) {
+                        char errorBuffer[50];
+                        sprintf(errorBuffer, "%.4f°", errorFactors[i]);
+                        gtk_label_set_text(GTK_LABEL(errorLabels[i]), errorBuffer);
+                    }
+                }
+            } else if (techSystem == "时差体制" && errorFactors.size() >= 5) {
+                // 查找已存在的误差值标签
+                GList* children = gtk_container_get_children(GTK_CONTAINER(errorTable));
+                GtkWidget* errorLabels[5] = {nullptr}; // 存储找到的标签引用
+                
+                // 找出所有值标签的引用
+                for (GList* iter = children; iter != NULL; iter = g_list_next(iter)) {
+                    GtkWidget* child = GTK_WIDGET(iter->data);
+                    int row, col;
+                    gtk_container_child_get(GTK_CONTAINER(errorTable), child, 
+                                           "top-attach", &row, 
+                                           "left-attach", &col, NULL);
+                    if (col == 1 && row >= 0 && row < 5) {
+                        errorLabels[row] = child;
+                    }
+                }
+                g_list_free(children);
+                
+                // 更新每个标签的文本，直接设置文本而不是添加新标签
+                for (int i = 0; i < 5; i++) {
+                    if (errorLabels[i]) {
+                        char errorBuffer[50];
+                        sprintf(errorBuffer, "%.4f°", errorFactors[i]);
+                        gtk_label_set_text(GTK_LABEL(errorLabels[i]), errorBuffer);
+                    }
+                }
             }
             
             // 显示所有控件
             gtk_widget_show_all(errorTable);
         }
-    }
+        
+        return G_SOURCE_REMOVE;
+    }, this);
+    
+    // 保存最后一次仿真的误差因素，供延时函数使用
+    m_lastErrorFactors = result.errorFactors;
 }
 
 // 加载模型数据
@@ -268,4 +335,9 @@ void SinglePlatformController::handleTechSystemChange(const std::string& techSys
 // 获取视图
 SinglePlatformView* SinglePlatformController::getView() const {
     return m_view;
+}
+
+// 获取最后一次仿真的误差因素
+const std::vector<double>& SinglePlatformController::getLastErrorFactors() const {
+    return m_lastErrorFactors;
 } 

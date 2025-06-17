@@ -99,6 +99,7 @@ bool SimulationValidator::validateAll(const std::vector<int>& deviceIds, int sou
         // 获取设备空间直角坐标
         COORD3 deviceXYZ = lbh2xyz(deviceLongitude, deviceLatitude, deviceAltitude);
         
+        // ============ 2. 方位角验证 ============
         // 计算两个方向的方位角和俯仰角
         auto [azimuthToEmitter, elevationToEmitter] = calculateAzimuthElevation(
             deviceXYZ.p1, deviceXYZ.p2, deviceXYZ.p3,
