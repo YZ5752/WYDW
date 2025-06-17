@@ -32,6 +32,9 @@ public:
     
     // 获取视图
     SinglePlatformView* getView() const;
+    
+    // 获取最后一次仿真的误差因素
+    const std::vector<double>& getLastErrorFactors() const;
 
 private:
     SinglePlatformController();
@@ -42,4 +45,7 @@ private:
     SinglePlatformController& operator=(const SinglePlatformController&) = delete;
     
     SinglePlatformView* m_view;
+    
+    // 存储最后一次仿真的误差因素
+    std::vector<double> m_lastErrorFactors;
 }; 
