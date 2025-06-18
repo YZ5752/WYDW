@@ -197,4 +197,4 @@ double calculateDistance(double l1, double b1, double h1, double l2, double b2, 
     
     // 返回两点之间的距离
     return sqrt(dx * dx + dy * dy + dz * dz);
-} 
+}
