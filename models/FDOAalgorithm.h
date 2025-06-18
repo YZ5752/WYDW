@@ -9,6 +9,7 @@
 #include "../models/RadiationSourceModel.h"
 #include "../utils/Vector3.h"
 #include "../utils/SimulationValidator.h"
+#include "../utils/CoordinateTransform.h"
 
 class FDOAalgorithm {
 public:
@@ -45,6 +46,12 @@ public:
     // 计算时间间隔最大值
     double calculateMaximumTimeInterval(const std::vector<int>& deviceIds, int sourceId);
 
+    // 计算每个观测时刻的频差
+    std::vector<std::vector<double>> calculateFrequencyDifferences(
+        const std::vector<int>& deviceIds,
+        int sourceId,
+        double simulationTime);
+
 private:
     FDOAalgorithm();
     ~FDOAalgorithm();
@@ -61,6 +68,13 @@ private:
 
     // 辅助函数：求解二次方程
     std::vector<double> solveQuadratic(double a, double b, double c);
+
+    // 计算每个观测时刻的频差
+    std::vector<std::vector<double>> calculateFrequencyDifferences(
+        const std::vector<ReconnaissanceDevice>& devices,
+        const RadiationSource& source,
+        const std::vector<double>& timePoints,
+        double signalFrequency);
 
     std::vector<std::string> m_deviceNames;    // 设备名称列表
     std::string m_sourceName;                  // 辐射源名称
