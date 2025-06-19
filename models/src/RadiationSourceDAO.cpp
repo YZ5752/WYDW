@@ -16,8 +16,6 @@ RadiationSourceDAO::~RadiationSourceDAO() {
 }
 
 std::vector<RadiationSource> RadiationSourceDAO::getAllRadiationSources() {
-    std::cout << "RadiationSourceDAO: Getting all radiation sources..." << std::endl;
-    
     std::vector<RadiationSource> sources;
     DBConnector& db = DBConnector::getInstance();
     
@@ -25,16 +23,12 @@ std::vector<RadiationSource> RadiationSourceDAO::getAllRadiationSources() {
     MYSQL* conn = db.getConnection();
     if (!conn) {
         std::cerr << "RadiationSourceDAO: No valid database connection" << std::endl;
-        
-        std::cout << "RadiationSourceDAO: Returning " << sources.size() << " sample radiation sources for testing" << std::endl;
         return sources;
     }
     
     const char* sql = "SELECT radiation_id, radiation_name, is_stationary, transmit_power, scan_period, carrier_frequency, "
                       "azimuth_start_angle, azimuth_end_angle, elevation_start_angle, elevation_end_angle, movement_speed, movement_azimuth, "
                       "movement_elevation, longitude, latitude, altitude FROM radiation_source_models";
-    
-    std::cout << "RadiationSourceDAO: Executing SQL: " << sql << std::endl;
     
     if (mysql_query(conn, sql)) {
         std::cerr << "RadiationSourceDAO: Failed to execute query - " << mysql_error(conn) << std::endl;
@@ -46,8 +40,6 @@ std::vector<RadiationSource> RadiationSourceDAO::getAllRadiationSources() {
         std::cerr << "RadiationSourceDAO: Failed to store result - " << mysql_error(conn) << std::endl;
         return sources;
     }
-    
-    std::cout << "RadiationSourceDAO: Found " << mysql_num_rows(res) << " radiation sources" << std::endl;
     
     MYSQL_ROW row;
     while ((row = mysql_fetch_row(res)) != nullptr) {
@@ -72,28 +64,12 @@ std::vector<RadiationSource> RadiationSourceDAO::getAllRadiationSources() {
         sources.push_back(source);
     }
     mysql_free_result(res);
-    std::cout << "RadiationSourceDAO: Successfully loaded " << sources.size() << " radiation sources" << std::endl;
     return sources;
 }
 
 RadiationSource RadiationSourceDAO::getRadiationSourceById(int sourceId) {
-    std::cout << "RadiationSourceDAO: Getting radiation source with ID " << sourceId << std::endl;
-
     DBConnector& db = DBConnector::getInstance();
     MYSQL* conn = db.getConnection();
-
-    // 打印当前数据库名
-    if (mysql_query(conn, "SELECT DATABASE()") == 0) {
-        MYSQL_RES* res_dbname = mysql_store_result(conn);
-        if (res_dbname) {
-            MYSQL_ROW row_dbname = mysql_fetch_row(res_dbname);
-            if (row_dbname && row_dbname[0]) {
-                std::cout << "当前数据库: " << row_dbname[0] << std::endl;
-            }
-            mysql_free_result(res_dbname);
-        }
-    }
-
     RadiationSource source;
 
     char sql[512];
@@ -140,8 +116,6 @@ RadiationSource RadiationSourceDAO::getRadiationSourceById(int sourceId) {
 }
 
 bool RadiationSourceDAO::addRadiationSource(const RadiationSource& source, int& sourceId) {
-    std::cout << "RadiationSourceDAO: Adding radiation source..." << std::endl;
-    
     DBConnector& db = DBConnector::getInstance();
     MYSQL* conn = db.getConnection();
     if (!conn) return false;
@@ -183,9 +157,6 @@ bool RadiationSourceDAO::addRadiationSource(const RadiationSource& source, int& 
 }
 
 bool RadiationSourceDAO::updateRadiationSource(const RadiationSource& source) {
-    std::cout << "RadiationSourceDAO: Updating radiation source with ID " 
-              << source.getRadiationId() << std::endl;
-    
     DBConnector& db = DBConnector::getInstance();
     MYSQL* conn = db.getConnection();
     if (!conn) return false;

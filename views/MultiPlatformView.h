@@ -45,6 +45,7 @@ private:
     void onSourceComboChanged(); // 辐射源下拉框处理
     void updateRadarMarker(int idx); // 更新单个侦察设备标记
     void updateSourceMarker(); // 更新辐射源标记
+    std::string formatSimulationResult(const std::string& result); // 格式化仿真结果
     
     // 开始仿真按钮回调
     static void onStartSimulationCallback(GtkWidget* widget, gpointer data);

@@ -5,6 +5,8 @@
 #include "../../models/RadiationSourceDAO.h"
 #include <gtk/gtk.h>
 #include <algorithm>
+#include <sstream>
+#include <iomanip>
 
 // 实现MultiPlatformView类
 MultiPlatformView::MultiPlatformView() : m_view(nullptr), m_algoCombo(nullptr),  m_resultLabel(nullptr), m_errorLabel(nullptr), m_mapView(nullptr), m_sourceMarker(-1), m_timeEntry(nullptr) {
