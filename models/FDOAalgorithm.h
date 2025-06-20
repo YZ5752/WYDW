@@ -104,6 +104,13 @@ private:
         const std::vector<double>& b               // 常数向量
     );
 
+    // 生成带有高斯随机扰动的初始值
+    std::pair<COORD3, Vector3> generateGaussianPerturbedInitialGuess(
+        const RadiationSource& source,
+        double positionSigma,
+        double velocitySigma,
+        double angleSigma);
+
     std::vector<std::string> m_deviceNames;    // 设备名称列表
     std::string m_sourceName;                  // 辐射源名称
     std::string m_systemType;                  // 技术体制
