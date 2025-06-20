@@ -32,13 +32,19 @@ LocationResult InterferometerPositioning::runSimulation(const ReconnaissanceDevi
     g_print("观测站初始位置: %.6f°, %.6f°, %.2fm\n", device.getLongitude(), device.getLatitude(), device.getAltitude());
     g_print("观测站初始位置: %.6f, %.6f, %.2f\n", X_0, Y_0, Z_0);
     
-    // 获取辐射源位置（固定）
+    //获取辐射源位置（固定）
     COORD3 sourceXYZ = lbh2xyz(source.getLongitude(), source.getLatitude(), source.getAltitude());
     double X_T = sourceXYZ.p1;
     double Y_T = sourceXYZ.p2;
     double Z_T = sourceXYZ.p3;
     g_print("辐射源位置: %.6f°, %.6f°, %.2fm\n", source.getLongitude(), source.getLatitude(), source.getAltitude());
     g_print("辐射源位置: %.6f, %.6f, %.2f\n", X_T, Y_T, Z_T);
+
+    // //假设
+    //     double X_T = 1000;
+    // double Y_T = 500;
+    // double Z_T = 300;
+    //     g_print("假设辐射源位置: %.6f, %.6f, %.2f\n", X_T, Y_T, Z_T);
     
     // 获取观测站速度
     // 将设备的运动速度和方向转换为笛卡尔坐标系中的速度分量
@@ -54,6 +60,12 @@ LocationResult InterferometerPositioning::runSimulation(const ReconnaissanceDevi
     double v_z = velocityXYZ.p3;
     g_print("观测站速度: %.2fm/s, %.2fm/s, %.2fm/s\n", v_x, v_y, v_z);
 
+    // //假设
+    //  double v_x = 50;
+    // double v_y = 0;
+    // double v_z = 0;
+    // g_print("假设观测站速度: %.2fm/s, %.2fm/s, %.2fm/s\n", v_x, v_y, v_z);
+
     // 获取基线长度
     double d = device.getBaselineLength();
     g_print("基线长度: %.2fm\n", d);
@@ -62,23 +74,36 @@ LocationResult InterferometerPositioning::runSimulation(const ReconnaissanceDevi
     double f_T = source.getCarrierFrequency() * 1e9;
     g_print("辐射源频率: %.2fHz\n", f_T);
     
-    // 计算方位角 θ(t) = tg^(-1)((X_T - X_0)/(Y_T - Y_0)) (公式4.2.3)
-    double theta_t = atan2(X_T - X_0, Y_T - Y_0);
-    g_print("方位角: %.2f°\n", theta_t * RAD2DEG);
+    // 计算观测站运动后的位置
+    // 假设仿真时间内匀速运动
+    double X_0_moved = X_0 + v_x * simulationTime;
+    double Y_0_moved = Y_0 + v_y * simulationTime;
+    double Z_0_moved = Z_0 + v_z * simulationTime;
+    g_print("观测站运动后位置: %.6f, %.6f, %.2f\n", X_0_moved, Y_0_moved, Z_0_moved);
+
+// //假设
+//         double X_0_moved = 50;
+//     double Y_0_moved =0;
+//     double Z_0_moved =0;
+//         g_print("假设观测站运动后位置: %.6f, %.6f, %.2f\n", X_0_moved, Y_0_moved, Z_0_moved);
     
-    // 计算俯仰角 ε(t) = tg^(-1)((Z_T - Z_0)/sqrt((X_T - X_0)^2 + (Y_T - Y_0)^2)) (公式4.2.4)
-    double r_pt = sqrt(pow(X_T - X_0, 2) + pow(Y_T - Y_0, 2));
-    double epsilon_t = atan2(Z_T - Z_0, r_pt);
-    g_print("俯仰角: %.2f°\n", epsilon_t * RAD2DEG);
+    // 计算方位角 θ(t) = tg^(-1)((X_T - X_0_moved)/(Y_T - Y_0_moved)) (公式4.2.3修改版)
+    double theta_t = atan2(X_T - X_0_moved, Y_T - Y_0_moved);
+    g_print("方位角(运动后): %.1f°\n", theta_t * RAD2DEG);
+    
+    // 计算俯仰角 ε(t) = tg^(-1)((Z_T - Z_0_moved)/sqrt((X_T - X_0_moved)^2 + (Y_T - Y_0_moved)^2)) (公式4.2.4修改版)
+    double r_pt = sqrt(pow(X_T - X_0_moved, 2) + pow(Y_T - Y_0_moved, 2));
+    double epsilon_t = atan2(Z_T - Z_0_moved, r_pt);
+    g_print("俯仰角(运动后): %.1f°\n", epsilon_t * RAD2DEG);
     
     // 计算方位角变化率 θ'(t) = (v_y*sin(θ(t)) - v_x*cos(θ(t)))/r_pt (公式4.2.5)
     double theta_dot_t = (v_y * sin(theta_t) - v_x * cos(theta_t)) / r_pt;
     g_print("方位角变化率: %.2f°/s\n", theta_dot_t * RAD2DEG);
     
     // 计算俯仰角变化率 ε'(t) = (-v_z*cos(ε(t)) + r_pt_dot*sin(ε(t)))/r (公式4.2.6)
-    // 其中 r_pt_dot = (X_T - X_0)*sin(θ(t)) + (Y_T - Y_0)*cos(θ(t))
-    double r_pt_dot = (X_T - X_0) * sin(theta_t) + (Y_T - Y_0) * cos(theta_t);
-    double r_t = sqrt(pow(X_T - X_0, 2) + pow(Y_T - Y_0, 2) + pow(Z_T - Z_0, 2));
+    // 其中 r_pt_dot = (X_T - X_0_moved)*sin(θ(t)) + (Y_T - Y_0_moved)*cos(θ(t))
+    double r_pt_dot = (X_T - X_0_moved) * sin(theta_t) + (Y_T - Y_0_moved) * cos(theta_t);
+    double r_t = sqrt(pow(X_T - X_0_moved, 2) + pow(Y_T - Y_0_moved, 2) + pow(Z_T - Z_0_moved, 2));
     double epsilon_dot_t = (-v_z * cos(epsilon_t) + r_pt_dot * sin(epsilon_t)) / r_t;
     g_print("俯仰角变化率: %.2f°/s\n", epsilon_dot_t * RAD2DEG);
     
@@ -97,10 +122,10 @@ LocationResult InterferometerPositioning::runSimulation(const ReconnaissanceDevi
     double r_hat = numerator / denominator;
     g_print("距离: %.2fm\n", r_hat);
     
-    // 计算辐射源坐标 (公式4.2.9)
-    double X_T_calculated = X_0 + r_hat * cos(epsilon_t) * sin(theta_t);
-    double Y_T_calculated = Y_0 + r_hat * cos(epsilon_t) * cos(theta_t);
-    double Z_T_calculated = Z_0 + r_hat * sin(epsilon_t);
+    // 计算辐射源坐标 (公式4.2.9，基于运动后的位置)
+    double X_T_calculated = X_0_moved + r_hat * cos(epsilon_t) * sin(theta_t);
+    double Y_T_calculated = Y_0_moved + r_hat * cos(epsilon_t) * cos(theta_t);
+    double Z_T_calculated = Z_0_moved + r_hat * sin(epsilon_t);
     g_print("计算得到的辐射源坐标: %.6f, %.6f, %.2f\n", X_T_calculated, Y_T_calculated, Z_T_calculated);
     
     // 将计算得到的辐射源笛卡尔坐标转换回经纬度高度
@@ -185,13 +210,40 @@ std::pair<double, double> InterferometerPositioning::calculateDirectionData(cons
     double Y_T = sourceXYZ.p2;
     double Z_T = sourceXYZ.p3;
     
-    // 计算方位角
-    double theta_t = atan2(X_T - X_0, Y_T - Y_0) * RAD2DEG;
+    // 获取观测站速度
+    COORD3 velocityXYZ = velocity_lbh2xyz(
+        device.getLongitude(), 
+        device.getLatitude(), 
+        device.getMovementSpeed(), 
+        device.getMovementAzimuth(), 
+        device.getMovementElevation()
+    );
+    double v_x = velocityXYZ.p1;
+    double v_y = velocityXYZ.p2;
+    double v_z = velocityXYZ.p3;
+    
+    // 将笛卡尔坐标系中的速度分量转换回大地坐标系中的速度、方位角和俯仰角
+    COORD3 velocityLBH = velocity_xyz2lbh(
+        device.getLongitude(),
+        device.getLatitude(),
+        v_x, v_y, v_z
+    );
+    g_print("测向计算中 - 从笛卡尔坐标转换回大地坐标系的运动参数:\n");
+    g_print("  - 速度: %.2fm/s, 方位角: %.2f°, 俯仰角: %.2f°\n", 
+           velocityLBH.p1, velocityLBH.p2, velocityLBH.p3);
+    
+    // 计算观测站运动后的位置（假设运动1秒）
+    double X_0_moved = X_0 + v_x * 1.0;
+    double Y_0_moved = Y_0 + v_y * 1.0;
+    double Z_0_moved = Z_0 + v_z * 1.0;
+    
+    // 计算方位角（基于运动后位置）
+    double theta_t = atan2(X_T - X_0_moved, Y_T - Y_0_moved) * RAD2DEG;
     if (theta_t < 0) theta_t += 360.0;
     
-    // 计算俯仰角
-    double r_pt = sqrt(pow(X_T - X_0, 2) + pow(Y_T - Y_0, 2));
-    double epsilon_t = atan2(Z_T - Z_0, r_pt) * RAD2DEG;
+    // 计算俯仰角（基于运动后位置）
+    double r_pt = sqrt(pow(X_T - X_0_moved, 2) + pow(Y_T - Y_0_moved, 2));
+    double epsilon_t = atan2(Z_T - Z_0_moved, r_pt) * RAD2DEG;
     
     return std::make_pair(theta_t, epsilon_t);
 }
@@ -209,18 +261,46 @@ std::pair<std::pair<double, double>, double> InterferometerPositioning::calculat
     double latitude = device.getLatitude();
     double altitude = device.getAltitude();
     
+    // 获取观测站速度
+    COORD3 velocityXYZ = velocity_lbh2xyz(
+        longitude, 
+        latitude, 
+        device.getMovementSpeed(), 
+        device.getMovementAzimuth(), 
+        device.getMovementElevation()
+    );
+    double v_x = velocityXYZ.p1;
+    double v_y = velocityXYZ.p2;
+    double v_z = velocityXYZ.p3;
+    
+    // 将笛卡尔坐标系中的速度分量转换回大地坐标系中的速度、方位角和俯仰角
+    COORD3 velocityLBH = velocity_xyz2lbh(
+        longitude,
+        latitude,
+        v_x, v_y, v_z
+    );
+    g_print("定位计算中 - 从笛卡尔坐标转换回大地坐标系的运动参数:\n");
+    g_print("  - 速度: %.2fm/s, 方位角: %.2f°, 俯仰角: %.2f°\n", 
+           velocityLBH.p1, velocityLBH.p2, velocityLBH.p3);
+    
     // 估计距离
     double distance = 100000.0; // 假设距离为100km
     
-    // 计算辐射源坐标
+    // 计算观测站当前位置
     COORD3 deviceXYZ = lbh2xyz(longitude, latitude, altitude);
     double X_0 = deviceXYZ.p1;
     double Y_0 = deviceXYZ.p2;
     double Z_0 = deviceXYZ.p3;
     
-    double X_T = X_0 + distance * cos(elevation_rad) * sin(azimuth_rad);
-    double Y_T = Y_0 + distance * cos(elevation_rad) * cos(azimuth_rad);
-    double Z_T = Z_0 + distance * sin(elevation_rad);
+    // 计算观测站运动后的位置（假设运动1秒）
+    double X_0_moved = X_0 + v_x * 1.0;
+    double Y_0_moved = Y_0 + v_y * 1.0;
+    double Z_0_moved = Z_0 + v_z * 1.0;
+    
+    // 基于运动后的位置计算辐射源坐标
+    double X_T = X_0_moved + distance * cos(elevation_rad) * sin(azimuth_rad);
+    double Y_T = Y_0_moved + distance * cos(elevation_rad) * cos(azimuth_rad);
+    double Z_T = Z_0_moved + distance * sin(elevation_rad);
     
     // 将笛卡尔坐标转换为经纬度高度
     COORD3 sourceLBH = xyz2lbh(X_T, Y_T, Z_T);
@@ -337,8 +417,7 @@ std::vector<double> InterferometerPositioning::calculateErrors(const Reconnaissa
     
     double sigma_phi_rad = INTERFEROMETER_PHASE_ERROR * DEG2RAD;  // 转换为弧度
     double sigma_theta = (lambda / (2 * M_PI * d * cos_theta)) * sigma_phi_rad;
-    sigma_theta *= RAD2DEG;  // 转换回度
-    errors.push_back(sigma_theta);
+
     
     // 添加详细的中间计算值输出
     g_print("天线阵测向误差计算中间值:\n");
@@ -352,6 +431,8 @@ std::vector<double> InterferometerPositioning::calculateErrors(const Reconnaissa
     // 5. 综合测向误差 Δθ（度）
     double total_error = sqrt(pow(sigma_alpha, 2) + pow(sigma_beta, 2) + 
                             pow(sigma_theta, 2) + pow(delta_em, 2));
+        sigma_theta *= RAD2DEG;  // 转换回度
+    errors.push_back(sigma_theta);
     errors.push_back(total_error);
     
     // 打印调试信息

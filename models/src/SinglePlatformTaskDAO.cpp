@@ -1,6 +1,7 @@
 #include "../SinglePlatformTaskDAO.h"
 #include <iostream>
 #include <cstring>
+#include <gtk/gtk.h>
 
 // 单例实现
 SinglePlatformTaskDAO& SinglePlatformTaskDAO::getInstance() {
@@ -263,4 +264,80 @@ SinglePlatformTask SinglePlatformTaskDAO::createTaskFromRow(MYSQL_ROW row) {
     task.createdAt = row[14] ? row[14] : "";
     
     return task;
+}
+
+// 根据辐射源ID获取任务
+std::vector<SinglePlatformTask> SinglePlatformTaskDAO::getTasksBySourceId(int sourceId) {
+    std::vector<SinglePlatformTask> tasks;
+    
+    DBConnector& db = DBConnector::getInstance();
+    MYSQL* conn = db.getConnection();
+    if (!conn) {
+        g_print("SinglePlatformTaskDAO: No valid database connection\n");
+        return tasks;
+    }
+    
+    // 打印当前数据库名称
+    if (mysql_query(conn, "SELECT DATABASE()") == 0) {
+        MYSQL_RES* res_dbname = mysql_store_result(conn);
+        if (res_dbname) {
+            MYSQL_ROW row_dbname = mysql_fetch_row(res_dbname);
+            if (row_dbname && row_dbname[0]) {
+                g_print("SinglePlatformTaskDAO: 当前数据库: %s\n", row_dbname[0]);
+            }
+            mysql_free_result(res_dbname);
+        }
+    }
+    
+    // 增加缓冲区大小，从256增加到1024，避免SQL查询被截断
+    char sql[1024];
+    snprintf(sql, sizeof(sql), 
+        "SELECT task_id, tech_system, device_id, radiation_id, execution_time, "
+        "target_longitude, target_latitude, target_altitude, target_angle, angle_error, "
+        "max_positioning_distance, positioning_time, positioning_accuracy, direction_finding_accuracy "
+        "FROM single_platform_task WHERE radiation_id=%d", 
+        sourceId);
+    
+    g_print("SinglePlatformTaskDAO: 执行SQL: %s\n", sql);
+    
+    if (mysql_query(conn, sql)) {
+        g_print("SinglePlatformTaskDAO: Failed to execute query - %s\n", mysql_error(conn));
+        return tasks;
+    }
+    
+    MYSQL_RES* res = mysql_store_result(conn);
+    if (!res) {
+        g_print("SinglePlatformTaskDAO: Failed to store result - %s\n", mysql_error(conn));
+        return tasks;
+    }
+    
+    g_print("SinglePlatformTaskDAO: 查询到 %lu 条记录\n", mysql_num_rows(res));
+    
+    MYSQL_ROW row;
+    while ((row = mysql_fetch_row(res))) {
+        SinglePlatformTask task;
+        
+        int idx = 0;
+        task.taskId = row[idx] ? atoi(row[idx]) : 0; idx++;
+        task.techSystem = row[idx] ? row[idx] : ""; idx++;
+        task.deviceId = row[idx] ? atoi(row[idx]) : 0; idx++;
+        task.radiationId = row[idx] ? atoi(row[idx]) : 0; idx++;
+        task.executionTime = row[idx] ? atof(row[idx]) : 0.0f; idx++;
+        task.targetLongitude = row[idx] ? atof(row[idx]) : 0.0; idx++;
+        task.targetLatitude = row[idx] ? atof(row[idx]) : 0.0; idx++;
+        task.targetAltitude = row[idx] ? atof(row[idx]) : 0.0; idx++;
+        task.targetAngle = row[idx] ? atof(row[idx]) : 0.0; idx++;
+        task.angleError = row[idx] ? atof(row[idx]) : 0.0; idx++;
+        task.maxPositioningDistance = row[idx] ? atof(row[idx]) : 0.0f; idx++;
+        task.positioningTime = row[idx] ? atof(row[idx]) : 0.0f; idx++;
+        task.positioningAccuracy = row[idx] ? atof(row[idx]) : 0.0; idx++;
+        task.directionFindingAccuracy = row[idx] ? atof(row[idx]) : 0.0; idx++;
+        
+        g_print("SinglePlatformTaskDAO: 加载任务 ID=%d, radiation_id=%d\n", task.taskId, task.radiationId);
+        tasks.push_back(task);
+    }
+    
+    mysql_free_result(res);
+    g_print("SinglePlatformTaskDAO: 总共加载了 %zu 个任务\n", tasks.size());
+    return tasks;
 } 
