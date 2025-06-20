@@ -185,6 +185,10 @@ void SinglePlatformController::startSimulation() {
     
     // 执行设备移动仿真 - 使用轨迹仿真器
     ReconnaissanceDevice deviceCopy = device; // 使用副本，避免修改原始数据
+    
+    // 保存原始设备位置，用于定位计算
+    ReconnaissanceDevice originalDevice = device; // 保存原始设备数据，位置不会被修改
+    
     std::vector<std::pair<double, double>> trajectoryPoints = 
         TrajectorySimulator::getInstance().simulateDeviceMovement(deviceCopy, simulationTime);
     
@@ -198,13 +202,18 @@ void SinglePlatformController::startSimulation() {
     LocationResult result;
     
     // 根据选择的技术体制执行不同的算法
+    // 使用原始设备位置进行定位计算，而不是移动后的位置
     if (techSystem == "干涉仪体制") {
         g_print("执行干涉仪体制定位算法...\n");
-        result = InterferometerPositioning::getInstance().runSimulation(deviceCopy, source, simulationTime);
+        g_print("使用原始设备位置进行定位计算：经度=%.6f°, 纬度=%.6f°, 高度=%.2fm\n", 
+                originalDevice.getLongitude(), originalDevice.getLatitude(), originalDevice.getAltitude());
+        result = InterferometerPositioning::getInstance().runSimulation(originalDevice, source, simulationTime);
     } else if (techSystem == "时差体制") {
         g_print("执行时差体制定位算法...\n");
-        result = SinglePlatformTDOA::getInstance().runSimulation(deviceCopy, source, simulationTime);
-    } 
+        g_print("使用原始设备位置进行定位计算：经度=%.6f°, 纬度=%.6f°, 高度=%.2fm\n", 
+                originalDevice.getLongitude(), originalDevice.getLatitude(), originalDevice.getAltitude());
+        result = SinglePlatformTDOA::getInstance().runSimulation(originalDevice, source, simulationTime);
+    }
     
     // 先设置仿真结果到缓存，确保animateDeviceMovement可以使用
     m_view->setSimulationResult(result.longitude, result.latitude, result.altitude, result.azimuth, result.elevation);
@@ -226,85 +235,151 @@ void SinglePlatformController::startSimulation() {
     std::vector<double> errorFactors = result.errorFactors;
     std::string currentTechSystem = techSystem;
     
-    // 在动画结束后才显示结果参数和误差分析
-    g_timeout_add(simulationTime * 1000 + 1200, [](gpointer data) -> gboolean {
-        auto* controller = static_cast<SinglePlatformController*>(data);
-        if (!controller || !controller->getView()) {
-            return G_SOURCE_REMOVE;
-        }
+//  // 在动画结束后才显示结果参数和误差分析
+//     g_timeout_add(simulationTime * 1000 + 1200, [](gpointer data) -> gboolean {
+//         auto* controller = static_cast<SinglePlatformController*>(data);
+//         if (!controller || !controller->getView()) {
+//             return G_SOURCE_REMOVE;
+//         }
         
-        SinglePlatformView* view = controller->getView();
+//         SinglePlatformView* view = controller->getView();
         
-        // 显示仿真结果参数（这部分已在SinglePlatformView::animateDeviceMovement中实现）
+//         // 显示仿真结果参数（这部分已在SinglePlatformView::animateDeviceMovement中实现）
         
-        // 更新误差表格
-        std::string techSystem = view->getSelectedTechSystem();
-        GtkWidget* errorTable = view->getErrorTable();
+//         // 更新误差表格
+//         std::string techSystem = view->getSelectedTechSystem();
+//         GtkWidget* errorTable = view->getErrorTable();
         
-        if (errorTable) {
-            // 获取保存的误差因素数据
-            std::vector<double> errorFactors = controller->getLastErrorFactors();
+//         if (errorTable) {
+//             // 获取保存的误差因素数据
+//             std::vector<double> errorFactors = controller->getLastErrorFactors();
             
-            if (techSystem == "干涉仪体制" && errorFactors.size() >= 5) {
-                // 查找已存在的误差值标签
-                GList* children = gtk_container_get_children(GTK_CONTAINER(errorTable));
-                GtkWidget* errorLabels[5] = {nullptr}; // 存储找到的标签引用
+//             if (techSystem == "干涉仪体制" && errorFactors.size() >= 5) {
+//                 // 查找已存在的误差值标签
+//                 GList* children = gtk_container_get_children(GTK_CONTAINER(errorTable));
+//                 GtkWidget* errorLabels[5] = {nullptr}; // 存储找到的标签引用
                 
-                // 找出所有值标签的引用
-                for (GList* iter = children; iter != NULL; iter = g_list_next(iter)) {
-                    GtkWidget* child = GTK_WIDGET(iter->data);
-                    int row, col;
-                    gtk_container_child_get(GTK_CONTAINER(errorTable), child, 
-                                           "top-attach", &row, 
-                                           "left-attach", &col, NULL);
-                    if (col == 1 && row >= 0 && row < 5) {
-                        errorLabels[row] = child;
-                    }
-                }
-                g_list_free(children);
+//                 // 找出所有值标签的引用
+//                 for (GList* iter = children; iter != NULL; iter = g_list_next(iter)) {
+//                     GtkWidget* child = GTK_WIDGET(iter->data);
+//                     int row, col;
+//                     gtk_container_child_get(GTK_CONTAINER(errorTable), child, 
+//                                            "top-attach", &row, 
+//                                            "left-attach", &col, NULL);
+//                     if (col == 1 && row >= 0 && row < 5) {
+//                         errorLabels[row] = child;
+//                     }
+//                 }
+//                 g_list_free(children);
                 
-                // 更新每个标签的文本，直接设置文本而不是添加新标签
-                for (int i = 0; i < 5; i++) {
-                    if (errorLabels[i]) {
-                        char errorBuffer[50];
-                        sprintf(errorBuffer, "%.4f°", errorFactors[i]);
-                        gtk_label_set_text(GTK_LABEL(errorLabels[i]), errorBuffer);
-                    }
-                }
-            } else if (techSystem == "时差体制" && errorFactors.size() >= 5) {
-                // 查找已存在的误差值标签
-                GList* children = gtk_container_get_children(GTK_CONTAINER(errorTable));
-                GtkWidget* errorLabels[5] = {nullptr}; // 存储找到的标签引用
+//                 // 更新每个标签的文本，直接设置文本而不是添加新标签
+//                 for (int i = 0; i < 5; i++) {
+//                     if (errorLabels[i]) {
+//                         char errorBuffer[50];
+//                         sprintf(errorBuffer, "%.4f°", errorFactors[i]);
+//                         gtk_label_set_text(GTK_LABEL(errorLabels[i]), errorBuffer);
+//                     }
+//                 }
+//             } else if (techSystem == "时差体制" && errorFactors.size() >= 5) {
+//                 // 查找已存在的误差值标签
+//                 GList* children = gtk_container_get_children(GTK_CONTAINER(errorTable));
+//                 GtkWidget* errorLabels[5] = {nullptr}; // 存储找到的标签引用
                 
-                // 找出所有值标签的引用
-                for (GList* iter = children; iter != NULL; iter = g_list_next(iter)) {
-                    GtkWidget* child = GTK_WIDGET(iter->data);
-                    int row, col;
-                    gtk_container_child_get(GTK_CONTAINER(errorTable), child, 
-                                           "top-attach", &row, 
-                                           "left-attach", &col, NULL);
-                    if (col == 1 && row >= 0 && row < 5) {
-                        errorLabels[row] = child;
-                    }
-                }
-                g_list_free(children);
+//                 // 找出所有值标签的引用
+//                 for (GList* iter = children; iter != NULL; iter = g_list_next(iter)) {
+//                     GtkWidget* child = GTK_WIDGET(iter->data);
+//                     int row, col;
+//                     gtk_container_child_get(GTK_CONTAINER(errorTable), child, 
+//                                            "top-attach", &row, 
+//                                            "left-attach", &col, NULL);
+//                     if (col == 1 && row >= 0 && row < 5) {
+//                         errorLabels[row] = child;
+//                     }
+//                 }
+//                 g_list_free(children);
                 
-                // 更新每个标签的文本，直接设置文本而不是添加新标签
-                for (int i = 0; i < 5; i++) {
-                    if (errorLabels[i]) {
-                        char errorBuffer[50];
-                        sprintf(errorBuffer, "%.4f°", errorFactors[i]);
-                        gtk_label_set_text(GTK_LABEL(errorLabels[i]), errorBuffer);
-                    }
+//                 // 更新每个标签的文本，直接设置文本而不是添加新标签
+//                 for (int i = 0; i < 5; i++) {
+//                     if (errorLabels[i]) {
+//                         char errorBuffer[50];
+//                         sprintf(errorBuffer, "%.4f°", errorFactors[i]);
+//                         gtk_label_set_text(GTK_LABEL(errorLabels[i]), errorBuffer);
+//                     }
+//                 }
+//             }
+            
+//             // 显示所有控件
+//             gtk_widget_show_all(errorTable);
+//         }
+        
+//         return G_SOURCE_REMOVE;
+//     }, this);
+
+    // 立即显示结果参数和误差分析，不等待动画结束
+    // 显示仿真结果参数
+    m_view->showSimulationResult(result.longitude, result.latitude, result.altitude, result.azimuth, result.elevation);
+    
+    // 更新误差表格
+    GtkWidget* errorTable = m_view->getErrorTable();
+    
+    if (errorTable) {
+        if (techSystem == "干涉仪体制" && errorFactors.size() >= 5) {
+            // 查找已存在的误差值标签
+            GList* children = gtk_container_get_children(GTK_CONTAINER(errorTable));
+            GtkWidget* errorLabels[5] = {nullptr}; // 存储找到的标签引用
+            
+            // 找出所有值标签的引用
+            for (GList* iter = children; iter != NULL; iter = g_list_next(iter)) {
+                GtkWidget* child = GTK_WIDGET(iter->data);
+                int row, col;
+                gtk_container_child_get(GTK_CONTAINER(errorTable), child, 
+                                       "top-attach", &row, 
+                                       "left-attach", &col, NULL);
+                if (col == 1 && row >= 0 && row < 5) {
+                    errorLabels[row] = child;
                 }
             }
+            g_list_free(children);
             
-            // 显示所有控件
-            gtk_widget_show_all(errorTable);
+            // 更新每个标签的文本，直接设置文本而不是添加新标签
+            for (int i = 0; i < 5; i++) {
+                if (errorLabels[i]) {
+                    char errorBuffer[50];
+                    sprintf(errorBuffer, "%.4f°", errorFactors[i]);
+                    gtk_label_set_text(GTK_LABEL(errorLabels[i]), errorBuffer);
+                }
+            }
+        } else if (techSystem == "时差体制" && errorFactors.size() >= 5) {
+            // 查找已存在的误差值标签
+            GList* children = gtk_container_get_children(GTK_CONTAINER(errorTable));
+            GtkWidget* errorLabels[5] = {nullptr}; // 存储找到的标签引用
+            
+            // 找出所有值标签的引用
+            for (GList* iter = children; iter != NULL; iter = g_list_next(iter)) {
+                GtkWidget* child = GTK_WIDGET(iter->data);
+                int row, col;
+                gtk_container_child_get(GTK_CONTAINER(errorTable), child, 
+                                       "top-attach", &row, 
+                                       "left-attach", &col, NULL);
+                if (col == 1 && row >= 0 && row < 5) {
+                    errorLabels[row] = child;
+                }
+            }
+            g_list_free(children);
+            
+            // 更新每个标签的文本，直接设置文本而不是添加新标签
+            for (int i = 0; i < 5; i++) {
+                if (errorLabels[i]) {
+                    char errorBuffer[50];
+                    sprintf(errorBuffer, "%.4f°", errorFactors[i]);
+                    gtk_label_set_text(GTK_LABEL(errorLabels[i]), errorBuffer);
+                }
+            }
         }
         
-        return G_SOURCE_REMOVE;
-    }, this);
+        // 显示所有控件
+        gtk_widget_show_all(errorTable);
+    }
     
     // 保存最后一次仿真的误差因素，供延时函数使用
     m_lastErrorFactors = result.errorFactors;

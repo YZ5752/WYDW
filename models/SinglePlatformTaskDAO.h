@@ -72,6 +72,13 @@ public:
     std::vector<SinglePlatformTask> getSinglePlatformTasksByRadiationId(int radiationId);
     
     /**
+     * @brief 根据辐射源ID获取单平台任务（别名方法）
+     * @param sourceId 辐射源ID
+     * @return 任务列表
+     */
+    std::vector<SinglePlatformTask> getTasksBySourceId(int sourceId);
+    
+    /**
      * @brief 更新单平台任务
      * @param task 任务数据
      * @return 是否成功

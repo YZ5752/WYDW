@@ -1,11 +1,16 @@
 #pragma once
 
-#include "../views/EvaluationView.h"
 #include <string>
 #include <vector>
 #include <map>
+#include <gtk/gtk.h>
+#include "../models/RadiationSourceModel.h"
+#include "../models/RadiationSourceDAO.h"
+#include "../models/SinglePlatformTaskDAO.h"
 
-class ApplicationController;  // 前向声明
+// 前向声明
+class EvaluationView;
+class ApplicationController;
 
 class EvaluationController {
 public:
@@ -19,6 +24,12 @@ public:
     // 开始评估
     void startEvaluation();
     
+    // 评估指定的辐射源
+    std::vector<std::pair<std::string, double>> evaluateRadiationSource(int sourceId, bool isSinglePlatform);
+    
+    // 获取性能随时间变化的数据
+    std::map<double, double> getAccuracyTimeData(int sourceId, bool isSinglePlatform);
+    
     // 导出评估结果
     void exportResults(const std::string& filePath);
     
@@ -30,6 +41,9 @@ public:
     
     // 获取视图
     EvaluationView* getView() const;
+    
+    // 获取所有辐射源数据
+    std::vector<RadiationSource> getAllRadiationSources();
 
 private:
     EvaluationController();

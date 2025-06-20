@@ -618,7 +618,6 @@ void SinglePlatformView::animateDeviceMovement(const ReconnaissanceDevice& devic
         } else {
             g_print("解析定位结果失败，格式不匹配: %s\n", locDataStr);
             // 使用辐射源位置作为默认值
-            g_print("无法解析定位结果，使用默认值\n");
             for (const auto& src : m_sources) {
                 if (src.getRadiationName() == getSelectedSource()) {
                     calculatedLongitude = src.getLongitude();
@@ -629,8 +628,7 @@ void SinglePlatformView::animateDeviceMovement(const ReconnaissanceDevice& devic
             }
         }
     } else {
-        g_print("无法解析定位结果，使用默认值\n");
-        // 使用辐射源位置作为默认值（在实际应用中这是不可能的，但这里仅用于可视化）
+        // 使用辐射源位置作为默认值（这里仅用于可视化）
         for (const auto& src : m_sources) {
             if (src.getRadiationName() == getSelectedSource()) {
                 calculatedLongitude = src.getLongitude();
