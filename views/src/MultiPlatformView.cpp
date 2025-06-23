@@ -50,6 +50,7 @@ GtkWidget* MultiPlatformView::createView() {
     m_algoCombo = gtk_combo_box_text_new();
     gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(m_algoCombo), "时差体制");
     gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(m_algoCombo), "频差体制");
+    gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(m_algoCombo), "测向体制");
     gtk_combo_box_set_active(GTK_COMBO_BOX(m_algoCombo), 0);
     gtk_box_pack_start(GTK_BOX(algoBox), m_algoCombo, TRUE, TRUE, 5);
     g_signal_connect(m_algoCombo, "changed", G_CALLBACK(onTechSystemChangedCallback), this);
@@ -189,9 +190,22 @@ void MultiPlatformView::onTechSystemChangedCallback(GtkWidget* widget, gpointer 
 
 void MultiPlatformView::onTechSystemChanged() {
     int idx = gtk_combo_box_get_active(GTK_COMBO_BOX(m_algoCombo));
-    // 0:时差体制，1:频差体制
-    for (int i = 0; i < 4; ++i) {
-        gtk_widget_set_visible(m_radarFrame[i], (idx == 0) ? (i < 4) : (i < 3));
+    // 0:时差体制，1:频差体制, 2:测向体制
+    if (idx == 0) {
+        // 时差体制：显示4个侦察设备
+        for (int i = 0; i < 4; ++i) {
+            gtk_widget_set_visible(m_radarFrame[i], true);
+        }
+    } else if (idx == 1) {
+        // 频差体制：显示3个侦察设备
+        for (int i = 0; i < 4; ++i) {
+            gtk_widget_set_visible(m_radarFrame[i], i < 3);
+        }
+    } else {
+        // 测向体制：显示2个侦察设备
+        for (int i = 0; i < 4; ++i) {
+            gtk_widget_set_visible(m_radarFrame[i], i < 2);
+        }
     }
     updateDeviceCombos();
     updateSourceCombo();
@@ -207,6 +221,8 @@ void MultiPlatformView::updateDeviceCombos() {
             if (idx == 0 && !dev.getIsStationary()) continue;
             // 频差体制：1-3号可选全部，4号不显示
             if (idx == 1 && i >= 3) continue;
+            // 测向体制：1-2号可选全部，3-4号不显示
+            if (idx == 2 && i >= 2) continue;
             gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(m_radarCombo[i]), dev.getDeviceName().c_str());
         }
         // 默认选中第i个（如有）
@@ -222,9 +238,9 @@ void MultiPlatformView::updateSourceCombo() {
     int idx = gtk_combo_box_get_active(GTK_COMBO_BOX(m_algoCombo));
     gtk_combo_box_text_remove_all(GTK_COMBO_BOX_TEXT(m_sourceCombo));
     for (const auto& src : m_sources) {
-        // 时差体制：只能选固定
+        // 时差体制：只能选固定源
         if (idx == 0 && !src.getIsStationary()) continue;
-        // 频差体制：全部可选
+        // 频差体制和测向体制：全部可选
         gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(m_sourceCombo), src.getRadiationName().c_str());
     }
     if (gtk_combo_box_get_active(GTK_COMBO_BOX(m_sourceCombo)) < 0 && gtk_combo_box_get_active(GTK_COMBO_BOX(m_sourceCombo)) != 0) {
@@ -345,7 +361,16 @@ void MultiPlatformView::onStartSimulation() {
     
     // 获取选中的侦察设备
     std::vector<std::string> deviceNames;
-    int requiredRadars = (strcmp(systemType, "时差体制") == 0) ? 4 : 3;
+    int requiredRadars = 4; // 默认为时差体制的4个雷达
+    
+    if (strcmp(systemType, "时差体制") == 0) {
+        requiredRadars = 4;
+    } else if (strcmp(systemType, "频差体制") == 0) {
+        requiredRadars = 3;
+    } else if (strcmp(systemType, "测向体制") == 0) {
+        requiredRadars = 2;
+    }
+    
     for (int i = 0; i < requiredRadars; ++i) {
         gchar* deviceName = gtk_combo_box_text_get_active_text(GTK_COMBO_BOX_TEXT(m_radarCombo[i]));
         if (deviceName) {
@@ -390,37 +415,40 @@ void MultiPlatformView::onStartSimulation() {
 
 // 检查雷达侦察模型是否有效
 bool MultiPlatformView::checkRadarModels() {
-    // 获取当前技术体制：0-时差体制，1-频差体制
+    // 获取当前技术体制：0-时差体制，1-频差体制, 2-测向体制
     int techSystem = gtk_combo_box_get_active(GTK_COMBO_BOX(m_algoCombo));
     
     // 需要检查的雷达数量
-    int requiredRadars = (techSystem == 0) ? 4 : 3;
+    int requiredRadars = 4; // 默认为时差体制
+    
+    if (techSystem == 0) {
+        requiredRadars = 4; // 时差体制需要4个雷达
+    } else if (techSystem == 1) {
+        requiredRadars = 3; // 频差体制需要3个雷达
+    } else if (techSystem == 2) {
+        requiredRadars = 2; // 测向体制需要2个雷达
+    }
     
     // 收集已选择的雷达模型名称
     std::vector<std::string> selectedRadars;
-    for (int i = 0; i < requiredRadars; i++) {
-        // 确保雷达框是可见的
-        if (!gtk_widget_get_visible(m_radarFrame[i])) {
-            continue;
-        }
-        
-        gchar* name = gtk_combo_box_text_get_active_text(GTK_COMBO_BOX_TEXT(m_radarCombo[i]));
-        if (!name) {
-            // 如果未选择雷达，显示警告
+    for (int i = 0; i < requiredRadars; ++i) {
+        gchar* radarName = gtk_combo_box_text_get_active_text(GTK_COMBO_BOX_TEXT(m_radarCombo[i]));
+        if (!radarName) {
             GtkWidget* dialog = gtk_message_dialog_new(
                 GTK_WINDOW(gtk_widget_get_toplevel(m_view)),
                 GTK_DIALOG_MODAL,
                 GTK_MESSAGE_WARNING,
                 GTK_BUTTONS_OK,
-                "请选择所有侦察设备模型"
+                "请选择所有必要的侦察设备 (%d/%d)", i+1, requiredRadars
             );
             gtk_dialog_run(GTK_DIALOG(dialog));
             gtk_widget_destroy(dialog);
             return false;
         }
         
+        std::string name = radarName;
+        g_free(radarName);
         selectedRadars.push_back(name);
-        g_free(name);
     }
     
     // 检查是否有重复的雷达模型

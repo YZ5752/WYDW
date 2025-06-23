@@ -153,14 +153,34 @@ LocationResult InterferometerPositioning::runSimulation(const ReconnaissanceDevi
         device.getFreqRangeMax() - device.getFreqRangeMin()  // 带宽（GHz）
     );
     
-    // 计算定位精度（使用综合测向误差作为定位精度）
+    // 计算定位精度 - 使用计算位置与真实位置之间的距离差异百分比
     double positioningAccuracy = 0.0;
-    if (!result.errorFactors.empty()) {
-        positioningAccuracy = result.errorFactors.back(); // 最后一个元素是综合测向误差
+    
+    // 计算真实位置和计算位置之间的欧氏距离
+    double calculated_distance = sqrt(
+        pow(X_T_calculated , 2) + 
+        pow(Y_T_calculated , 2) + 
+        pow(Z_T_calculated , 2)
+    );
+    
+    // 计算真实位置的长度（距离原点）
+    double true_position_length = sqrt(pow(X_T, 2) + pow(Y_T, 2) + pow(Z_T, 2));
+    
+    // 防止除以零
+    if (true_position_length > 1e-6) {
+        // 计算误差百分比
+        positioningAccuracy = (calculated_distance / true_position_length) * 100.0;
+    } else {
+        // 如果真实位置非常接近原点，使用绝对误差
+        positioningAccuracy = calculated_distance;
     }
+
     
     // 计算测向精度（使用综合测向误差）
-    double directionFindingAccuracy = positioningAccuracy;
+    double directionFindingAccuracy = 0.0;
+    if (!result.errorFactors.empty()) {
+        directionFindingAccuracy = result.errorFactors.back(); // 最后一个元素是综合测向误差
+    }
     
     // 保存结果到数据库
     SinglePlatformTask task;
@@ -182,7 +202,7 @@ LocationResult InterferometerPositioning::runSimulation(const ReconnaissanceDevi
     if (SinglePlatformTaskDAO::getInstance().addSinglePlatformTask(task, taskId)) {
         g_print("单平台干涉仪定位结果已保存到数据库，任务ID: %d\n", taskId);
         g_print("最大定位距离: %.2fm\n", maxDetectionRange);
-        g_print("定位精度: %.6fm\n", positioningAccuracy);
+        g_print("定位精度: %.6f%%\n", positioningAccuracy);
         g_print("测向精度: %.6f°\n", directionFindingAccuracy);
     } else {
         g_print("警告：保存单平台干涉仪定位结果到数据库失败\n");

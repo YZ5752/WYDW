@@ -20,6 +20,9 @@ public:
 
     // 更新仿真结果显示
     void updateResult(const std::string& result);
+    
+    // 获取地图视图
+    MapView* getMapView() const { return m_mapView; }
 
 private:
     GtkWidget* m_view;//主视图
