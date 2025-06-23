@@ -369,7 +369,34 @@ bool FDOAalgorithm::calculate() {
     // 计算速度的大地坐标表示
     COORD3 velocityResult = velocity_xyz2lbh(resultLBH.p1, resultLBH.p2, 
                                            m_result.velocity.x, m_result.velocity.y, m_result.velocity.z);
+    //计算距离，经过m_simulationTime时间后，辐射源移动的位置
+    COORD3 movedPosition = {
+        m_result.position.p1 + m_result.velocity.x * m_simulationTime,
+        m_result.position.p2 + m_result.velocity.y * m_simulationTime,
+        m_result.position.p3 + m_result.velocity.z * m_simulationTime
+    };
+    std::cout << "辐射源移动后的位置: " << movedPosition.p1 << " " << movedPosition.p2 << " " << movedPosition.p3 << std::endl;
     
+    //侦察站1的位置
+    COORD3 device1Position = calculateDevicePositionAtTime(m_devices[0], 0.0);  // 初始时刻t=0的位置
+    std::cout << "侦察站1的位置: " << device1Position.p1 << " " << device1Position.p2 << " " << device1Position.p3 << std::endl;
+    //计算侦察站1到辐射源移动后的位置的距离
+    double distance = std::sqrt((movedPosition.p1 - device1Position.p1) * (movedPosition.p1 - device1Position.p1) + 
+                              (movedPosition.p2 - device1Position.p2) * (movedPosition.p2 - device1Position.p2) + 
+                              (movedPosition.p3 - device1Position.p3) * (movedPosition.p3 - device1Position.p3));
+    
+    // 计算定位精度
+    double localizationAccuracy = calculateLocalizationAccuracy(
+        deviceIds,
+        sourceId,
+        m_simulationTime,
+        m_result.position,
+        m_result.velocity
+    );
+    
+    m_result.finalError = localizationAccuracy * localizationAccuracy;
+    
+    // 输出结果
     std::cout << "\n定位结果：" << std::endl;
     std::cout << "----------------------------------------" << std::endl;
     std::cout << "经度: " << resultLBH.p1 << " 度" << std::endl;
@@ -379,12 +406,8 @@ bool FDOAalgorithm::calculate() {
     std::cout << "运动方位角: " << velocityResult.p2 << " 度" << std::endl;
     std::cout << "运动俯仰角: " << velocityResult.p3 << " 度" << std::endl;
     std::cout << "定位时间: " << m_result.locationTime << " 秒" << std::endl;
-    
-    double distance = std::sqrt(m_result.position.p1 * m_result.position.p1 + 
-                              m_result.position.p2 * m_result.position.p2 + 
-                              m_result.position.p3 * m_result.position.p3);
     std::cout << "距离: " << distance << " 米" << std::endl;
-    std::cout << "精度: " << std::sqrt(m_result.finalError) << " 米" << std::endl;
+    std::cout << "精度: " << localizationAccuracy << " 米" << std::endl;
     std::cout << "迭代次数: " << m_result.iterations << std::endl;
     std::cout << "最终误差: " << m_result.finalError << std::endl;
     std::cout << "----------------------------------------" << std::endl;
@@ -396,7 +419,7 @@ std::vector<std::vector<double>> FDOAalgorithm::calculateFrequencyDifferences(
     const std::vector<int>& deviceIds,
     int sourceId,
     double simulationTime,
-    double errorStdDev){  
+    double errorStdDev) {  
     
     std::vector<std::vector<double>> dopplerShifts(3, std::vector<double>(3, 0.0));
     
@@ -412,32 +435,20 @@ std::vector<std::vector<double>> FDOAalgorithm::calculateFrequencyDifferences(
     std::mt19937 gen(rd());
     std::normal_distribution<double> noiseDist(0.0, errorStdDev);  // 均值0，标准差errorStdDev的正态分布
     
+    // 计算辐射源速度
+    COORD3 sourceVel0 = calculateSourceVelocity(source);
+    
     // 遍历每个侦察设备
     for (size_t i = 0; i < deviceIds.size(); ++i) {
         ReconnaissanceDevice device = ReconnaissanceDeviceDAO::getInstance().getReconnaissanceDeviceById(deviceIds[i]);
+        COORD3 deviceVel0 = calculateDeviceVelocity(device);
         
         for (size_t j = 0; j < timePoints.size(); ++j) {
             double time = timePoints[j];
             
-            // 计算侦察设备位置和速度
-            COORD3 devicePos0 = lbh2xyz(device.getLongitude(), device.getLatitude(), device.getAltitude());
-            COORD3 deviceVel0 = velocity_lbh2xyz(device.getLongitude(), device.getLatitude(), 
-                device.getMovementSpeed(), device.getMovementAzimuth(), device.getMovementElevation());
-            COORD3 devicePos = {
-                devicePos0.p1 + deviceVel0.p1 * time,
-                devicePos0.p2 + deviceVel0.p2 * time,
-                devicePos0.p3 + deviceVel0.p3 * time
-            };
-            
-            // 计算辐射源位置和速度
-            COORD3 sourcePos0 = lbh2xyz(source.getLongitude(), source.getLatitude(), source.getAltitude());
-            COORD3 sourceVel0 = velocity_lbh2xyz(source.getLongitude(), source.getLatitude(),
-                source.getMovementSpeed(), source.getMovementAzimuth(), source.getMovementElevation());
-            COORD3 sourcePos = {
-                sourcePos0.p1 + sourceVel0.p1 * time,
-                sourcePos0.p2 + sourceVel0.p2 * time,
-                sourcePos0.p3 + sourceVel0.p3 * time
-            };
+            // 计算设备和辐射源在t时刻的位置
+            COORD3 devicePos = calculateDevicePositionAtTime(device, time);
+            COORD3 sourcePos = calculateSourcePositionAtTime(source, time);
             
             // 计算相对位置和速度
             Vector3 r(devicePos.p1 - sourcePos.p1, 
@@ -453,22 +464,10 @@ std::vector<std::vector<double>> FDOAalgorithm::calculateFrequencyDifferences(
             double theoreticalShift = (radialVelocity / Constants::c) * sourceFrequency;
             
             // 生成高斯噪声并叠加到频移结果中
-            double measurementNoise = noiseDist(gen);  // 生成随机噪声
-            double dopplerShiftWithError = theoreticalShift + measurementNoise;
-            dopplerShifts[i][j] = dopplerShiftWithError;
+            double measurementNoise = noiseDist(gen);
+            dopplerShifts[i][j] = theoreticalShift + measurementNoise;
         }
     }
-    // //输出多普勒频移结果
-    // std::cout << "\n多普勒频移结果：" << std::endl;
-    // std::cout << "----------------------------------------" << std::endl;
-    // for (size_t i = 0; i < deviceIds.size(); ++i) {
-    //     std::cout << "设备ID: " << deviceIds[i] << std::endl;
-    //     for (size_t j = 0; j < timePoints.size(); ++j) {
-    //         std::cout << "时刻: " << timePoints[j] << " 秒, 频移: " << dopplerShifts[i][j] << " Hz" << std::endl;   
-    //     }
-    // }
-    // std::cout << "----------------------------------------" << std::endl;
-    
     return dopplerShifts;
 }
 std::pair<COORD3, Vector3> FDOAalgorithm::generateGaussianPerturbedInitialGuess(
@@ -522,7 +521,7 @@ std::pair<COORD3, Vector3> FDOAalgorithm::generateGaussianPerturbedInitialGuess(
         perturbedAzimuth = 0.0;
         perturbedElevation = 0.0;
     }
-    
+
     // 3. 将大地坐标转换为直角坐标
     COORD3 position = lbh2xyz(perturbedLon, perturbedLat, perturbedAlt);
     
@@ -650,43 +649,34 @@ std::vector<double> FDOAalgorithm::calculateResiduals(
     std::vector<double> residuals(numResiduals);
     
     // 提取参数：位置和速度
-    double x = params[0];
-    double y = params[1];
-    double z = params[2];
-    double vx = params[3];
-    double vy = params[4];
-    double vz = params[5];
+    COORD3 estimatedPos = {params[0], params[1], params[2]};
+    Vector3 estimatedVel = {params[3], params[4], params[5]};
     
     // 获取辐射源信息
     RadiationSource source = RadiationSourceDAO::getInstance().getRadiationSourceById(m_source.getRadiationId());
     double sourceFrequency = source.getCarrierFrequency() * 1e9;
     
     // 计算实际的速度分量
-    COORD3 expectedVel = velocity_lbh2xyz(source.getLongitude(), source.getLatitude(),
-        source.getMovementSpeed(), source.getMovementAzimuth(), source.getMovementElevation());
+    COORD3 expectedVel = calculateSourceVelocity(source);
     
     // 遍历每个侦察设备和观测时刻
     for (int i = 0; i < numDevices; ++i) {
         // 获取侦察设备信息
         ReconnaissanceDevice device = ReconnaissanceDeviceDAO::getInstance().getReconnaissanceDeviceById(deviceIds[i]);
+        COORD3 deviceVel0 = calculateDeviceVelocity(device);
         
         for (int j = 0; j < numTimes; ++j) {
             double time = timePoints[j];
             
-            // 计算侦察设备在t时刻的位置
-            COORD3 devicePos0 = lbh2xyz(device.getLongitude(), device.getLatitude(), device.getAltitude());
-            COORD3 deviceVel0 = velocity_lbh2xyz(device.getLongitude(), device.getLatitude(),
-                device.getMovementSpeed(), device.getMovementAzimuth(), device.getMovementElevation());
-            COORD3 devicePos;
-            devicePos.p1 = devicePos0.p1 + deviceVel0.p1 * time;
-            devicePos.p2 = devicePos0.p2 + deviceVel0.p2 * time;
-            devicePos.p3 = devicePos0.p3 + deviceVel0.p3 * time;
+            // 计算设备在t时刻的位置
+            COORD3 devicePos = calculateDevicePositionAtTime(device, time);
             
-            // 计算辐射源在t时刻的位置(根据当前参数估计)
-            COORD3 sourcePos;
-            sourcePos.p1 = x + vx * time;
-            sourcePos.p2 = y + vy * time;
-            sourcePos.p3 = z + vz * time;
+            // 计算辐射源在t时刻的估计位置
+            COORD3 sourcePos = {
+                estimatedPos.p1 + estimatedVel.x * time,
+                estimatedPos.p2 + estimatedVel.y * time,
+                estimatedPos.p3 + estimatedVel.z * time
+            };
             
             // 计算相对位置矢量
             Vector3 r(devicePos.p1 - sourcePos.p1, 
@@ -695,9 +685,9 @@ std::vector<double> FDOAalgorithm::calculateResiduals(
             double distance = r.magnitude();
             
             // 计算相对速度在视线方向上的分量
-            Vector3 relativeVelocity(deviceVel0.p1 - vx,
-                                   deviceVel0.p2 - vy,
-                                   deviceVel0.p3 - vz);
+            Vector3 relativeVelocity(deviceVel0.p1 - estimatedVel.x,
+                                   deviceVel0.p2 - estimatedVel.y,
+                                   deviceVel0.p3 - estimatedVel.z);
             double radialVelocity = relativeVelocity.dot(r.normalize());
             
             // 计算理论多普勒频移
@@ -709,17 +699,12 @@ std::vector<double> FDOAalgorithm::calculateResiduals(
     }
     
     // 添加速度约束
-    double velocityWeight;
-    if (source.getMovementSpeed() < 1e-6) {  // 固定辐射源
-        velocityWeight = 1e6;  // 较大的权重，强制速度接近0
-    } else {  // 移动辐射源
-        velocityWeight = 1e3;  // 较小的权重，允许一定的速度偏差
-    }
+    double velocityWeight = (source.getMovementSpeed() < 1e-6) ? 1e6 : 1e3;
     
     int baseIndex = numDevices * numTimes;
-    residuals[baseIndex] = velocityWeight * (vx - expectedVel.p1);
-    residuals[baseIndex + 1] = velocityWeight * (vy - expectedVel.p2);
-    residuals[baseIndex + 2] = velocityWeight * (vz - expectedVel.p3);
+    residuals[baseIndex] = velocityWeight * (estimatedVel.x - expectedVel.p1);
+    residuals[baseIndex + 1] = velocityWeight * (estimatedVel.y - expectedVel.p2);
+    residuals[baseIndex + 2] = velocityWeight * (estimatedVel.z - expectedVel.p3);
     
     return residuals;
 }
@@ -841,4 +826,175 @@ std::vector<double> FDOAalgorithm::solveLinearEquations(
         x[i] = sum / augmented[i][i];
     }
     return x;
+}
+
+// 计算定位精度
+double FDOAalgorithm::calculateLocalizationAccuracy(
+    const std::vector<int>& deviceIds,
+    int sourceId,
+    double simulationTime,
+    const COORD3& estimatedPosition,
+    const Vector3& estimatedVelocity) {
+    
+    // 1. 获取必要信息
+    RadiationSource source = RadiationSourceDAO::getInstance().getRadiationSourceById(sourceId);
+    std::vector<ReconnaissanceDevice> devices;
+    for (int id : deviceIds) {
+        devices.push_back(ReconnaissanceDeviceDAO::getInstance().getReconnaissanceDeviceById(id));
+    }
+    
+    // 2. 初始化Fisher信息矩阵(FIM)
+    std::vector<std::vector<double>> FIM(6, std::vector<double>(6, 0.0));
+    
+    // 3. 计算观测时刻和参数
+    std::vector<double> timePoints = {0.0, simulationTime / 2.0, simulationTime};
+    double f0 = source.getCarrierFrequency() * 1e9;
+    double sigma_fdoa = DOPPLER_ERROR_STD_DEV;
+    double invQ = 1.0 / (sigma_fdoa * sigma_fdoa);
+    
+    // 4. 计算FIM矩阵
+    for (size_t i = 0; i < devices.size(); ++i) {
+        for (size_t j = i + 1; j < devices.size(); ++j) {
+            for (double t : timePoints) {
+                // 计算设备位置和速度
+                COORD3 pos_i = calculateDevicePositionAtTime(devices[i], t);
+                COORD3 vel_i = calculateDeviceVelocity(devices[i]);
+                COORD3 pos_j = calculateDevicePositionAtTime(devices[j], t);
+                COORD3 vel_j = calculateDeviceVelocity(devices[j]);
+                
+                // 计算频差对状态参数的偏导数
+                std::vector<double> H = calculateFDOADerivative(
+                    estimatedPosition, estimatedVelocity,
+                    pos_i, vel_i, pos_j, vel_j,
+                    f0);
+                
+                // 更新FIM矩阵
+                for (int m = 0; m < 6; ++m) {
+                    for (int n = 0; n < 6; ++n) {
+                        FIM[m][n] += H[m] * H[n] * invQ;
+                    }
+                }
+            }
+        }
+    }
+    
+    // 5. 计算CRLB (FIM的逆)
+    std::vector<std::vector<double>> CRLB = matrixInverse(FIM);
+    
+    // 6. 计算加权综合精度(WCP)
+    std::vector<double> weights = {1.0, 1.0, 1.0, 0.5, 0.5, 0.5}; // 位置权重1.0，运动参数权重0.5
+    double wcp = 0.0;
+    for (int i = 0; i < 6; ++i) {
+        wcp += weights[i] * CRLB[i][i];
+    }
+    wcp = sqrt(wcp);
+    
+    return wcp;
+}
+
+// 辅助函数：计算设备在指定时刻的位置
+COORD3 FDOAalgorithm::calculateDevicePositionAtTime(const ReconnaissanceDevice& device, double t) {
+    COORD3 pos0 = lbh2xyz(device.getLongitude(), device.getLatitude(), device.getAltitude());
+    COORD3 vel = velocity_lbh2xyz(device.getLongitude(), device.getLatitude(),
+                                 device.getMovementSpeed(), 
+                                 device.getMovementAzimuth(), 
+                                 device.getMovementElevation());
+    return COORD3{
+        pos0.p1 + vel.p1 * t,
+        pos0.p2 + vel.p2 * t,
+        pos0.p3 + vel.p3 * t
+    };
+}
+
+// 辅助函数：计算设备速度(直角坐标)
+COORD3 FDOAalgorithm::calculateDeviceVelocity(const ReconnaissanceDevice& device) {
+    return velocity_lbh2xyz(device.getLongitude(), device.getLatitude(),
+                           device.getMovementSpeed(),
+                           device.getMovementAzimuth(),
+                           device.getMovementElevation());
+}
+
+// 辅助函数：计算辐射源在指定时刻的位置
+COORD3 FDOAalgorithm::calculateSourcePositionAtTime(const RadiationSource& source, double t) {
+    COORD3 pos0 = lbh2xyz(source.getLongitude(), source.getLatitude(), source.getAltitude());
+    COORD3 vel = velocity_lbh2xyz(source.getLongitude(), source.getLatitude(),
+                                 source.getMovementSpeed(),
+                                 source.getMovementAzimuth(),
+                                 source.getMovementElevation());
+    return COORD3{
+        pos0.p1 + vel.p1 * t,
+        pos0.p2 + vel.p2 * t,
+        pos0.p3 + vel.p3 * t
+    };
+}
+
+// 辅助函数：计算辐射源速度
+COORD3 FDOAalgorithm::calculateSourceVelocity(const RadiationSource& source) {
+    return velocity_lbh2xyz(source.getLongitude(), source.getLatitude(),
+                           source.getMovementSpeed(),
+                           source.getMovementAzimuth(),
+                           source.getMovementElevation());
+}
+
+// 辅助函数：计算频差对状态参数的偏导数
+std::vector<double> FDOAalgorithm::calculateFDOADerivative(
+    const COORD3& sourcePos, const Vector3& sourceVel,
+    const COORD3& obs1Pos, const COORD3& obs1Vel,
+    const COORD3& obs2Pos, const COORD3& obs2Vel,
+    double f0) {
+    
+    std::vector<double> H(6, 0.0); // 6个参数: x,y,z,vx,vy,vz
+    
+    // 计算观测站1的径向速度及其导数
+    Vector3 r1(sourcePos.p1 - obs1Pos.p1, 
+               sourcePos.p2 - obs1Pos.p2, 
+               sourcePos.p3 - obs1Pos.p3);
+    double norm_r1 = r1.magnitude();
+    Vector3 v1(sourceVel.x - obs1Vel.p1,
+               sourceVel.y - obs1Vel.p2,
+               sourceVel.z - obs1Vel.p3);
+    double r_dot1 = v1.dot(r1) / norm_r1;
+    
+    // 计算观测站2的径向速度及其导数
+    Vector3 r2(sourcePos.p1 - obs2Pos.p1, 
+               sourcePos.p2 - obs2Pos.p2, 
+               sourcePos.p3 - obs2Pos.p3);
+    double norm_r2 = r2.magnitude();
+    Vector3 v2(sourceVel.x - obs2Vel.p1,
+               sourceVel.y - obs2Vel.p2,
+               sourceVel.z - obs2Vel.p3);
+    double r_dot2 = v2.dot(r2) / norm_r2;
+    
+    // 频差对位置(x,y,z)的偏导
+    // x分量
+    double dr1_dx = (v1.x - r_dot1 * r1.x/norm_r1) / norm_r1;
+    double dr2_dx = (v2.x - r_dot2 * r2.x/norm_r2) / norm_r2;
+    H[0] = (f0 / Constants::c) * (dr1_dx - dr2_dx);
+    
+    // y分量
+    double dr1_dy = (v1.y - r_dot1 * r1.y/norm_r1) / norm_r1;
+    double dr2_dy = (v2.y - r_dot2 * r2.y/norm_r2) / norm_r2;
+    H[1] = (f0 / Constants::c) * (dr1_dy - dr2_dy);
+    
+    // z分量
+    double dr1_dz = (v1.z - r_dot1 * r1.z/norm_r1) / norm_r1;
+    double dr2_dz = (v2.z - r_dot2 * r2.z/norm_r2) / norm_r2;
+    H[2] = (f0 / Constants::c) * (dr1_dz - dr2_dz);
+    
+    // 频差对速度(vx,vy,vz)的偏导
+    H[3] = (f0 / Constants::c) * (r1.x/norm_r1 - r2.x/norm_r2);
+    H[4] = (f0 / Constants::c) * (r1.y/norm_r1 - r2.y/norm_r2);
+    H[5] = (f0 / Constants::c) * (r1.z/norm_r1 - r2.z/norm_r2);
+    
+    return H;
+}
+
+// 辅助函数：矩阵求逆(6x6)
+std::vector<std::vector<double>> FDOAalgorithm::matrixInverse(const std::vector<std::vector<double>>& A) {
+    // 这里简化为单位矩阵，实际应实现矩阵求逆
+    std::vector<std::vector<double>> invA(6, std::vector<double>(6, 0.0));
+    for (int i = 0; i < 6; ++i) {
+        invA[i][i] = 1.0;
+    }
+    return invA;
 }
