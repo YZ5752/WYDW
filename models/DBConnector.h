@@ -28,8 +28,12 @@ public:
     bool commitTransaction();
     bool rollbackTransaction();
 
-     static bool initDefaultConnection();
+    static bool initDefaultConnection();
 
+    // 公共函数,显示错误信息
+    void showError() {
+        handleError();
+    }
 private:
     DBConnector();
     ~DBConnector();

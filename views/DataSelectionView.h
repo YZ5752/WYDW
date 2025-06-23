@@ -3,6 +3,7 @@
 #include <gtk/gtk.h>
 #include <string>
 #include <vector>
+#include <iostream> 
 
 class DataSelectionView {
 public:
@@ -30,10 +31,31 @@ public:
     // 获取视图控件
     GtkWidget* getView() const;
 
+    // 从数据库获取与指定辐射源 ID 关联的任务数据。
+    std::vector<std::vector<std::string>> getRelatedTasks(int radiationId);
+
+    // 根据辐射源 ID 更新目标数据列表。
+    void updateTaskList(int radiationId);
+
+    // 删除选中的数据项
+    void deleteSelectedItems();
+
+    // 录入选中的数据项到数据库
+    void importSelectedItems();
+
+    // 删除按钮点击事件回调函数，触发删除选中数据项操作。
+    static void onDeleteButtonClicked(GtkWidget* widget, gpointer user_data);
+
+    // 录入按钮点击事件回调函数，触发录入选中数据项到数据库操作。
+    static void onImportButtonClicked(GtkWidget* widget, gpointer user_data);
+
 private:
     GtkWidget* m_view;
     GtkWidget* m_dataList;
     GtkWidget* m_filterEntry;
     GtkWidget* m_startTimeEntry;
     GtkWidget* m_endTimeEntry;
+    GtkWidget* m_targetCombo;
+    // 获取选中的数据项
+    std::vector<std::vector<std::string>> getSelectedData() const;
 }; 
