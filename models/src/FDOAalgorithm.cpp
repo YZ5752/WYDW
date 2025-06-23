@@ -293,31 +293,31 @@ bool FDOAalgorithm::calculate() {
     for (const auto& device : m_devices) {
         deviceIds.push_back(device.getDeviceId());
     }
-    // 3. 执行仿真验证
-    // SimulationValidator validator;
-    // std::string failMessage;
-    // if (!validator.validateAll(deviceIds, sourceId, failMessage)) {
-    //     std::cerr << "仿真验证失败：" << failMessage << std::endl;
-    //     return false;
-    // }
+   // 3. 执行仿真验证
+    SimulationValidator validator;
+    std::string failMessage;
+    if (!validator.validateAll(deviceIds, sourceId, failMessage)) {
+        std::cerr << "仿真验证失败：" << failMessage << std::endl;
+        return false;
+    }
     
-    // 4. 计算时间间隔
-    // double minInterval = calculateMinimumTimeInterval(deviceIds[0], sourceId);
-    // double maxInterval = calculateMaximumTimeInterval(deviceIds, sourceId);
+    //4. 计算时间间隔
+    double minInterval = calculateMinimumTimeInterval(deviceIds[0], sourceId);
+    double maxInterval = calculateMaximumTimeInterval(deviceIds, sourceId);
     
-    // std::cout << "最小时间间隔: " << minInterval << " 秒" << std::endl;
-    // std::cout << "最大时间间隔: " << maxInterval << " 秒" << std::endl;
+    std::cout << "最小时间间隔: " << minInterval << " 秒" << std::endl;
+    std::cout << "最大时间间隔: " << maxInterval << " 秒" << std::endl;
     
-    // 验证仿真时间是否合适
-    // if (m_simulationTime < minInterval) {
-    //     std::cerr << "错误：仿真时间(" << m_simulationTime << "秒)小于最小时间间隔的2倍(" << 2 * minInterval << "秒)" << std::endl;
-    //     return false;
-    // }
+    //验证仿真时间是否合适
+    if (m_simulationTime < minInterval) {
+        std::cerr << "错误：仿真时间(" << m_simulationTime << "秒)小于最小时间间隔的2倍(" << 2 * minInterval << "秒)" << std::endl;
+        return false;
+    }
     
-    // if (m_simulationTime > 3 * maxInterval) {
-    //     std::cerr << "错误：仿真时间(" << m_simulationTime << "秒)大于最大时间间隔的2倍(" << 2 * maxInterval << "秒)" << std::endl;
-    //     return false;
-    // }
+    if (m_simulationTime > 3 * maxInterval) {
+        std::cerr << "错误：仿真时间(" << m_simulationTime << "秒)大于最大时间间隔的2倍(" << 2 * maxInterval << "秒)" << std::endl;
+        return false;
+    }
 
     // 生成带有高斯扰动的初始值（位置扰动10米，速度扰动0.1m/s，角度扰动0.5度）
     std::pair<COORD3, Vector3> initialGuess = generateGaussianPerturbedInitialGuess(
