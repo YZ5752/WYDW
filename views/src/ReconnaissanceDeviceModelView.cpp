@@ -1,6 +1,7 @@
 #include "../ReconnaissanceDeviceModelView.h"
 #include "../../controllers/ApplicationController.h"
 #include "../../controllers/ReconnaissanceDeviceModelController.h"
+#include "../../models/ReconnaissanceDeviceDAO.h"
 #include <iostream>
 #include <sstream>
 
