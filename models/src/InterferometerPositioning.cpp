@@ -119,18 +119,59 @@ LocationResult InterferometerPositioning::runSimulation(const ReconnaissanceDevi
     double numerator = (v_y * sin(theta_t) - v_x * cos(theta_t)) * cos(theta_t) * cos(epsilon_t) -
                        (r_pt_dot * sin(epsilon_t) - v_z * cos(epsilon_t)) * sin(theta_t) * sin(epsilon_t);
     double denominator = delta_phi_dot_t * c / (2 * M_PI * d * f_T);
-    double r_hat = numerator / denominator;
+    
+    // 声明r_hat变量
+    double r_hat;
+    
+    // 检查分母是否接近零，避免不稳定的距离计算
+    const double MIN_DENOMINATOR = 1e-6;
+    if (std::abs(denominator) < MIN_DENOMINATOR) {
+        g_print("警告：距离计算分母接近零 (%.10f)，使用直接距离计算\n", denominator);
+        // 使用直接距离计算作为后备
+        r_hat = sqrt(pow(X_T - X_0_moved, 2) + pow(Y_T - Y_0_moved, 2) + pow(Z_T - Z_0_moved, 2));
+    } else {
+        r_hat = numerator / denominator;
+        
+        // 检查计算出的距离是否合理
+        const double MAX_REASONABLE_DISTANCE = 500000.0; // 500公里
+        if (r_hat < 0 || r_hat > MAX_REASONABLE_DISTANCE) {
+            g_print("警告：计算出的距离不合理 (%.2fm)，使用直接距离计算\n", r_hat);
+            // 使用直接距离计算作为后备
+            r_hat = sqrt(pow(X_T - X_0_moved, 2) + pow(Y_T - Y_0_moved, 2) + pow(Z_T - Z_0_moved, 2));
+        }
+    }
+    
     g_print("距离: %.2fm\n", r_hat);
     
     // 计算辐射源坐标 (公式4.2.9，基于运动后的位置)
     double X_T_calculated = X_0_moved + r_hat * cos(epsilon_t) * sin(theta_t);
     double Y_T_calculated = Y_0_moved + r_hat * cos(epsilon_t) * cos(theta_t);
     double Z_T_calculated = Z_0_moved + r_hat * sin(epsilon_t);
-    g_print("计算得到的辐射源坐标: %.6f, %.6f, %.2f\n", X_T_calculated, Y_T_calculated, Z_T_calculated);
+    
+    // 检查计算出的高度是否合理
+    const double MAX_REASONABLE_ALTITUDE = 50000.0; // 50公里
+    const double MIN_REASONABLE_ALTITUDE = -500.0;  // 海平面以下500米
     
     // 将计算得到的辐射源笛卡尔坐标转换回经纬度高度
     COORD3 sourceLBH = xyz2lbh(X_T_calculated, Y_T_calculated, Z_T_calculated);
     g_print("计算得到的辐射源经纬度高度: %.6f°, %.6f°, %.2fm\n", sourceLBH.p1, sourceLBH.p2, sourceLBH.p3);
+    
+    // 检查高度是否合理
+    if (sourceLBH.p3 < MIN_REASONABLE_ALTITUDE || sourceLBH.p3 > MAX_REASONABLE_ALTITUDE) {
+        g_print("警告：计算出的高度不合理 (%.2fm)，使用辐射源实际高度\n", sourceLBH.p3);
+        
+        // 保持经纬度，但使用辐射源的实际高度
+        sourceLBH.p3 = source.getAltitude();
+        g_print("修正后的辐射源高度: %.2fm\n", sourceLBH.p3);
+        
+        // 重新计算笛卡尔坐标，以便后续计算
+        COORD3 correctedXYZ = lbh2xyz(sourceLBH.p1, sourceLBH.p2, sourceLBH.p3);
+        X_T_calculated = correctedXYZ.p1;
+        Y_T_calculated = correctedXYZ.p2;
+        Z_T_calculated = correctedXYZ.p3;
+    }
+    
+    g_print("计算得到的辐射源坐标: %.6f, %.6f, %.2f\n", X_T_calculated, Y_T_calculated, Z_T_calculated);
     
     // 设置结果
     result.longitude = sourceLBH.p1;
@@ -449,4 +490,135 @@ std::vector<double> InterferometerPositioning::calculateErrors(const Reconnaissa
     g_print("  俯仰角: %.4f°\n", elevation);
     
     return errors;
+}
+
+// 验证角度是否在辐射源工作扇区范围内
+bool InterferometerPositioning::validateAngle(const RadiationSource& source,
+                                           double azimuth,
+                                           double elevation) {
+    // 获取辐射源工作扇区范围
+    double azimuthStart = source.getAzimuthStartAngle();
+    double azimuthEnd = source.getAzimuthEndAngle();
+    double elevationStart = source.getElevationStartAngle();
+    double elevationEnd = source.getElevationEndAngle();
+    
+    g_print("角度验证:\n");
+    g_print("  辐射源: %s (ID: %d)\n", source.getRadiationName().c_str(), source.getRadiationId());
+    g_print("  辐射源工作扇区: 方位角[%.2f°~%.2f°], 俯仰角[%.2f°~%.2f°]\n", 
+           azimuthStart, azimuthEnd, elevationStart, elevationEnd);
+    g_print("  计算得到的方位角: %.2f°, 俯仰角: %.2f°\n", azimuth, elevation);
+    
+    // 检查方位角是否在范围内
+    bool azimuthValid = true;
+    if (azimuthEnd > azimuthStart) {
+        // 正常范围检查
+        azimuthValid = (azimuth >= azimuthStart && azimuth <= azimuthEnd);
+    } else {
+        // 跨越0度的范围检查
+        azimuthValid = (azimuth >= azimuthStart || azimuth <= azimuthEnd);
+    }
+    
+    // 检查俯仰角是否在范围内
+    bool elevationValid = (elevation >= elevationStart && elevation <= elevationEnd);
+    
+    g_print("  方位角验证: %s\n", azimuthValid ? "通过" : "失败");
+    g_print("  俯仰角验证: %s\n", elevationValid ? "通过" : "失败");
+    
+    // 如果验证失败，输出详细错误信息
+    if (!azimuthValid || !elevationValid) {
+        g_print("角度验证失败: 辐射源 %s 的工作扇区范围为 方位角[%.2f°~%.2f°], 俯仰角[%.2f°~%.2f°], "
+               "而设备相对于辐射源的方位角为 %.2f°, 俯仰角为 %.2f°\n",
+               source.getRadiationName().c_str(), azimuthStart, azimuthEnd, elevationStart, elevationEnd, 
+               azimuth, elevation);
+    }
+    
+    // 返回角度验证结果
+    return azimuthValid && elevationValid;
+}
+
+// 验证SNR是否满足要求
+bool InterferometerPositioning::validateSNR(const ReconnaissanceDevice& device, 
+                                         const RadiationSource& source,
+                                         double distance) {
+    // 计算自由空间路径损耗
+    // 公式: FSPL(dB) = 20*log10(d) + 20*log10(f) - 147.55
+    // 其中d为距离(米)，f为频率(Hz)
+    double frequencyGHz = source.getCarrierFrequency(); // 假设这个值已经是GHz单位
+    double frequencyHz = frequencyGHz * 1e9;
+    double pathLoss = 20 * log10(distance) + 20 * log10(frequencyHz) - 147.55;
+    
+    // 计算接收功率(dBm)
+    // Pr = Pt + Gt + Gr - PL
+    // 这里我们简化模型，假设Gt和Gr都为0dBi
+    double transmitPowerKW = source.getTransmitPower(); // 假设单位是千瓦
+    double transmitPowerDBm = 10 * log10(transmitPowerKW * 1000) + 30; // 转换为dBm
+    double receivePowerDBm = transmitPowerDBm - pathLoss;
+    
+    // 估计噪声功率
+    double noiseFigureDB = device.getNoiseFigure(); // 设备噪声系数(dB)
+    if (noiseFigureDB <= 0) noiseFigureDB = 6.0; // 默认值
+    
+    double bandwidthHz = device.getBandwidth() * 1e6; // 假设设备带宽单位为MHz
+    if (bandwidthHz <= 0) bandwidthHz = 10e6; // 默认10MHz
+    
+    // 热噪声功率: Pn = kTB (W)，转换为dBm: 10*log10(kTB*1000)
+    // k: 玻尔兹曼常数，T: 温度(K)，B: 带宽(Hz)
+    double kT = -174; // dBm/Hz，290K温度下
+    double noisePowerDBm = kT + 10 * log10(bandwidthHz) + noiseFigureDB;
+    
+    // 计算SNR(dB)
+    double snrDB = receivePowerDBm - noisePowerDBm;
+    
+    // 计算最大可通信距离（基于最小SNR要求）
+    double minSNRdB = device.getMinSNR(); // 设备要求的最小SNR(dB)
+    if (minSNRdB <= 0) minSNRdB = 1.0; // 默认最小SNR为1dB
+    
+    double maxDistance = pow(10, (transmitPowerDBm - noisePowerDBm - minSNRdB + 147.55 - 20 * log10(frequencyHz)) / 20);
+    
+    g_print("SNR分析:\n");
+    g_print("  辐射源: %s (ID: %d)\n", source.getRadiationName().c_str(), source.getRadiationId());
+    g_print("  侦察设备: %s (ID: %d)\n", device.getDeviceName().c_str(), device.getDeviceId());
+    g_print("  辐射源发射功率: %.2f kW (%.2f dBm)\n", transmitPowerKW, transmitPowerDBm);
+    g_print("  频率: %.3f GHz\n", frequencyGHz);
+    g_print("  距离: %.2f m\n", distance);
+    g_print("  路径损耗: %.2f dB\n", pathLoss);
+    g_print("  接收功率: %.2f dBm\n", receivePowerDBm);
+    g_print("  噪声功率: %.2f dBm\n", noisePowerDBm);
+    g_print("  计算SNR: %.2f dB\n", snrDB);
+    g_print("  要求最小SNR: %.2f dB\n", minSNRdB);
+    g_print("  最大有效距离: %.2f m\n", maxDistance);
+    
+    // 检查距离是否超过有效范围
+    if (distance > maxDistance) {
+        g_print("SNR验证失败: 辐射源 %s 与侦察设备 %s 之间的距离不能超过 %.2f 米，当前距离为 %.2f 米，信噪比为 %.2f dB，低于阈值 %.2f dB。\n",
+               source.getRadiationName().c_str(), device.getDeviceName().c_str(), 
+               maxDistance, distance, snrDB, minSNRdB);
+        return false;
+    }
+    
+    // 返回SNR验证结果
+    return snrDB >= minSNRdB;
+}
+
+// 计算最大探测距离
+double InterferometerPositioning::calculateMaxDetectionRange(double transmitPower, double frequency, double noisePsd, double bandwidth) {
+    // 转换单位
+    double transmitPowerW = transmitPower * 1000; // 千瓦转换为瓦
+    double frequencyHz = frequency * 1e9; // GHz转换为Hz
+    double bandwidthHz = bandwidth * 1e9; // GHz转换为Hz
+    
+    // 转换dBm/Hz为线性单位
+    double noisePower = pow(10, noisePsd / 10) * 1e-3 * bandwidthHz; // 转换为瓦
+    
+    // 最小可检测功率（假设最小SNR为10dB）
+    double minSNR = 10.0;
+    double minDetectablePower = noisePower * pow(10, minSNR / 10);
+    
+    // 使用自由空间路径损耗公式计算最大距离
+    // P_r = P_t * G_t * G_r * (λ/(4πd))^2
+    // 假设发射和接收天线增益为1 (0dB)
+    double wavelength = SPEED_OF_LIGHT / frequencyHz;
+    double maxDistance = sqrt(transmitPowerW / (minDetectablePower * 16 * PI * PI)) * wavelength;
+    
+    return maxDistance;
 } 

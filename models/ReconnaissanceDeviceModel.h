@@ -94,6 +94,53 @@ public:
     std::string getFreqRangeString() const;
     std::string getAngleRangeString() const;
 
+    /**
+     * @brief 获取设备噪声系数
+     * @return 噪声系数(dB)
+     */
+    double getNoiseFigure() const {
+        return m_noiseFigure;
+    }
+    
+    /**
+     * @brief 设置设备噪声系数
+     * @param noiseFigure 噪声系数(dB)
+     */
+    void setNoiseFigure(double noiseFigure) {
+        m_noiseFigure = noiseFigure;
+    }
+    
+    /**
+     * @brief 获取设备带宽
+     * @return 带宽(MHz)
+     */
+    double getBandwidth() const {
+        return m_bandwidth;
+    }
+    
+    /**
+     * @brief 设置设备带宽
+     * @param bandwidth 带宽(MHz)
+     */
+    void setBandwidth(double bandwidth) {
+        m_bandwidth = bandwidth;
+    }
+    
+    /**
+     * @brief 获取设备最小SNR要求
+     * @return 最小SNR(dB)
+     */
+    double getMinSNR() const {
+        return m_minSNR;
+    }
+    
+    /**
+     * @brief 设置设备最小SNR要求
+     * @param minSNR 最小SNR(dB)
+     */
+    void setMinSNR(double minSNR) {
+        m_minSNR = minSNR;
+    }
 
 private:
     int m_deviceId;
@@ -116,4 +163,7 @@ private:
     double m_altitude;
     std::string m_createdAt;
     std::string m_updatedAt;
+    double m_noiseFigure = 6.0;    // 设备噪声系数(dB)，默认6dB
+    double m_bandwidth = 10.0;     // 设备带宽(MHz)，默认10MHz
+    double m_minSNR = 1.0;         // 最小SNR要求(dB)，默认1dB
 }; 

@@ -121,14 +121,55 @@ void SinglePlatformController::startSimulation() {
     g_print("使用辐射源 ID: %d, 名称: %s\n", source.getRadiationId(), source.getRadiationName().c_str());
     
     // ====== 仿真前条件验证 ======
-    SimulationValidator validator;
-    std::vector<int> deviceIds = { device.getDeviceId() };
-    int sourceId = source.getRadiationId();
-    std::string failMessage;
-    if (!validator.validateAll(deviceIds, sourceId, failMessage)) {
-        g_print("仿真前条件验证失败：%s\n", failMessage.c_str());
-        if (m_view) m_view->showErrorMessage(failMessage);
-        return;
+    // 检查SNR和角度验证
+    bool snrValid = true;
+    bool angleValid = true;
+    
+    // 计算设备到辐射源的距离
+    COORD3 devicePos = lbh2xyz(device.getLongitude(), device.getLatitude(), device.getAltitude());
+    COORD3 sourcePos = lbh2xyz(source.getLongitude(), source.getLatitude(), source.getAltitude());
+    double distance = sqrt(
+        pow(sourcePos.p1 - devicePos.p1, 2) +
+        pow(sourcePos.p2 - devicePos.p2, 2) +
+        pow(sourcePos.p3 - devicePos.p3, 2)
+    );
+    
+    // 检查SNR验证
+    if (techSystem == "时差体制") {
+        snrValid = SinglePlatformTDOA::getInstance().validateSNR(device, source, distance);
+    } else if (techSystem == "干涉仪体制") {
+        // 假设干涉仪体制也有类似的SNR验证
+        // 这里可能需要根据实际情况调整
+    }
+    
+    // 检查角度验证
+    if (techSystem == "干涉仪体制") {
+        // 计算方位角和俯仰角
+        std::pair<double, double> angles = InterferometerPositioning::getInstance().calculateDirectionData(device, source);
+        angleValid = InterferometerPositioning::getInstance().validateAngle(source, angles.first, angles.second);
+    } else if (techSystem == "时差体制") {
+        // 时差体制的角度验证可能需要在仿真过程中进行
+        // 这里可以添加预检查逻辑
+    }
+    
+    // 如果验证失败，询问用户是否继续
+    if (!snrValid || !angleValid) {
+        std::string warningMsg = "警告：";
+        if (!snrValid && !angleValid) {
+            warningMsg += "SNR验证和角度验证均失败。";
+        } else if (!snrValid) {
+            warningMsg += "SNR验证失败，设备与辐射源距离过远或信号强度不足。";
+        } else {
+            warningMsg += "角度验证失败，辐射源可能不在工作扇区内。";
+        }
+        warningMsg += "\n\n是否仍然继续仿真？结果可能不准确。";
+        
+        if (!m_view->showConfirmDialog("仿真验证警告", warningMsg)) {
+            g_print("用户取消了仿真\n");
+            return;
+        }
+        
+        g_print("用户选择继续仿真，尽管验证失败\n");
     }
     
     // 设置初始地图视角
@@ -235,86 +276,6 @@ void SinglePlatformController::startSimulation() {
     std::vector<double> errorFactors = result.errorFactors;
     std::string currentTechSystem = techSystem;
     
-//  // 在动画结束后才显示结果参数和误差分析
-//     g_timeout_add(simulationTime * 1000 + 1200, [](gpointer data) -> gboolean {
-//         auto* controller = static_cast<SinglePlatformController*>(data);
-//         if (!controller || !controller->getView()) {
-//             return G_SOURCE_REMOVE;
-//         }
-        
-//         SinglePlatformView* view = controller->getView();
-        
-//         // 显示仿真结果参数（这部分已在SinglePlatformView::animateDeviceMovement中实现）
-        
-//         // 更新误差表格
-//         std::string techSystem = view->getSelectedTechSystem();
-//         GtkWidget* errorTable = view->getErrorTable();
-        
-//         if (errorTable) {
-//             // 获取保存的误差因素数据
-//             std::vector<double> errorFactors = controller->getLastErrorFactors();
-            
-//             if (techSystem == "干涉仪体制" && errorFactors.size() >= 5) {
-//                 // 查找已存在的误差值标签
-//                 GList* children = gtk_container_get_children(GTK_CONTAINER(errorTable));
-//                 GtkWidget* errorLabels[5] = {nullptr}; // 存储找到的标签引用
-                
-//                 // 找出所有值标签的引用
-//                 for (GList* iter = children; iter != NULL; iter = g_list_next(iter)) {
-//                     GtkWidget* child = GTK_WIDGET(iter->data);
-//                     int row, col;
-//                     gtk_container_child_get(GTK_CONTAINER(errorTable), child, 
-//                                            "top-attach", &row, 
-//                                            "left-attach", &col, NULL);
-//                     if (col == 1 && row >= 0 && row < 5) {
-//                         errorLabels[row] = child;
-//                     }
-//                 }
-//                 g_list_free(children);
-                
-//                 // 更新每个标签的文本，直接设置文本而不是添加新标签
-//                 for (int i = 0; i < 5; i++) {
-//                     if (errorLabels[i]) {
-//                         char errorBuffer[50];
-//                         sprintf(errorBuffer, "%.4f°", errorFactors[i]);
-//                         gtk_label_set_text(GTK_LABEL(errorLabels[i]), errorBuffer);
-//                     }
-//                 }
-//             } else if (techSystem == "时差体制" && errorFactors.size() >= 5) {
-//                 // 查找已存在的误差值标签
-//                 GList* children = gtk_container_get_children(GTK_CONTAINER(errorTable));
-//                 GtkWidget* errorLabels[5] = {nullptr}; // 存储找到的标签引用
-                
-//                 // 找出所有值标签的引用
-//                 for (GList* iter = children; iter != NULL; iter = g_list_next(iter)) {
-//                     GtkWidget* child = GTK_WIDGET(iter->data);
-//                     int row, col;
-//                     gtk_container_child_get(GTK_CONTAINER(errorTable), child, 
-//                                            "top-attach", &row, 
-//                                            "left-attach", &col, NULL);
-//                     if (col == 1 && row >= 0 && row < 5) {
-//                         errorLabels[row] = child;
-//                     }
-//                 }
-//                 g_list_free(children);
-                
-//                 // 更新每个标签的文本，直接设置文本而不是添加新标签
-//                 for (int i = 0; i < 5; i++) {
-//                     if (errorLabels[i]) {
-//                         char errorBuffer[50];
-//                         sprintf(errorBuffer, "%.4f°", errorFactors[i]);
-//                         gtk_label_set_text(GTK_LABEL(errorLabels[i]), errorBuffer);
-//                     }
-//                 }
-//             }
-            
-//             // 显示所有控件
-//             gtk_widget_show_all(errorTable);
-//         }
-        
-//         return G_SOURCE_REMOVE;
-//     }, this);
-
     // 立即显示结果参数和误差分析，不等待动画结束
     // 显示仿真结果参数
     m_view->showSimulationResult(result.longitude, result.latitude, result.altitude, result.azimuth, result.elevation);

@@ -3,6 +3,7 @@
 #include "DBConnector.h"
 #include <string>
 #include <vector>
+#include <mysql/mysql.h> // Add this line to define MYSQL_ROW
 
 /**
  * @brief 单平台任务数据结构体
