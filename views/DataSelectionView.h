@@ -49,6 +49,9 @@ public:
     // 录入按钮点击事件回调函数，触发录入选中数据项到数据库操作。
     static void onImportButtonClicked(GtkWidget* widget, gpointer user_data);
 
+    // 显示任务详情对话框
+    void showTaskDetailsDialog(int taskId, const std::string& taskType);
+
 private:
     GtkWidget* m_view;
     GtkWidget* m_dataList;

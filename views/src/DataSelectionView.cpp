@@ -90,6 +90,7 @@ void DataSelectionView::updateTaskList(int radiationId) {
                            2, task[1].c_str(), // 侦察设备
                            3, ("坐标: (" + task[3] + ", " + task[4] + ")").c_str(), // 定位数据
                            4, ("任务ID: " + task[2]).c_str(), // 任务时间（这里用任务ID代替）
+                           5, "查看", // 添加"查看"链接
                            -1);
     }
 }
@@ -111,12 +112,90 @@ static void on_target_combo_changed(GtkComboBox *combo, gpointer user_data) {
 // 行激活事件回调函数，用于实现点击选择/取消选择
 static void on_row_activated(GtkTreeView *tree_view, GtkTreePath *path, GtkTreeViewColumn *column, gpointer user_data) {
     DataSelectionView *view = static_cast<DataSelectionView*>(user_data);
-    GtkTreeSelection *selection = gtk_tree_view_get_selection(tree_view);
-    if (gtk_tree_selection_path_is_selected(selection, path)) {
-        gtk_tree_selection_unselect_path(selection, path);
-    } else {
-        gtk_tree_selection_select_path(selection, path);
+    
+    // 获取点击的列索引
+    int columnIndex = -1;
+    for (int i = 0; i < gtk_tree_view_get_n_columns(tree_view); i++) {
+        if (gtk_tree_view_get_column(tree_view, i) == column) {
+            columnIndex = i;
+            break;
+        }
     }
+    
+    // 如果点击的是"查看"列
+    if (columnIndex == 5) {
+        // 获取选中行的数据
+        GtkTreeModel *model = gtk_tree_view_get_model(tree_view);
+        GtkTreeIter iter;
+        if (gtk_tree_model_get_iter(model, &iter, path)) {
+            // 获取任务类型
+            gchar *taskTypeValue;
+            gtk_tree_model_get(model, &iter, 1, &taskTypeValue, -1);
+            std::string taskType = taskTypeValue ? taskTypeValue : "";
+            g_free(taskTypeValue);
+            
+            // 获取任务ID
+            gchar *taskIdValue;
+            gtk_tree_model_get(model, &iter, 4, &taskIdValue, -1);
+            std::string taskIdStr = taskIdValue ? taskIdValue : "";
+            g_free(taskIdValue);
+            
+            // 解析任务ID
+            const std::string prefix = "任务ID: ";
+            size_t prefixPos = taskIdStr.find(prefix);
+            if (prefixPos != std::string::npos) {
+                std::string idStr = taskIdStr.substr(prefixPos + prefix.length());
+                try {
+                    int taskId = std::stoi(idStr);
+                    view->showTaskDetailsDialog(taskId, taskType);
+                } catch (const std::exception& e) {
+                    std::cerr << "无效任务ID: " << taskIdStr << " 错误: " << e.what() << std::endl;
+                }
+            }
+        }
+    } else {
+        // 原有的选择/取消选择逻辑
+        GtkTreeSelection *selection = gtk_tree_view_get_selection(tree_view);
+        if (gtk_tree_selection_path_is_selected(selection, path)) {
+            gtk_tree_selection_unselect_path(selection, path);
+        } else {
+            gtk_tree_selection_select_path(selection, path);
+        }
+    }
+}
+
+// 提示信息回调函数
+static gboolean on_tree_view_query_tooltip(GtkWidget *widget, 
+                                         gint x, 
+                                         gint y, 
+                                         gboolean keyboard_mode, 
+                                         GtkTooltip *tooltip, 
+                                         gpointer user_data) {
+    GtkTreeView *tree_view = GTK_TREE_VIEW(widget);
+    GtkTreePath *path = NULL;
+    GtkTreeViewColumn *column = NULL;
+    
+    if (!gtk_tree_view_get_path_at_pos(tree_view, x, y, &path, &column, NULL, NULL))
+        return FALSE;
+        
+    // 找到点击的列索引
+    int columnIndex = -1;
+    for (int i = 0; i < gtk_tree_view_get_n_columns(tree_view); i++) {
+        if (gtk_tree_view_get_column(tree_view, i) == column) {
+            columnIndex = i;
+            break;
+        }
+    }
+    
+    // 对操作列显示提示
+    if (columnIndex == 5) {
+        gtk_tooltip_set_text(tooltip, "点击查看任务详情");
+        gtk_tree_path_free(path);
+        return TRUE;
+    }
+    
+    gtk_tree_path_free(path);
+    return FALSE;
 }
 
 // 创建数据选择UI
@@ -183,12 +262,13 @@ GtkWidget* DataSelectionView::createView() {
     gtk_container_set_border_width(GTK_CONTAINER(dataBox), 10);
     
     // 创建列表存储
-    GtkListStore* store = gtk_list_store_new(5, 
+    GtkListStore* store = gtk_list_store_new(6, 
                                          G_TYPE_BOOLEAN,  // 选择
                                          G_TYPE_STRING,   // 任务类型
                                          G_TYPE_STRING,   // 侦察设备
                                          G_TYPE_STRING,  // 定位数据
-                                         G_TYPE_STRING);  // 任务时间    
+                                         G_TYPE_STRING,  // 任务时间
+                                         G_TYPE_STRING);  // 查看按钮    
 
     // 创建树视图
     m_dataList = gtk_tree_view_new_with_model(GTK_TREE_MODEL(store));
@@ -200,6 +280,10 @@ GtkWidget* DataSelectionView::createView() {
 
     // 连接行激活事件
     g_signal_connect(G_OBJECT(m_dataList), "row-activated", G_CALLBACK(on_row_activated), this);
+    
+    // 启用指针悬停效果
+    gtk_widget_set_has_tooltip(m_dataList, TRUE);
+    g_signal_connect(m_dataList, "query-tooltip", G_CALLBACK(on_tree_view_query_tooltip), NULL);
     
     // 添加列
     // 选择列
@@ -236,6 +320,20 @@ GtkWidget* DataSelectionView::createView() {
         "任务信息", textRenderer4, "text", 4, NULL);
     gtk_tree_view_column_set_min_width(column4, 200);
     gtk_tree_view_append_column(GTK_TREE_VIEW(m_dataList), column4);
+    
+    // 查看按钮列
+    GtkCellRenderer* textRenderer5 = gtk_cell_renderer_text_new();
+    g_object_set(textRenderer5, 
+                "foreground", "green", 
+                "underline", PANGO_UNDERLINE_SINGLE,
+                "xalign", 0.0,  // 左对齐
+                "mode", GTK_CELL_RENDERER_MODE_ACTIVATABLE,
+                NULL);
+    GtkTreeViewColumn* column5 = gtk_tree_view_column_new_with_attributes(
+        "操作", textRenderer5, "text", 5, NULL);
+    gtk_tree_view_column_set_sizing(column5, GTK_TREE_VIEW_COLUMN_FIXED);
+    gtk_tree_view_column_set_fixed_width(column5, 60);
+    gtk_tree_view_append_column(GTK_TREE_VIEW(m_dataList), column5);
     
     // 滚动窗口
     GtkWidget* scrollWin = gtk_scrolled_window_new(NULL, NULL);
@@ -550,4 +648,212 @@ void DataSelectionView::onDeleteButtonClicked(GtkWidget* widget, gpointer user_d
 void DataSelectionView::onImportButtonClicked(GtkWidget* widget, gpointer user_data) {
     DataSelectionView* view = static_cast<DataSelectionView*>(user_data);
     view->importSelectedItems();
+}
+
+// 显示任务详情对话框
+void DataSelectionView::showTaskDetailsDialog(int taskId, const std::string& taskType) {
+    DBConnector& db = DBConnector::getInstance();
+    MYSQL* conn = db.getConnection();
+    if (!conn || mysql_ping(conn) != 0) {
+        std::cerr << "数据库连接异常" << std::endl;
+        std::cerr.flush();
+        return;
+    }
+
+    // 根据任务类型和ID查询详细信息
+    std::string tableName;
+    std::string sql;
+    if (taskType == "单平台") {
+        tableName = "single_platform_task";
+        sql = "SELECT spt.*, rdm.device_name, rsm.radiation_name "
+              "FROM single_platform_task spt "
+              "JOIN reconnaissance_device_models rdm ON spt.device_id = rdm.device_id "
+              "JOIN radiation_source_models rsm ON spt.radiation_id = rsm.radiation_id "
+              "WHERE spt.task_id = " + std::to_string(taskId);
+    } else if (taskType == "多平台") {
+        tableName = "multi_platform_task";
+        sql = "SELECT mpt.*, rsm.radiation_name "
+              "FROM multi_platform_task mpt "
+              "JOIN radiation_source_models rsm ON mpt.radiation_id = rsm.radiation_id "
+              "WHERE mpt.task_id = " + std::to_string(taskId);
+    } else {
+        std::cerr << "未知任务类型: " << taskType << std::endl;
+        return;
+    }
+
+    if (mysql_query(conn, sql.c_str()) != 0) {
+        std::cerr << "查询失败: " << mysql_error(conn) << std::endl;
+        return;
+    }
+
+    MYSQL_RES* result = mysql_store_result(conn);
+    if (!result) {
+        std::cerr << "获取结果集失败: " << mysql_error(conn) << std::endl;
+        return;
+    }
+
+    MYSQL_ROW row = mysql_fetch_row(result);
+    if (!row) {
+        std::cerr << "未找到任务ID: " << taskId << std::endl;
+        mysql_free_result(result);
+        return;
+    }
+
+    // 创建对话框
+    GtkWidget* dialog = gtk_dialog_new_with_buttons(
+        (taskType + "任务详情").c_str(),
+        nullptr,
+        GTK_DIALOG_MODAL,
+        "关闭", GTK_RESPONSE_CLOSE,
+        nullptr
+    );
+
+    // 设置对话框大小
+    gtk_window_set_default_size(GTK_WINDOW(dialog), 500, 500);
+
+    // 获取内容区域
+    GtkWidget* contentArea = gtk_dialog_get_content_area(GTK_DIALOG(dialog));
+    gtk_container_set_border_width(GTK_CONTAINER(contentArea), 10);
+
+    // 创建网格布局用于显示任务信息
+    GtkWidget* grid = gtk_grid_new();
+    gtk_grid_set_column_spacing(GTK_GRID(grid), 15);
+    gtk_grid_set_row_spacing(GTK_GRID(grid), 8);
+    gtk_container_add(GTK_CONTAINER(contentArea), grid);
+
+    // 标题标签
+    gchar* titleMarkup = g_markup_printf_escaped("<span font='16' weight='bold'>%s 任务详情 (ID: %d)</span>", 
+                                                taskType.c_str(), taskId);
+    GtkWidget* titleLabel = gtk_label_new(NULL);
+    gtk_label_set_markup(GTK_LABEL(titleLabel), titleMarkup);
+    g_free(titleMarkup);
+
+    // 将标题居中并占据整行
+    gtk_widget_set_halign(titleLabel, GTK_ALIGN_CENTER);
+    gtk_grid_attach(GTK_GRID(grid), titleLabel, 0, 0, 2, 1);
+
+    // 添加分隔符
+    GtkWidget* separator = gtk_separator_new(GTK_ORIENTATION_HORIZONTAL);
+    gtk_grid_attach(GTK_GRID(grid), separator, 0, 1, 2, 1);
+
+    // 显示数据
+    int row_idx = 2;
+
+    // 添加信息项
+    auto addInfoRow = [&](const char* label, const char* value) {
+        GtkWidget* nameLabel = gtk_label_new(label);
+        gtk_widget_set_halign(nameLabel, GTK_ALIGN_START);
+        gtk_grid_attach(GTK_GRID(grid), nameLabel, 0, row_idx, 1, 1);
+        
+        GtkWidget* valueLabel = gtk_label_new(value);
+        gtk_widget_set_halign(valueLabel, GTK_ALIGN_START);
+        gtk_grid_attach(GTK_GRID(grid), valueLabel, 1, row_idx, 1, 1);
+        
+        row_idx++;
+    };
+
+    unsigned int num_fields = mysql_num_fields(result);
+    MYSQL_FIELD* fields = mysql_fetch_fields(result);
+
+    // 获取字段名和值
+    for (unsigned int i = 0; i < num_fields; i++) {
+        const char* fieldName = fields[i].name;
+        const char* value = row[i] ? row[i] : "NULL";
+
+        // 跳过任务ID字段，因为已经在标题中显示
+        if (strcmp(fieldName, "task_id") == 0) {
+            continue;
+        }
+
+        // 格式化字段名称
+        std::string displayName;
+        if (strcmp(fieldName, "tech_system") == 0) {
+            displayName = "技术体制";
+        } else if (strcmp(fieldName, "device_id") == 0) {
+            displayName = "设备ID";
+        } else if (strcmp(fieldName, "radiation_id") == 0) {
+            displayName = "辐射源ID";
+        } else if (strcmp(fieldName, "execution_time") == 0) {
+            displayName = "执行时长(秒)";
+        } else if (strcmp(fieldName, "target_longitude") == 0) {
+            displayName = "目标经度(度)";
+        } else if (strcmp(fieldName, "target_latitude") == 0) {
+            displayName = "目标纬度(度)";
+        } else if (strcmp(fieldName, "target_altitude") == 0) {
+            displayName = "目标高度(米)";
+        } else if (strcmp(fieldName, "target_angle") == 0) {
+            displayName = "测向数据(度)";
+        } else if (strcmp(fieldName, "angle_error") == 0) {
+            displayName = "测向误差(度)";
+        } else if (strcmp(fieldName, "max_positioning_distance") == 0) {
+            displayName = "最远定位距离(米)";
+        } else if (strcmp(fieldName, "positioning_time") == 0) {
+            displayName = "定位时间(秒)";
+        } else if (strcmp(fieldName, "positioning_accuracy") == 0) {
+            displayName = "定位精度(米)";
+        } else if (strcmp(fieldName, "direction_finding_accuracy") == 0) {
+            displayName = "测向精度(度)";
+        } else if (strcmp(fieldName, "created_at") == 0) {
+            displayName = "创建时间";
+        } else if (strcmp(fieldName, "device_name") == 0) {
+            displayName = "设备名称";
+        } else if (strcmp(fieldName, "radiation_name") == 0) {
+            displayName = "辐射源名称";
+        } else {
+            // 将下划线转换为空格，首字母大写
+            displayName = fieldName;
+            for (char& c : displayName) {
+                if (c == '_') c = ' ';
+            }
+            if (!displayName.empty()) {
+                displayName[0] = toupper(displayName[0]);
+            }
+        }
+
+        addInfoRow(displayName.c_str(), value);
+    }
+
+    mysql_free_result(result);
+
+    // 如果是多平台任务，查询关联的设备
+    if (taskType == "多平台") {
+        std::string deviceSql = "SELECT rdm.device_name "
+                               "FROM platform_task_relation ptr "
+                               "JOIN reconnaissance_device_models rdm ON ptr.device_id = rdm.device_id "
+                               "WHERE ptr.simulation_id = " + std::to_string(taskId);
+        
+        if (mysql_query(conn, deviceSql.c_str()) == 0) {
+            MYSQL_RES* deviceResult = mysql_store_result(conn);
+            if (deviceResult) {
+                // 添加设备列表分隔符和标题
+                GtkWidget* deviceSeparator = gtk_separator_new(GTK_ORIENTATION_HORIZONTAL);
+                gtk_grid_attach(GTK_GRID(grid), deviceSeparator, 0, row_idx, 2, 1);
+                row_idx++;
+                
+                GtkWidget* deviceLabel = gtk_label_new(NULL);
+                gtk_label_set_markup(GTK_LABEL(deviceLabel), "<span weight='bold'>关联侦察设备</span>");
+                gtk_widget_set_halign(deviceLabel, GTK_ALIGN_START);
+                gtk_grid_attach(GTK_GRID(grid), deviceLabel, 0, row_idx, 2, 1);
+                row_idx++;
+                
+                // 列出所有关联设备
+                int deviceCount = 1;
+                MYSQL_ROW deviceRow;
+                while ((deviceRow = mysql_fetch_row(deviceResult))) {
+                    std::string deviceLabel = "设备 " + std::to_string(deviceCount);
+                    addInfoRow(deviceLabel.c_str(), deviceRow[0]);
+                    deviceCount++;
+                }
+                
+                mysql_free_result(deviceResult);
+            }
+        }
+    }
+
+    // 显示对话框
+    gtk_widget_show_all(dialog);
+    
+    // 运行对话框并在关闭时销毁
+    gtk_dialog_run(GTK_DIALOG(dialog));
+    gtk_widget_destroy(dialog);
 }

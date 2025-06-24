@@ -30,9 +30,16 @@ public:
     
     /**
      * @brief 计算时差体制误差因素
+     * @param baselineLength 基线长度
+     * @param timeDifference 时间差
+     * @param estimatedDistance 估计距离
+     * @param incidentAngle 入射角
      * @return 误差因素数组
      */
-    std::vector<double> calculateTDOAErrors();
+    std::vector<double> calculateTDOAErrors(double baselineLength, 
+                                         double timeDifference, 
+                                         double estimatedDistance,
+                                         double incidentAngle);
 
 private:
     // 私有构造函数和析构函数
@@ -42,4 +49,21 @@ private:
     // 禁止拷贝
     SinglePlatformTDOA(const SinglePlatformTDOA&) = delete;
     SinglePlatformTDOA& operator=(const SinglePlatformTDOA&) = delete;
+    
+    /**
+     * @brief 互相关法计算时差
+     */
+    double calculateTimeDifferenceCorrelation(
+        const std::vector<double>& signal1, 
+        const std::vector<double>& signal2,
+        double samplingRate);
+    
+    /**
+     * @brief 频谱相位法计算时差
+     */
+    double calculateTimeDifferencePhase(
+        const std::vector<double>& signal1, 
+        const std::vector<double>& signal2,
+        double samplingRate, 
+        double frequency);
 }; 
