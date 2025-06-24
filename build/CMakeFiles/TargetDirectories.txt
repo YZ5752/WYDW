@@ -1,0 +1,9 @@
+/home/yz/Desktop/wydw/WYDW/build/CMakeFiles/passivelocation.dir
+/home/yz/Desktop/wydw/WYDW/build/CMakeFiles/run.dir
+/home/yz/Desktop/wydw/WYDW/build/CMakeFiles/test.dir
+/home/yz/Desktop/wydw/WYDW/build/CMakeFiles/edit_cache.dir
+/home/yz/Desktop/wydw/WYDW/build/CMakeFiles/rebuild_cache.dir
+/home/yz/Desktop/wydw/WYDW/build/CMakeFiles/list_install_components.dir
+/home/yz/Desktop/wydw/WYDW/build/CMakeFiles/install.dir
+/home/yz/Desktop/wydw/WYDW/build/CMakeFiles/install/local.dir
+/home/yz/Desktop/wydw/WYDW/build/CMakeFiles/install/strip.dir

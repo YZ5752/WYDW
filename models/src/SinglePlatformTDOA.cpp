@@ -599,6 +599,46 @@ LocationResult SinglePlatformTDOA::runSimulation(const ReconnaissanceDevice& dev
     g_print("  方位角: %.2f°, 俯仰角: %.2f°\n", result.azimuth, result.elevation);
     g_print("  经度: %.6f°, 纬度: %.6f°, 高度: %.2fm\n", result.longitude, result.latitude, result.altitude);
     
+    // 保存结果到数据库
+    SinglePlatformTask task;
+    task.techSystem = "TDOA";
+    task.deviceId = device.getDeviceId();
+    task.radiationId = source.getRadiationId();
+    task.executionTime = static_cast<float>(simulationTime);
+    task.targetLongitude = result.longitude;
+    task.targetLatitude = result.latitude;
+    task.targetAltitude = result.altitude;
+    // 结构体中使用azimuth和elevation字段
+    task.azimuth = result.azimuth;
+    task.elevation = result.elevation;
+    task.angleError = std::abs(incidentAngle * RAD2DEG - std::asin(sinTheta) * RAD2DEG);
+    task.maxPositioningDistance = static_cast<float>(estimatedDistance);
+    task.positioningTime = static_cast<float>(simulationTime); // 假设定位时间等于仿真时间
+    
+    // 限制定位精度在数据库字段范围内 (DECIMAL(8,6) 意味着最大值为 99.999999)
+    double limitedAccuracy = result.accuracy;
+    if (limitedAccuracy > 99.999999) {
+        g_print("警告：定位精度 %.6f 超出数据库字段范围，已截断为 99.999999\n", limitedAccuracy);
+        limitedAccuracy = 99.999999;
+    }
+    task.positioningAccuracy = limitedAccuracy;
+    
+    // 限制测向精度在数据库字段范围内
+    double limitedDirectionAccuracy = result.errorFactors.size() > 5 ? result.errorFactors[5] : 0.0;
+    if (limitedDirectionAccuracy > 99.999999) {
+        g_print("警告：测向精度 %.6f 超出数据库字段范围，已截断为 99.999999\n", limitedDirectionAccuracy);
+        limitedDirectionAccuracy = 99.999999;
+    }
+    task.directionFindingAccuracy = limitedDirectionAccuracy;
+    
+    // 获取DAO实例并保存任务
+    int taskId = -1;
+    if (SinglePlatformTaskDAO::getInstance().addSinglePlatformTask(task, taskId)) {
+        g_print("任务已保存到数据库，ID: %d\n", taskId);
+    } else {
+        g_print("保存任务到数据库失败\n");
+    }
+    
     return result;
 }
 

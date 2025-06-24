@@ -121,15 +121,15 @@ void SinglePlatformController::startSimulation() {
     g_print("使用辐射源 ID: %d, 名称: %s\n", source.getRadiationId(), source.getRadiationName().c_str());
     
     // ====== 仿真前条件验证 ======
-    SimulationValidator validator;
-    std::vector<int> deviceIds = { device.getDeviceId() };
-    int sourceId = source.getRadiationId();
-    std::string failMessage;
-    if (!validator.validateAll(deviceIds, sourceId, failMessage)) {
-        g_print("仿真前条件验证失败：%s\n", failMessage.c_str());
-        if (m_view) m_view->showErrorMessage(failMessage);
-        return;
-    }
+    //SimulationValidator validator;
+  //  std::vector<int> deviceIds = { device.getDeviceId() };
+   // int sourceId = source.getRadiationId();
+ //   std::string failMessage;
+   // if (!validator.validateAll(deviceIds, sourceId, failMessage)) {
+    //    g_print("仿真前条件验证失败：%s\n", failMessage.c_str());
+     //   if (m_view) m_view->showErrorMessage(failMessage);
+      //  return;
+   // }
     
     // 设置初始地图视角
     MapView* mapView = m_view->getMapView();
