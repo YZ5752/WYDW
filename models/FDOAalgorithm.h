@@ -60,6 +60,20 @@ public:
         int maxIterations = 100,
         double tolerance = 1e-6);
 
+    // 计算设备在指定时刻的位置
+    COORD3 calculateDevicePositionAtTime(const ReconnaissanceDevice& device, double t);
+
+    // 计算定位精度
+    double calculateLocalizationAccuracy(
+        const std::vector<int>& deviceIds,
+        int sourceId,
+        double simulationTime,
+        const COORD3& estimatedPosition,
+        const Vector3& estimatedVelocity);
+
+    // 计算辐射源在指定时刻的位置
+    COORD3 calculateSourcePositionAtTime(const RadiationSource& source, double t);
+
 private:
     FDOAalgorithm();
     ~FDOAalgorithm();
@@ -111,16 +125,8 @@ private:
         double velocitySigma,
         double angleSigma);
 
-    double calculateLocalizationAccuracy(
-        const std::vector<int>& deviceIds,
-        int sourceId,
-        double simulationTime,
-        const COORD3& estimatedPosition,
-        const Vector3& estimatedVelocity);
-        
-    COORD3 calculateDevicePositionAtTime(const ReconnaissanceDevice& device, double t);
+    // 辅助函数：计算设备速度
     COORD3 calculateDeviceVelocity(const ReconnaissanceDevice& device);
-    COORD3 calculateSourcePositionAtTime(const RadiationSource& source, double t);
     COORD3 calculateSourceVelocity(const RadiationSource& source);
     std::vector<double> calculateFDOADerivative(
         const COORD3& sourcePos, const Vector3& sourceVel,
@@ -135,5 +141,5 @@ private:
     double m_simulationTime;                   // 仿真时间
     std::vector<ReconnaissanceDevice> m_devices;  // 设备信息
     RadiationSource m_source;                  // 辐射源信息
-    SourcePositionResult m_result;                   // 定位结果
+    SourcePositionResult m_result;             // 定位结果
 }; 

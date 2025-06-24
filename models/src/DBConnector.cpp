@@ -56,10 +56,6 @@ void DBConnector::close() {
 }
 
 bool DBConnector::executeSQL(const std::string& sql) {
-    std::cout << "\n=== SQL Execution Debug Info ===" << std::endl;
-    std::cout << "SQL Statement: " << sql << std::endl;
-    std::cout << "Connection Status: " << (m_connected ? "Connected" : "Disconnected") << std::endl;
-    std::cout << "Connection Pointer: " << (m_conn ? "Valid" : "Null") << std::endl;
     
     if (!m_connected || !m_conn) {
         std::cerr << "MySQL not connected" << std::endl;
@@ -73,9 +69,6 @@ bool DBConnector::executeSQL(const std::string& sql) {
         MYSQL_RES* res = mysql_store_result(m_conn);
         if (res) {
             MYSQL_ROW row = mysql_fetch_row(res);
-            if (row && row[0]) {
-                std::cout << "Current Database: " << row[0] << std::endl;
-            }
             mysql_free_result(res);
         }
     }

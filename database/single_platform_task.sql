@@ -134,3 +134,7 @@ ADD COLUMN max_positioning_distance FLOAT COMMENT '最远定位距离（米）' 
 ADD COLUMN positioning_time FLOAT COMMENT '定位时间（秒）' AFTER max_positioning_distance,
 ADD COLUMN positioning_accuracy DECIMAL(8,6) COMMENT '定位精度（米）' AFTER positioning_time,
 ADD COLUMN direction_finding_accuracy DECIMAL(8,6) COMMENT '测向精度（度）' AFTER angle_error;
+ALTER TABLE single_platform_task
+DROP COLUMN target_angle,
+ADD COLUMN azimuth decimal(5, 2) COMMENT '方位角' AFTER target_altitude,
+ADD COLUMN elevation decimal(4, 2) COMMENT '俯仰角' AFTER azimuth;

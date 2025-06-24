@@ -18,9 +18,9 @@ bool SinglePlatformTaskDAO::addSinglePlatformTask(const SinglePlatformTask& task
     char sql[1024];
     snprintf(sql, sizeof(sql),
         "INSERT INTO single_platform_task (tech_system, device_id, radiation_id, execution_time, "
-        "target_longitude, target_latitude, target_altitude, target_angle, angle_error, "
+        "target_longitude, target_latitude, target_altitude, azimuth, elevation, angle_error, "
         "max_positioning_distance, positioning_time, positioning_accuracy, direction_finding_accuracy) "
-        "VALUES ('%s', %d, %d, %f, %.6f, %.6f, %.2f, %.5f, %.6f, %f, %f, %.6f, %.6f)",
+        "VALUES ('%s', %d, %d, %f, %.6f, %.6f, %.2f, %.2f, %.2f, %.6f, %f, %f, %.6f, %.6f)",
         task.techSystem.c_str(),
         task.deviceId,
         task.radiationId,
@@ -28,7 +28,8 @@ bool SinglePlatformTaskDAO::addSinglePlatformTask(const SinglePlatformTask& task
         task.targetLongitude,
         task.targetLatitude,
         task.targetAltitude,
-        task.targetAngle,
+        task.azimuth,
+        task.elevation,
         task.angleError,
         task.maxPositioningDistance,
         task.positioningTime,
@@ -56,7 +57,7 @@ SinglePlatformTask SinglePlatformTaskDAO::getSinglePlatformTaskById(int taskId) 
     char sql[256];
     snprintf(sql, sizeof(sql),
         "SELECT task_id, tech_system, device_id, radiation_id, execution_time, "
-        "target_longitude, target_latitude, target_altitude, target_angle, angle_error, "
+        "target_longitude, target_latitude, target_altitude, azimuth, elevation, angle_error, "
         "max_positioning_distance, positioning_time, positioning_accuracy, direction_finding_accuracy, "
         "created_at FROM single_platform_task WHERE task_id = %d",
         taskId
@@ -91,7 +92,7 @@ std::vector<SinglePlatformTask> SinglePlatformTaskDAO::getAllSinglePlatformTasks
     if (!conn) return std::vector<SinglePlatformTask>{};
     
     const char* sql = "SELECT task_id, tech_system, device_id, radiation_id, execution_time, "
-                     "target_longitude, target_latitude, target_altitude, target_angle, angle_error, "
+                     "target_longitude, target_latitude, target_altitude, azimuth, elevation, angle_error, "
                      "max_positioning_distance, positioning_time, positioning_accuracy, direction_finding_accuracy, "
                      "created_at FROM single_platform_task ORDER BY task_id DESC";
     
@@ -125,7 +126,7 @@ std::vector<SinglePlatformTask> SinglePlatformTaskDAO::getSinglePlatformTasksByD
     char sql[256];
     snprintf(sql, sizeof(sql),
         "SELECT task_id, tech_system, device_id, radiation_id, execution_time, "
-        "target_longitude, target_latitude, target_altitude, target_angle, angle_error, "
+        "target_longitude, target_latitude, target_altitude, azimuth, elevation, angle_error, "
         "max_positioning_distance, positioning_time, positioning_accuracy, direction_finding_accuracy, "
         "created_at FROM single_platform_task WHERE device_id = %d ORDER BY task_id DESC",
         deviceId
@@ -161,7 +162,7 @@ std::vector<SinglePlatformTask> SinglePlatformTaskDAO::getSinglePlatformTasksByR
     char sql[256];
     snprintf(sql, sizeof(sql),
         "SELECT task_id, tech_system, device_id, radiation_id, execution_time, "
-        "target_longitude, target_latitude, target_altitude, target_angle, angle_error, "
+        "target_longitude, target_latitude, target_altitude, azimuth, elevation, angle_error, "
         "max_positioning_distance, positioning_time, positioning_accuracy, direction_finding_accuracy, "
         "created_at FROM single_platform_task WHERE radiation_id = %d ORDER BY task_id DESC",
         radiationId
@@ -198,7 +199,7 @@ bool SinglePlatformTaskDAO::updateSinglePlatformTask(const SinglePlatformTask& t
     snprintf(sql, sizeof(sql),
         "UPDATE single_platform_task SET tech_system = '%s', device_id = %d, radiation_id = %d, "
         "execution_time = %f, target_longitude = %.6f, target_latitude = %.6f, target_altitude = %.2f, "
-        "target_angle = %.5f, angle_error = %.6f, max_positioning_distance = %f, positioning_time = %f, "
+        "azimuth = %.2f, elevation = %.2f, angle_error = %.6f, max_positioning_distance = %f, positioning_time = %f, "
         "positioning_accuracy = %.6f, direction_finding_accuracy = %.6f WHERE task_id = %d",
         task.techSystem.c_str(),
         task.deviceId,
@@ -207,7 +208,8 @@ bool SinglePlatformTaskDAO::updateSinglePlatformTask(const SinglePlatformTask& t
         task.targetLongitude,
         task.targetLatitude,
         task.targetAltitude,
-        task.targetAngle,
+        task.azimuth,
+        task.elevation,
         task.angleError,
         task.maxPositioningDistance,
         task.positioningTime,
@@ -255,13 +257,14 @@ SinglePlatformTask SinglePlatformTaskDAO::createTaskFromRow(MYSQL_ROW row) {
     task.targetLongitude = row[5] ? atof(row[5]) : 0.0;
     task.targetLatitude = row[6] ? atof(row[6]) : 0.0;
     task.targetAltitude = row[7] ? atof(row[7]) : 0.0;
-    task.targetAngle = row[8] ? atof(row[8]) : 0.0;
-    task.angleError = row[9] ? atof(row[9]) : 0.0;
-    task.maxPositioningDistance = row[10] ? atof(row[10]) : 0.0f;
-    task.positioningTime = row[11] ? atof(row[11]) : 0.0f;
-    task.positioningAccuracy = row[12] ? atof(row[12]) : 0.0;
-    task.directionFindingAccuracy = row[13] ? atof(row[13]) : 0.0;
-    task.createdAt = row[14] ? row[14] : "";
+    task.azimuth = row[8] ? atof(row[8]) : 0.0;
+    task.elevation = row[9] ? atof(row[9]) : 0.0;
+    task.angleError = row[10] ? atof(row[10]) : 0.0;
+    task.maxPositioningDistance = row[11] ? atof(row[11]) : 0.0f;
+    task.positioningTime = row[12] ? atof(row[12]) : 0.0f;
+    task.positioningAccuracy = row[13] ? atof(row[13]) : 0.0;
+    task.directionFindingAccuracy = row[14] ? atof(row[14]) : 0.0;
+    task.createdAt = row[15] ? row[15] : "";
     
     return task;
 }
@@ -293,7 +296,7 @@ std::vector<SinglePlatformTask> SinglePlatformTaskDAO::getTasksBySourceId(int so
     char sql[1024];
     snprintf(sql, sizeof(sql), 
         "SELECT task_id, tech_system, device_id, radiation_id, execution_time, "
-        "target_longitude, target_latitude, target_altitude, target_angle, angle_error, "
+        "target_longitude, target_latitude, target_altitude, azimuth, elevation, angle_error, "
         "max_positioning_distance, positioning_time, positioning_accuracy, direction_finding_accuracy "
         "FROM single_platform_task WHERE radiation_id=%d", 
         sourceId);
@@ -326,7 +329,8 @@ std::vector<SinglePlatformTask> SinglePlatformTaskDAO::getTasksBySourceId(int so
         task.targetLongitude = row[idx] ? atof(row[idx]) : 0.0; idx++;
         task.targetLatitude = row[idx] ? atof(row[idx]) : 0.0; idx++;
         task.targetAltitude = row[idx] ? atof(row[idx]) : 0.0; idx++;
-        task.targetAngle = row[idx] ? atof(row[idx]) : 0.0; idx++;
+        task.azimuth = row[idx] ? atof(row[idx]) : 0.0; idx++;
+        task.elevation = row[idx] ? atof(row[idx]) : 0.0; idx++;
         task.angleError = row[idx] ? atof(row[idx]) : 0.0; idx++;
         task.maxPositioningDistance = row[idx] ? atof(row[idx]) : 0.0f; idx++;
         task.positioningTime = row[idx] ? atof(row[idx]) : 0.0f; idx++;
