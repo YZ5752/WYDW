@@ -349,8 +349,6 @@ bool FDOAalgorithm::calculate() {
                                  MAX_ITERATIONS,
                                  TOLERANCE);
 
-    m_result.locationTime = m_simulationTime;
-
     // 计算速度大小
     double speedMagnitude = std::sqrt(m_result.velocity.x * m_result.velocity.x +
                                     m_result.velocity.y * m_result.velocity.y +
@@ -363,55 +361,7 @@ bool FDOAalgorithm::calculate() {
         m_result.velocity.z = 0.0;
     }
 
-    // 将空间直角坐标转换为大地坐标
-    COORD3 resultLBH = xyz2lbh(m_result.position.p1, m_result.position.p2, m_result.position.p3);
-    
-    // 计算速度的大地坐标表示
-    COORD3 velocityResult = velocity_xyz2lbh(resultLBH.p1, resultLBH.p2, 
-                                           m_result.velocity.x, m_result.velocity.y, m_result.velocity.z);
-    //计算距离，经过m_simulationTime时间后，辐射源移动的位置
-    COORD3 movedPosition = {
-        m_result.position.p1 + m_result.velocity.x * m_simulationTime,
-        m_result.position.p2 + m_result.velocity.y * m_simulationTime,
-        m_result.position.p3 + m_result.velocity.z * m_simulationTime
-    };
-    std::cout << "辐射源移动后的位置: " << movedPosition.p1 << " " << movedPosition.p2 << " " << movedPosition.p3 << std::endl;
-    
-    //侦察站1的位置
-    COORD3 device1Position = calculateDevicePositionAtTime(m_devices[0], 0.0);  // 初始时刻t=0的位置
-    std::cout << "侦察站1的位置: " << device1Position.p1 << " " << device1Position.p2 << " " << device1Position.p3 << std::endl;
-    //计算侦察站1到辐射源移动后的位置的距离
-    double distance = std::sqrt((movedPosition.p1 - device1Position.p1) * (movedPosition.p1 - device1Position.p1) + 
-                              (movedPosition.p2 - device1Position.p2) * (movedPosition.p2 - device1Position.p2) + 
-                              (movedPosition.p3 - device1Position.p3) * (movedPosition.p3 - device1Position.p3));
-    
-    // 计算定位精度
-    double localizationAccuracy = calculateLocalizationAccuracy(
-        deviceIds,
-        sourceId,
-        m_simulationTime,
-        m_result.position,
-        m_result.velocity
-    );
-    
-    m_result.finalError = localizationAccuracy * localizationAccuracy;
-    
-    // 输出结果
-    std::cout << "\n定位结果：" << std::endl;
-    std::cout << "----------------------------------------" << std::endl;
-    std::cout << "经度: " << resultLBH.p1 << " 度" << std::endl;
-    std::cout << "纬度: " << resultLBH.p2 << " 度" << std::endl;
-    std::cout << "高度: " << resultLBH.p3 << " 米" << std::endl;
-    std::cout << "运动速度: " << velocityResult.p1 << " m/s" << std::endl;
-    std::cout << "运动方位角: " << velocityResult.p2 << " 度" << std::endl;
-    std::cout << "运动俯仰角: " << velocityResult.p3 << " 度" << std::endl;
-    std::cout << "定位时间: " << m_result.locationTime << " 秒" << std::endl;
-    std::cout << "距离: " << distance << " 米" << std::endl;
-    std::cout << "精度: " << localizationAccuracy << " 米" << std::endl;
-    std::cout << "迭代次数: " << m_result.iterations << std::endl;
-    std::cout << "最终误差: " << m_result.finalError << std::endl;
-    std::cout << "----------------------------------------" << std::endl;
-
+    m_result.locationTime = m_simulationTime;
     return true;
 }
 // 计算每个观测时刻的多普勒频移（含测量误差）
@@ -905,15 +855,6 @@ COORD3 FDOAalgorithm::calculateDevicePositionAtTime(const ReconnaissanceDevice& 
         pos0.p3 + vel.p3 * t
     };
 }
-
-// 辅助函数：计算设备速度(直角坐标)
-COORD3 FDOAalgorithm::calculateDeviceVelocity(const ReconnaissanceDevice& device) {
-    return velocity_lbh2xyz(device.getLongitude(), device.getLatitude(),
-                           device.getMovementSpeed(),
-                           device.getMovementAzimuth(),
-                           device.getMovementElevation());
-}
-
 // 辅助函数：计算辐射源在指定时刻的位置
 COORD3 FDOAalgorithm::calculateSourcePositionAtTime(const RadiationSource& source, double t) {
     COORD3 pos0 = lbh2xyz(source.getLongitude(), source.getLatitude(), source.getAltitude());
@@ -926,6 +867,13 @@ COORD3 FDOAalgorithm::calculateSourcePositionAtTime(const RadiationSource& sourc
         pos0.p2 + vel.p2 * t,
         pos0.p3 + vel.p3 * t
     };
+}
+// 辅助函数：计算设备速度(直角坐标)
+COORD3 FDOAalgorithm::calculateDeviceVelocity(const ReconnaissanceDevice& device) {
+    return velocity_lbh2xyz(device.getLongitude(), device.getLatitude(),
+                           device.getMovementSpeed(),
+                           device.getMovementAzimuth(),
+                           device.getMovementElevation());
 }
 
 // 辅助函数：计算辐射源速度

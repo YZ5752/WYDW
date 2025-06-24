@@ -50,3 +50,6 @@ ALTER TABLE multi_platform_task
 ADD COLUMN positioning_distance FLOAT COMMENT '定位距离（米）' AFTER target_altitude,
 ADD COLUMN positioning_time FLOAT COMMENT '定位时间（秒）' AFTER positioning_distance,
 ADD COLUMN positioning_accuracy DECIMAL(8,6) COMMENT '定位精度（米）' AFTER positioning_time;
+ALTER TABLE multi_platform_task
+ADD COLUMN azimuth decimal(5, 2) COMMENT '方位角' AFTER movement_elevation,
+ADD COLUMN elevation decimal(4, 2) COMMENT '俯仰角' AFTER azimuth;

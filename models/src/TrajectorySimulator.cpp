@@ -53,9 +53,6 @@ std::vector<std::pair<double, double>> TrajectorySimulator::simulateMovement(
     double vy = velocityXYZ.p2;
     double vz = velocityXYZ.p3;
     
-    g_print("模拟轨迹 - 初始位置: [%.6f, %.6f, %.2f], 速度: %.2f m/s, 方位角: %.2f°, 俯仰角: %.2f°\n",
-            initialLongitude, initialLatitude, initialAltitude, speed, azimuth, elevation);
-    g_print("速度向量 (ECEF): [%.2f, %.2f, %.2f] m/s\n", vx, vy, vz);
     
     // 记录初始位置
     trajectoryPoints.push_back(std::make_pair(initialLongitude, initialLatitude));
@@ -88,14 +85,14 @@ std::vector<std::pair<double, double>> TrajectorySimulator::simulateMovement(
                 device->setLongitude(longitude);
                 device->setLatitude(latitude);
                 device->setAltitude(altitude);
-                g_print("更新侦察设备位置: [%.6f, %.6f, %.2f]\n", longitude, latitude, altitude);
+                
             } else {
                 // 对象是RadiationSource
                 RadiationSource* source = static_cast<RadiationSource*>(objectPtr);
                 source->setLongitude(longitude);
                 source->setLatitude(latitude);
                 source->setAltitude(altitude);
-                g_print("更新辐射源位置: [%.6f, %.6f, %.2f]\n", longitude, latitude, altitude);
+              
             }
         }
         
@@ -103,7 +100,6 @@ std::vector<std::pair<double, double>> TrajectorySimulator::simulateMovement(
         trajectoryPoints.push_back(std::make_pair(longitude, latitude));
     }
     
-    g_print("移动轨迹计算完成，共%zu个点\n", trajectoryPoints.size());
     return trajectoryPoints;
 }
 
@@ -161,7 +157,6 @@ void TrajectorySimulator::animateDeviceMovement(
     
     if (!mapView || trajectoryPoints.empty()) return;
     
-    g_print("开始设备移动动画，轨迹点数量: %zu\n", trajectoryPoints.size());
     
     // 清除之前的所有实体
     std::string cleanupScript = 
@@ -378,7 +373,6 @@ void TrajectorySimulator::animateMultipleDevicesMovement(
     
     if (!mapView || devices.empty()) return;
     
-    g_print("开始多设备移动动画，设备数量: %zu\n", devices.size());
     
     // 清除之前的所有实体
     std::string cleanupScript = 
@@ -688,5 +682,5 @@ void TrajectorySimulator::animateMultipleDevicesMovement(
     // 执行脚本
     mapView->executeScript(script.str());
     
-    g_print("多设备移动仿真已启动，仿真时间: %d秒\n", simulationTime);
+   
 }

@@ -8,7 +8,7 @@
  * @brief 单平台任务数据结构体
  */
 struct SinglePlatformTask {
-    int taskId;                 // 任务ID
+     int taskId;                 // 任务ID
     std::string techSystem;     // 技术体制：INTERFEROMETER或TDOA
     int deviceId;               // 关联侦察设备模型ID
     int radiationId;            // 关联辐射源模型ID
@@ -16,7 +16,8 @@ struct SinglePlatformTask {
     double targetLongitude;     // 目标经度（度）
     double targetLatitude;      // 目标纬度（度）
     double targetAltitude;      // 目标高度（米）
-    double targetAngle;         // 测向数据（度）
+    double azimuth;            // 方位角（度）
+    double elevation;          // 俯仰角（度）
     double angleError;          // 测向误差（度）
     float maxPositioningDistance; // 最远定位距离（米）
     float positioningTime;      // 定位时间（秒）

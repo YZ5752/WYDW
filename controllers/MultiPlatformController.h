@@ -1,10 +1,11 @@
 #pragma once
 
 #include "../views/MultiPlatformView.h"
+#include "../models/MultiPlatformTaskDAO.h"
+#include "../models/FDOAalgorithm.h"
+#include "../utils/CoordinateTransform.h"
 #include "../models/RadiationSourceModel.h"
 #include "../models/ReconnaissanceDeviceModel.h"
-#include "../models/FDOAalgorithm.h"
-#include "../models/TDOAalgorithm.h"
 #include <string>
 #include <vector>
 
