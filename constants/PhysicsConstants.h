@@ -9,7 +9,6 @@
 namespace Constants {
     // 物理常数
     const double c = 299792458.0;  // 光速 (m/s)
-    const double SPEED_OF_LIGHT = c;  // 光速别名，保持兼容性
     const double PI = 3.14159265358979323846;
 
      // 坐标转换常量
