@@ -4,6 +4,7 @@
 #include "../models/RadiationSourceModel.h"
 #include "../models/ReconnaissanceDeviceModel.h"
 #include "../models/FDOAalgorithm.h"
+#include "../models/TDOAalgorithm.h"
 #include <string>
 #include <vector>
 

@@ -14,6 +14,69 @@ std::string RadiationSourceModelView::formatPosition(const RadiationSource& sour
     return ss.str();
 }
 
+// 单击事件处理函数
+static void on_tree_view_clicked(GtkTreeView* treeView, GdkEventButton* event, gpointer data) {
+    RadiationSourceModelView* view = static_cast<RadiationSourceModelView*>(data);
+    if (!view) return;
+    
+    // 获取点击的行和列
+    GtkTreePath* path = nullptr;
+    GtkTreeViewColumn* column = nullptr;
+    int cellX, cellY;
+    
+    if (gtk_tree_view_get_path_at_pos(GTK_TREE_VIEW(treeView), 
+                                     event->x, event->y, &path, &column, &cellX, &cellY)) {
+        // 获取选中的行
+        GtkTreeModel* model = gtk_tree_view_get_model(GTK_TREE_VIEW(treeView));
+        GtkTreeIter iter;
+        
+        if (gtk_tree_model_get_iter(model, &iter, path)) {
+            // 获取行ID
+            gchar* idStr;
+            gtk_tree_model_get(model, &iter, 0, &idStr, -1);
+            int sourceId = -1;
+            try {
+                sourceId = std::stoi(idStr);
+            } catch (...) {
+                g_free(idStr);
+                return;
+            }
+            g_free(idStr);
+            
+            if (sourceId <= 0) return;
+            
+            // 定义操作列
+            GtkTreeViewColumn* viewCol = gtk_tree_view_get_column(treeView, 4);
+            GtkTreeViewColumn* editCol = gtk_tree_view_get_column(treeView, 5);
+            GtkTreeViewColumn* deleteCol = gtk_tree_view_get_column(treeView, 6);
+            
+            // 判断点击的列并执行相应操作
+            if (column == viewCol) { // 查看
+                view->showSourceDetailsDialog(sourceId);
+            } else if (column == editCol) { // 编辑
+                RadiationSourceModelController::getInstance().showEditDialog(sourceId);
+            } else if (column == deleteCol) { // 删除
+                GtkWidget* dialog = gtk_message_dialog_new(
+                    GTK_WINDOW(gtk_widget_get_toplevel(GTK_WIDGET(treeView))),
+                    GTK_DIALOG_MODAL,
+                    GTK_MESSAGE_QUESTION,
+                    GTK_BUTTONS_YES_NO,
+                    "确定要删除选中的辐射源吗？");
+                
+                if (gtk_dialog_run(GTK_DIALOG(dialog)) == GTK_RESPONSE_YES) {
+                    RadiationSourceModelController::getInstance().deleteSource(sourceId);
+                }
+                gtk_widget_destroy(dialog);
+            }
+        }
+    }
+    
+    // 释放路径
+    if (path) {
+        gtk_tree_path_free(path);
+    }
+}
+
 // 回调函数
 static void on_add_button_clicked(GtkWidget* widget, gpointer data) {
     RadiationSourceModelView* view = static_cast<RadiationSourceModelView*>(data);
@@ -74,38 +137,6 @@ static void on_refresh_button_clicked(GtkWidget* widget, gpointer data) {
     RadiationSourceModelView* view = static_cast<RadiationSourceModelView*>(data);
     if (view) {
         RadiationSourceModelController::getInstance().loadSourceData();
-    }
-}
-
-// 行激活回调
-static void on_row_activated(GtkTreeView* treeView, GtkTreePath* path, GtkTreeViewColumn* column, gpointer data) {
-    RadiationSourceModelView* view = static_cast<RadiationSourceModelView*>(data);
-    int sourceId = view->getSelectedSourceId();
-    if (sourceId <= 0) return;
-    
-    // 新方法：通过列指针比较确定点击的列
-    GtkTreeViewColumn* cols[] = {
-        gtk_tree_view_get_column(treeView, 4), // 查看列
-        gtk_tree_view_get_column(treeView, 5), // 编辑列
-        gtk_tree_view_get_column(treeView, 6)  // 删除列
-    };
-    
-    if (column == cols[0]) { // 查看
-        view->showSourceDetailsDialog(sourceId);
-    } else if (column == cols[1]) { // 编辑
-        RadiationSourceModelController::getInstance().showEditDialog(sourceId);
-    } else if (column == cols[2]) { // 删除
-        GtkWidget* dialog = gtk_message_dialog_new(
-            GTK_WINDOW(gtk_widget_get_toplevel(GTK_WIDGET(treeView))),
-            GTK_DIALOG_MODAL,
-            GTK_MESSAGE_QUESTION,
-            GTK_BUTTONS_YES_NO,
-            "确定要删除选中的辐射源吗？");
-        
-        if (gtk_dialog_run(GTK_DIALOG(dialog)) == GTK_RESPONSE_YES) {
-            RadiationSourceModelController::getInstance().deleteSource(sourceId);
-        }
-        gtk_widget_destroy(dialog);
     }
 }
 
@@ -204,8 +235,8 @@ GtkWidget* RadiationSourceModelView::createView() {
     g_signal_connect(refreshButton, "clicked", G_CALLBACK(on_refresh_button_clicked), this);
     gtk_container_add(GTK_CONTAINER(buttonBox), refreshButton);
 
-    // 连接信号
-    g_signal_connect(m_sourceList, "row-activated", G_CALLBACK(on_row_activated), this);
+    // 连接信号 - 修改为button-press-event
+    g_signal_connect(m_sourceList, "button-press-event", G_CALLBACK(on_tree_view_clicked), this);
     GtkTreeSelection* selection = gtk_tree_view_get_selection(GTK_TREE_VIEW(m_sourceList));
     gtk_tree_selection_set_mode(selection, GTK_SELECTION_SINGLE);
 
