@@ -1,8 +1,10 @@
+// RadiationSourceModelView.h
 #pragma once
 
 #include <gtk/gtk.h>
 #include <string>
 #include <vector>
+#include <iomanip> 
 #include "../models/RadiationSourceModel.h"
 
 class RadiationSourceModelView {
@@ -25,6 +27,9 @@ public:
     // 从编辑对话框获取辐射源数据
     RadiationSource getSourceFromDialog(GtkWidget* dialog) const;
     
+    // 显示辐射源详情对话框
+    void showSourceDetailsDialog(int sourceId);
+    
     // 获取视图控件
     GtkWidget* getView() const;
 
@@ -32,4 +37,12 @@ private:
     GtkWidget* m_view;
     GtkWidget* m_sourceList;
     std::vector<RadiationSource> m_sources;
-}; 
+    
+    // 辅助函数：格式化位置信息字符串
+    std::string formatPosition(const RadiationSource& source) const;
+    
+    // 辅助函数：获取位置信息字符串（兼容旧代码）
+    std::string getPositionString(const RadiationSource& source) const {
+        return formatPosition(source);
+    }
+};
