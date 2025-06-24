@@ -93,10 +93,7 @@ public:
     void setSimulationResult(double lon, double lat, double alt, double az, double el);
     
     // 获取仿真结果缓存
-    bool getSimulationResult(double& lon, double& lat, double& alt, double& az, double& el) const;
-    
-    // 显示确认对话框
-    bool showConfirmDialog(const std::string& title, const std::string& message);
+    bool getSimulationResult(double& lon, double& lat, double& alt, double& az, double& el);
 
 private:
     GtkWidget* m_view;

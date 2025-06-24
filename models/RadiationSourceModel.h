@@ -4,9 +4,6 @@
 #include <vector>
 #include <utility>
 
-// 前向声明
-class RadiationSourceDAO;
-
 // 辐射源模型
 class RadiationSource {
 public:
@@ -86,37 +83,6 @@ public:
     void setLastUpdated(const std::string& time);
     std::string getLastUpdated() const;
 
-    /**
-     * @brief 获取工作扇区方位角起始值
-     * @return 方位角起始值(度)
-     */
-    double getAzimuthStartAngle() const {
-        return m_azimuthStart;
-    }
-    
-    /**
-     * @brief 获取工作扇区方位角终止值
-     * @return 方位角终止值(度)
-     */
-    double getAzimuthEndAngle() const {
-        return m_azimuthEnd;
-    }
-    
-    /**
-     * @brief 获取工作扇区俯仰角起始值
-     * @return 俯仰角起始值(度)
-     */
-    double getElevationStartAngle() const {
-        return m_elevationStart;
-    }
-    
-    /**
-     * @brief 获取工作扇区俯仰角终止值
-     * @return 俯仰角终止值(度)
-     */
-    double getElevationEndAngle() const {
-        return m_elevationEnd;
-    }
 
 private:
     int m_radiationId;

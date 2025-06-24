@@ -727,33 +727,12 @@ void SinglePlatformView::setSimulationResult(double lon, double lat, double alt,
     m_hasResult = true;
 }
 
-// 获取缓存的仿真结果
-bool SinglePlatformView::getSimulationResult(double& lon, double& lat, double& alt, double& az, double& el) const {
+bool SinglePlatformView::getSimulationResult(double& lon, double& lat, double& alt, double& az, double& el) {
     if (!m_hasResult) return false;
-    
     lon = m_lastLon;
     lat = m_lastLat;
     alt = m_lastAlt;
     az = m_lastAz;
     el = m_lastEl;
-    
     return true;
-}
-
-// 显示确认对话框
-bool SinglePlatformView::showConfirmDialog(const std::string& title, const std::string& message) {
-    if (!m_view) return false;
-    
-    GtkWidget* dialog = gtk_message_dialog_new(
-        GTK_WINDOW(gtk_widget_get_toplevel(m_view)),
-        GTK_DIALOG_DESTROY_WITH_PARENT,
-        GTK_MESSAGE_WARNING,
-        GTK_BUTTONS_YES_NO,
-        "%s", message.c_str());
-    
-    gtk_window_set_title(GTK_WINDOW(dialog), title.c_str());
-    gint response = gtk_dialog_run(GTK_DIALOG(dialog));
-    gtk_widget_destroy(dialog);
-    
-    return (response == GTK_RESPONSE_YES);
 }
