@@ -7,6 +7,7 @@
 #include <string>
 #include <sstream>
 #include <iomanip>
+#include <cmath>  // 添加数学函数支持，用于fabs函数
 
 SinglePlatformView::SinglePlatformView() :
     m_view(nullptr),
@@ -555,6 +556,9 @@ void SinglePlatformView::onSinglePlatformSimulation(GtkWidget* widget, gpointer 
         return;
     }
     
+    // 清除之前的测向误差线
+    view->clearDirectionErrorLines();
+    
     g_print("调用SinglePlatformController::startSimulation()...\n");
     
     // 调用控制器启动仿真
@@ -676,6 +680,7 @@ void SinglePlatformView::animateDeviceMovement(const ReconnaissanceDevice& devic
         radiationSourceLatitude,
         radiationSourceAltitude
     );
+    
     // 动画结束后显示参数（直接从缓存读取）
     g_timeout_add(simulationTime * 1000 + 1200, [](gpointer data) -> gboolean {
         auto* view = static_cast<SinglePlatformView*>(data);
@@ -683,6 +688,124 @@ void SinglePlatformView::animateDeviceMovement(const ReconnaissanceDevice& devic
         if (view->getSimulationResult(lon, lat, alt, az, el)) {
             view->showSimulationResult(lon, lat, alt, az, el);
         }
+        return G_SOURCE_REMOVE;
+    }, self);
+    
+    // 动画结束后显示测向误差线
+    g_timeout_add(simulationTime * 1000 + 1500, [](gpointer data) -> gboolean {
+        auto* view = static_cast<SinglePlatformView*>(data);
+        
+        // 获取测向误差角度 - 从控制器获取
+        double errorAngle = 5.0;  // 默认值
+        
+        // 从控制器获取误差因素
+        const std::vector<double>& errorFactors = 
+            SinglePlatformController::getInstance().getLastErrorFactors();
+        
+        // 检查是否有误差因素数据
+        if (!errorFactors.empty()) {
+            // 干涉仪体制和时差体制的误差因素数组中，最后一个通常是测向误差
+            errorAngle = errorFactors.back();
+            g_print("从控制器获取测向误差角度：%.2f度\n", errorAngle);
+        } else {
+            g_print("控制器未提供误差因素数据，使用默认误差角度：%.2f度\n", errorAngle);
+        }
+        
+        // 获取当前选中的侦察设备（这是误差线的起始点）
+        gchar* deviceName = gtk_combo_box_text_get_active_text(GTK_COMBO_BOX_TEXT(view->m_radarCombo));
+        if (!deviceName) {
+            g_print("错误：获取选中的侦察设备失败\n");
+            return G_SOURCE_REMOVE;
+        }
+        
+        std::string selDeviceName = deviceName;
+        g_free(deviceName);
+        
+        // 查找对应的设备
+        ReconnaissanceDevice device;
+        bool deviceFound = false;
+        
+        for (const auto& dev : view->m_devices) {
+            if (dev.getDeviceName() == selDeviceName) {
+                device = dev;
+                deviceFound = true;
+                break;
+            }
+        }
+        
+        if (!deviceFound) {
+            g_print("错误：未找到选中的设备\n");
+            return G_SOURCE_REMOVE;
+        }
+        
+        // 使用侦察设备当前位置作为测向误差线的起点
+        double deviceLongitude = device.getLongitude();
+        double deviceLatitude = device.getLatitude();
+        double deviceAltitude = device.getAltitude();
+        
+        // 获取定位计算结果作为目标点（即辐射源的计算位置）
+        double calculatedLon = 0, calculatedLat = 0, calculatedAlt = 0, calculatedAz = 0, calculatedEl = 0;
+        bool hasResult = view->getSimulationResult(calculatedLon, calculatedLat, calculatedAlt, calculatedAz, calculatedEl);
+        
+        if (hasResult) {
+            // 使用计算结果作为目标点，设备位置作为起点
+            g_print("使用仿真结果作为辐射源位置：(%.6f, %.6f, %.2f)\n", 
+                    calculatedLon, calculatedLat, calculatedAlt);
+                    
+            // 创建临时设备对象，使用当前侦察设备的位置
+            ReconnaissanceDevice tempDevice;
+            tempDevice.setDeviceName(device.getDeviceName());
+            tempDevice.setLongitude(deviceLongitude);
+            tempDevice.setLatitude(deviceLatitude);
+            tempDevice.setAltitude(deviceAltitude);
+            
+            // 显示测向误差线 - 从侦察设备位置到计算的辐射源位置
+            view->showDirectionErrorLines(errorAngle, 
+                                         deviceLongitude, deviceLatitude, deviceAltitude,
+                                         calculatedLon, calculatedLat, calculatedAlt);
+        } else {
+            // 如果没有计算结果，使用实际辐射源位置作为目标点
+            // 获取当前选中的辐射源
+            gchar* sourceName = gtk_combo_box_text_get_active_text(GTK_COMBO_BOX_TEXT(view->m_sourceCombo));
+            if (!sourceName) {
+                g_print("错误：获取选中的辐射源失败\n");
+                return G_SOURCE_REMOVE;
+            }
+            
+            std::string selSourceName = sourceName;
+            g_free(sourceName);
+            
+            // 查找对应的辐射源
+            RadiationSource source;
+            bool sourceFound = false;
+            
+            for (const auto& src : view->m_sources) {
+                if (src.getRadiationName() == selSourceName) {
+                    source = src;
+                    sourceFound = true;
+                    break;
+                }
+            }
+            
+            if (!sourceFound) {
+                g_print("错误：未找到选中的辐射源\n");
+                return G_SOURCE_REMOVE;
+            }
+            
+            // 使用实际辐射源位置作为目标点
+            double sourceLongitude = source.getLongitude();
+            double sourceLatitude = source.getLatitude();
+            double sourceAltitude = source.getAltitude();
+            
+            g_print("使用实际辐射源位置：(%.6f, %.6f, %.2f)\n", 
+                    sourceLongitude, sourceLatitude, sourceAltitude);
+                    
+            // 显示测向误差线 - 从侦察设备位置到实际辐射源位置
+            view->showDirectionErrorLines(errorAngle,
+                                         deviceLongitude, deviceLatitude, deviceAltitude,
+                                         sourceLongitude, sourceLatitude, sourceAltitude);
+        }
+        
         return G_SOURCE_REMOVE;
     }, self);
 }
@@ -735,4 +858,53 @@ bool SinglePlatformView::getSimulationResult(double& lon, double& lat, double& a
     az = m_lastAz;
     el = m_lastEl;
     return true;
+}
+
+// 从指定位置显示测向误差线
+void SinglePlatformView::showDirectionErrorLines(
+    double errorAngle, 
+    double deviceLongitude, double deviceLatitude, double deviceAltitude,
+    double targetLongitude, double targetLatitude, double targetAltitude) {
+    
+    if (!m_mapView) {
+        g_print("错误：地图视图为空，无法显示测向误差线\n");
+        return;
+    }
+    
+    g_print("显示测向误差线：设备位置(%.6f, %.6f, %.2f), 目标位置(%.6f, %.6f, %.2f), 误差角度=%.2f度\n",
+            deviceLongitude, deviceLatitude, deviceAltitude,
+            targetLongitude, targetLatitude, targetAltitude,
+            errorAngle);
+    
+    // 创建临时设备对象，使用指定的侦察设备位置
+    ReconnaissanceDevice tempDevice;
+    tempDevice.setDeviceName("侦察设备");
+    tempDevice.setLongitude(deviceLongitude);
+    tempDevice.setLatitude(deviceLatitude);
+    tempDevice.setAltitude(deviceAltitude);
+    
+    // 显示测向误差线，不显示误差角度文本
+    bool success = m_directionErrorLines.showDirectionErrorLines(
+        m_mapView,
+        tempDevice,
+        targetLongitude,
+        targetLatitude,
+        targetAltitude,
+        errorAngle,
+        "#FF0000",  // 红色
+        20000.0     // 20km
+    );
+    
+    if (!success) {
+        g_print("错误：显示测向误差线失败\n");
+    } else {
+        g_print("成功显示测向误差线\n");
+    }
+}
+
+// 清除测向误差线
+void SinglePlatformView::clearDirectionErrorLines() {
+    if (!m_mapView) return;
+    m_directionErrorLines.clearDirectionErrorLines(m_mapView);
+    g_print("已清除测向误差线\n");
 }

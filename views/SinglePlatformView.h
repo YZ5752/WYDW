@@ -7,6 +7,7 @@
 #include "../models/RadiationSourceModel.h"
 #include "components/MapView.h"
 #include "../models/TrajectorySimulator.h"
+#include "../utils/DirectionErrorLines.h"
 
 // 声明全局回调函数
 extern "C" {
@@ -94,6 +95,14 @@ public:
     
     // 获取仿真结果缓存
     bool getSimulationResult(double& lon, double& lat, double& alt, double& az, double& el);
+    
+    // 从指定位置显示测向误差线
+    void showDirectionErrorLines(double errorAngle, 
+                               double deviceLongitude, double deviceLatitude, double deviceAltitude,
+                               double targetLongitude, double targetLatitude, double targetAltitude);
+    
+    // 清除测向误差线
+    void clearDirectionErrorLines();
 
 private:
     GtkWidget* m_view;
@@ -130,4 +139,7 @@ private:
 
     double m_lastLon = 0, m_lastLat = 0, m_lastAlt = 0, m_lastAz = 0, m_lastEl = 0;
     bool m_hasResult = false;
+
+    // 测向误差线工具类
+    DirectionErrorLines m_directionErrorLines;
 }; 
