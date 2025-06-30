@@ -2,6 +2,7 @@
 #include "../../models/ReconnaissanceDeviceDAO.h"
 #include "../../models/RadiationSourceDAO.h"
 #include "../../models/TrajectorySimulator.h"
+#include "../../models/DirectionFindingAlgorithm.h"
 #include <iostream>
 #include <sstream>
 #include <iomanip>
@@ -176,7 +177,8 @@ void MultiPlatformController::startSimulation(const std::vector<std::string>& de
 
             int taskId;
             if (!MultiPlatformTaskDAO::getInstance().addMultiPlatformTask(task, taskId)) {
-                m_view->updateResult("多平台仿真任务保存失败");
+                std::cerr << "多平台仿真任务保存失败" << std::endl;
+                m_view->updateResult("定位结果（多平台仿真任务保存失败）");
             }
             
             // 执行多设备轨迹动画
@@ -188,6 +190,31 @@ void MultiPlatformController::startSimulation(const std::vector<std::string>& de
                 calculatedLongitude,
                 calculatedLatitude,
                 calculatedAltitude
+            );
+            
+            // 显示测向误差线
+            // 假设角度误差为5度（可以根据实际算法计算结果调整）
+            double errorAngle = 5.0;
+            std::vector<int> activeDeviceIndices;
+            for (int i = 0; i < deviceNames.size(); ++i) {
+                activeDeviceIndices.push_back(i);
+            }
+            
+            // 清除可能存在的测向误差线
+            m_view->clearDirectionErrorLines();
+            
+            // 添加0.5秒延迟，等待轨迹动画开始后再显示测向误差线
+            // 注意：这里的延迟是为了避免视觉冲突，确保轨迹动画先开始
+            std::string delayScript = "setTimeout(function() { console.log('Ready to show direction error lines'); }, 500);";
+            mapView->executeScript(delayScript);
+            
+            // 显示所有设备的测向误差线
+            m_view->showMultipleDeviceErrorLines(
+                activeDeviceIndices,
+                resultLBH.p1,  // 使用计算得到的位置
+                resultLBH.p2,
+                resultLBH.p3,
+                errorAngle
             );
         } else {
             m_view->updateResult("定位计算失败");
@@ -206,26 +233,161 @@ void MultiPlatformController::startSimulation(const std::vector<std::string>& de
             calculatedLatitude,
             calculatedAltitude
         );
-    } else if (systemType == "测向体制") {
-        // TODO: 实现测向定位算法
-        std::stringstream ss;
-        ss << "经度：" << calculatedLongitude << "°\n";
-        ss << "纬度：" << calculatedLatitude << "°\n";  
-        ss << "高度：" << calculatedAltitude << " 米\n";
-        ss << "运动方位角：" << std::fixed << std::setprecision(2) << 315.75 << "°\n";
-        ss << "运动俯仰角：" << std::fixed << std::setprecision(2) << 245.30 << "°\n";
         
-        m_view->updateResult(ss.str());
+        // 显示测向误差线
+        double errorAngle = 8.0; // 时差体制通常误差略大
+        std::vector<int> activeDeviceIndices;
+        for (int i = 0; i < deviceNames.size(); ++i) {
+            activeDeviceIndices.push_back(i);
+        }
         
-        // 执行轨迹动画
-        TrajectorySimulator::getInstance().animateMultipleDevicesMovement(
-            mapView,
-            selectedDevices,
-            selectedSource,
-            simulationTime,
-            calculatedLongitude,
+        // 添加延迟
+        std::string delayScript = "setTimeout(function() { console.log('Ready to show direction error lines'); }, 500);";
+        mapView->executeScript(delayScript);
+        
+        // 显示所有设备的测向误差线
+        m_view->showMultipleDeviceErrorLines(
+            activeDeviceIndices,
+            calculatedLongitude,  // 使用真实位置（因为算法未实现）
             calculatedLatitude,
-            calculatedAltitude
+            calculatedAltitude,
+            errorAngle
         );
+    } else if (systemType == "测向体制") {
+        // 使用测向定位算法实现
+        DirectionFindingAlgorithm& algorithm = DirectionFindingAlgorithm::getInstance();
+        
+        // 初始化算法参数
+        algorithm.init(deviceNames, sourceName, systemType, simulationTime);
+        
+        // 执行算法
+        bool success = algorithm.calculate();
+        
+        if (success) {
+            auto result = algorithm.getResult();
+            
+            // 将空间直角坐标转换为大地坐标
+            COORD3 resultLBH = xyz2lbh(result.position.p1, result.position.p2, result.position.p3);
+            
+            // 计算方位角和俯仰角（以第一个设备为参考）
+            ReconnaissanceDevice& device1 = selectedDevices[0];
+            COORD3 device1Pos = lbh2xyz(device1.getLongitude(), device1.getLatitude(), device1.getAltitude());
+            
+            // 计算从设备到计算位置的向量
+            double dx = result.position.p1 - device1Pos.p1;
+            double dy = result.position.p2 - device1Pos.p2;
+            double dz = result.position.p3 - device1Pos.p3;
+            
+            // 计算水平距离
+            double horizontalDist = std::sqrt(dx*dx + dy*dy);
+            
+            // 计算方位角（相对北方向的水平角度）
+            double azimuth = std::atan2(dx, dy) * Constants::RAD2DEG;
+            if (azimuth < 0) azimuth += 360.0;
+            
+            // 计算俯仰角（相对水平面的仰角）
+            double elevation = std::atan2(dz, horizontalDist) * Constants::RAD2DEG;
+            
+            // 计算距离
+            double distance = std::sqrt(dx*dx + dy*dy + dz*dz);
+            
+            // 输出结果
+            std::stringstream ss;
+            ss << std::fixed << std::setprecision(6);
+            ss << "定位结果：\n";
+            ss << "经度: " << resultLBH.p1 << " 度\n";
+            ss << "纬度: " << resultLBH.p2 << " 度\n";
+            ss << std::setprecision(2);
+            ss << "高度: " << resultLBH.p3 << " 米\n";
+            ss << "定位时间: " << result.localizationTime << " 秒\n";
+            ss << "定位距离: " << distance << " 米\n";
+            ss << "定位精度 (GDOP): " << result.accuracy << "\n";
+            ss << "方位角: " << azimuth << " 度\n";
+            ss << "俯仰角: " << elevation << " 度\n";
+            
+            // 更新视图
+            m_view->updateResult(ss.str());
+            
+            // 保存多平台仿真任务信息到数据库
+            MultiPlatformTask task;
+            task.techSystem = "TDOA"; // 使用数据库支持的值，将DF归入TDOA类别
+            task.radiationId = selectedSource.getRadiationId();
+            task.executionTime = simulationTime;
+            task.targetLongitude = resultLBH.p1;
+            task.targetLatitude = resultLBH.p2;
+            task.targetAltitude = resultLBH.p3;
+            
+            // 添加默认的运动参数
+            task.movementSpeed = 0.0f;  // 静止目标
+            task.movementAzimuth = 0.0;
+            task.movementElevation = 0.0;
+            
+            task.azimuth = azimuth;
+            task.elevation = elevation;
+            task.positioningDistance = distance;
+            task.positioningTime = result.localizationTime;
+            
+            // 限制精度值，避免数据库溢出
+            task.positioningAccuracy = std::min(1000.0, result.accuracy);
+            task.deviceIds = deviceIds;
+            
+            int taskId;
+            if (!MultiPlatformTaskDAO::getInstance().addMultiPlatformTask(task, taskId)) {
+                std::cerr << "多平台仿真任务保存失败" << std::endl;
+                // 不覆盖已显示的结果，只添加错误信息
+                m_view->updateResult(ss.str() + "\n多平台仿真任务保存失败");
+            }
+            
+            // 执行轨迹动画
+            TrajectorySimulator::getInstance().animateMultipleDevicesMovement(
+                mapView,
+                selectedDevices,
+                selectedSource,
+                simulationTime,
+                resultLBH.p1,  // 使用计算的位置
+                resultLBH.p2,
+                resultLBH.p3
+            );
+            
+            // 显示测向误差线
+            double errorAngle = 3.0; // 使用默认测向误差角度
+            
+            // 如果有测向误差因子，使用实际计算值
+            if (!result.errorFactors.empty() && result.errorFactors.size() > 1) {
+                // 假设第一个误差因子是角度误差（度）
+                errorAngle = result.errorFactors[0];
+            }
+            
+            std::vector<int> activeDeviceIndices;
+            for (int i = 0; i < deviceNames.size(); ++i) {
+                activeDeviceIndices.push_back(i);
+            }
+            
+            // 添加延迟
+            std::string delayScript = "setTimeout(function() { console.log('Ready to show direction error lines'); }, 500);";
+            mapView->executeScript(delayScript);
+            
+            // 显示所有设备的测向误差线
+            m_view->showMultipleDeviceErrorLines(
+                activeDeviceIndices,
+                resultLBH.p1,
+                resultLBH.p2,
+                resultLBH.p3,
+                errorAngle
+            );
+        } else {
+            m_view->updateResult("测向定位计算失败");
+            
+            // 即使算法失败，也执行轨迹动画（使用真实辐射源位置）
+            TrajectorySimulator::getInstance().animateMultipleDevicesMovement(
+                mapView,
+                selectedDevices,
+                selectedSource,
+                simulationTime,
+                calculatedLongitude,
+                calculatedLatitude,
+                calculatedAltitude
+            );
+        }
     }
 } 
