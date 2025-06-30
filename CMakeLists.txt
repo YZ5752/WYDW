@@ -15,9 +15,16 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(MYSQL_INCLUDE_DIR /usr/include/mysql)
 set(MYSQL_LIBRARIES /usr/lib/x86_64-linux-gnu/libmysqlclient.so)
 
+# 查找Eigen库 - 用于测向定位算法的矩阵计算
+find_package(Eigen3 REQUIRED)
+if(NOT EIGEN3_FOUND)
+    message(FATAL_ERROR "Eigen3 not found. Please install libeigen3-dev")
+endif()
+
 # 打印路径（调试用）
 message(STATUS "MySQL Include Dir: ${MYSQL_INCLUDE_DIR}")
 message(STATUS "MySQL Libraries: ${MYSQL_LIBRARIES}")
+message(STATUS "Eigen3 Include Dir: ${EIGEN3_INCLUDE_DIR}")
 
 # 查找GTK3
 find_package(PkgConfig REQUIRED)
@@ -37,6 +44,7 @@ include_directories(
     ${CMAKE_CURRENT_SOURCE_DIR}  # 根目录，可以访问所有MVC目录
     ${CMAKE_CURRENT_SOURCE_DIR}/models
     ${MYSQL_INCLUDE_DIR}  # 添加 MySQL 头文件路径
+    ${EIGEN3_INCLUDE_DIR} # 添加 Eigen3 头文件路径
 )
 
 # 链接目录

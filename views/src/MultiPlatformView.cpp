@@ -323,6 +323,9 @@ void MultiPlatformView::onStartSimulationCallback(GtkWidget* widget, gpointer da
 
 // 开始仿真处理
 void MultiPlatformView::onStartSimulation() {
+    // 清除之前的测向误差线
+    clearDirectionErrorLines();
+    
     // 先检查雷达侦察模型是否符合要求
     if (!checkRadarModels()) {
         return; // 如果检查不通过，直接返回
@@ -386,6 +389,19 @@ void MultiPlatformView::onStartSimulation() {
         if (timeStr && *timeStr) {
             try {
                 simulationTime = std::stod(timeStr);
+                // 检查仿真时间是否合理
+                if (simulationTime < 1.0 || simulationTime > 3600.0) {
+                    GtkWidget* dialog = gtk_message_dialog_new(
+                        GTK_WINDOW(gtk_widget_get_toplevel(m_view)),
+                        GTK_DIALOG_MODAL,
+                        GTK_MESSAGE_WARNING,
+                        GTK_BUTTONS_OK,
+                        "仿真时间必须在1到3600秒之间，使用默认值20秒"
+                    );
+                    gtk_dialog_run(GTK_DIALOG(dialog));
+                    gtk_widget_destroy(dialog);
+                    simulationTime = 20.0;
+                }
             } catch (const std::exception& e) {
                 GtkWidget* dialog = gtk_message_dialog_new(
                     GTK_WINDOW(gtk_widget_get_toplevel(m_view)),
@@ -479,4 +495,99 @@ void MultiPlatformView::updateResult(const std::string& result) {
     if (m_resultLabel) {
         gtk_label_set_markup(GTK_LABEL(m_resultLabel), result.c_str());
     }
+}
+
+// 显示测向误差线 - 从设备到目标位置，带误差角度
+void MultiPlatformView::showDirectionErrorLines(int deviceIndex, 
+                                             double targetLongitude, double targetLatitude, double targetAltitude,
+                                             double errorAngle,
+                                             const std::string& lineColor) {
+    if (!m_mapView || deviceIndex < 0 || deviceIndex >= 4) {
+        g_print("错误：无效的设备索引 %d 或地图视图为空\n", deviceIndex);
+        return;
+    }
+
+    // 获取选中的设备
+    gchar* deviceName = gtk_combo_box_text_get_active_text(GTK_COMBO_BOX_TEXT(m_radarCombo[deviceIndex]));
+    if (!deviceName) {
+        g_print("错误：设备 %d 未选择\n", deviceIndex);
+        return;
+    }
+    
+    std::string selDeviceName = deviceName;
+    g_free(deviceName);
+    
+    // 查找设备
+    ReconnaissanceDevice device;
+    bool deviceFound = false;
+    
+    for (const auto& dev : m_devices) {
+        if (dev.getDeviceName() == selDeviceName) {
+            device = dev;
+            deviceFound = true;
+            break;
+        }
+    }
+    
+    if (!deviceFound) {
+        g_print("错误：未找到设备 %s\n", selDeviceName.c_str());
+        return;
+    }
+    
+    g_print("显示设备 %s 的测向误差线，目标位置: (%.6f, %.6f, %.2f)，误差角度: %.2f°\n",
+            selDeviceName.c_str(), targetLongitude, targetLatitude, targetAltitude, errorAngle);
+    
+    // 显示测向误差线
+    bool success = m_directionErrorLines.showDirectionErrorLines(
+        m_mapView,
+        device,
+        targetLongitude,
+        targetLatitude,
+        targetAltitude,
+        errorAngle,
+        lineColor,
+        20000.0 // 20km长度
+    );
+    
+    if (!success) {
+        g_print("错误：显示测向误差线失败\n");
+    } else {
+        g_print("成功显示设备 %s 的测向误差线\n", selDeviceName.c_str());
+    }
+}
+
+// 显示多设备测向误差线 - 从所有设备到目标位置
+void MultiPlatformView::showMultipleDeviceErrorLines(const std::vector<int>& deviceIndices,
+                                                  double targetLongitude, double targetLatitude, double targetAltitude,
+                                                  double errorAngle) {
+    if (!m_mapView || deviceIndices.empty()) {
+        g_print("错误：设备索引为空或地图视图为空\n");
+        return;
+    }
+    
+    // 清除之前的误差线
+    clearDirectionErrorLines();
+    
+    // 为不同设备使用不同颜色
+    const std::string colors[] = {"#FF0000", "#00FF00", "#0000FF", "#FF00FF"};
+    
+    // 为每个设备显示测向误差线
+    for (size_t i = 0; i < deviceIndices.size(); ++i) {
+        int deviceIndex = deviceIndices[i];
+        if (deviceIndex >= 0 && deviceIndex < 4) {
+            showDirectionErrorLines(
+                deviceIndex,
+                targetLongitude, targetLatitude, targetAltitude,
+                errorAngle,
+                colors[i % 4] // 循环使用颜色
+            );
+        }
+    }
+}
+
+// 清除测向误差线
+void MultiPlatformView::clearDirectionErrorLines() {
+    if (!m_mapView) return;
+    m_directionErrorLines.clearDirectionErrorLines(m_mapView);
+    g_print("已清除测向误差线\n");
 } 

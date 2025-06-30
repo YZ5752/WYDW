@@ -6,6 +6,7 @@
 #include "../models/ReconnaissanceDeviceModel.h"
 #include "../models/RadiationSourceModel.h"
 #include "components/MapView.h"
+#include "../utils/DirectionErrorLines.h"
 
 class MultiPlatformView {
 public:
@@ -23,6 +24,20 @@ public:
     
     // 获取地图视图
     MapView* getMapView() const { return m_mapView; }
+    
+    // 显示测向误差线 - 从设备到目标位置，带误差角度
+    void showDirectionErrorLines(int deviceIndex, 
+                               double targetLongitude, double targetLatitude, double targetAltitude,
+                               double errorAngle,
+                               const std::string& lineColor = "#FF0000");
+    
+    // 显示多设备测向误差线 - 从所有设备到目标位置
+    void showMultipleDeviceErrorLines(const std::vector<int>& deviceIndices,
+                                    double targetLongitude, double targetLatitude, double targetAltitude,
+                                    double errorAngle);
+    
+    // 清除测向误差线
+    void clearDirectionErrorLines();
 
 private:
     GtkWidget* m_view;//主视图
@@ -38,6 +53,10 @@ private:
     MapView* m_mapView = nullptr; // 地图对象
     int m_radarMarkers[4] = {-1,-1,-1,-1}; // 侦察设备标记点ID
     int m_sourceMarker = -1; // 辐射源标记点ID
+    
+    // 测向误差线工具类
+    DirectionErrorLines m_directionErrorLines;
+    
     void updateDeviceCombos(); // 刷新设备下拉框内容
     void updateSourceCombo();  // 刷新辐射源下拉框内容
     static void onTechSystemChangedCallback(GtkWidget* widget, gpointer data); // 技术体制切换回调
