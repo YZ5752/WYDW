@@ -38,6 +38,10 @@ public:
     
     // 清除测向误差线
     void clearDirectionErrorLines();
+    
+    // 获取测向误差参数
+    double getDFMeanError(int deviceIndex) const;
+    double getDFStdDev(int deviceIndex) const;
 
 private:
     GtkWidget* m_view;//主视图
@@ -48,6 +52,12 @@ private:
     GtkWidget* m_resultLabel;//仿真结果
     GtkWidget* m_errorLabel;//误差结果
     GtkWidget* m_timeEntry;    // 仿真时间输入框
+    
+    // 测向定位误差参数
+    GtkWidget* m_dfParamsFrame;    // 测向误差参数框架
+    GtkWidget* m_dfMeanError[2];   // 均值误差输入框
+    GtkWidget* m_dfStdDev[2];      // 标准差输入框
+    
     std::vector<ReconnaissanceDevice> m_devices; // 设备数据
     std::vector<RadiationSource> m_sources;      // 辐射源数据
     MapView* m_mapView = nullptr; // 地图对象
@@ -73,4 +83,10 @@ private:
     static void onStartSimulationCallback(GtkWidget* widget, gpointer data);
     void onStartSimulation(); // 开始仿真处理
     bool checkRadarModels(); // 检查雷达侦察模型是否有效
+    
+    // 创建测向误差参数UI
+    void createDFParamsUI(GtkWidget* parent);
+    
+    // 显示/隐藏测向误差参数UI
+    void toggleDFParamsUI(bool show);
 }; 

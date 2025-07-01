@@ -9,6 +9,12 @@
 #include "ReconnaissanceDeviceDAO.h"
 #include "RadiationSourceDAO.h"
 
+    // double esm1MeanError = 3.0;
+    // double esm1StdDev = 1.0;
+    // double esm2MeanError = 3.0;
+    // double esm2StdDev = 1.0;
+    double error = 0.0;
+
 DirectionFinding& DirectionFinding::getInstance() {
     static DirectionFinding instance;
     return instance;
@@ -22,6 +28,8 @@ void DirectionFinding::init(const std::vector<std::string>& deviceNames, const s
     m_sourceName = sourceName;
     m_simulationTime = simulationTime;
     m_devices.clear();
+    m_directionLines.clear();
+    m_deviceErrors.clear();
     m_isInitialized = false;
     m_result = Result{};
 }
@@ -67,28 +75,46 @@ std::vector<int> DirectionFinding::getDeviceIds() const {
 
 int DirectionFinding::getSourceId() const { return m_source.getRadiationId(); }
 
-bool DirectionFinding::calculate() {
+// 移除无参数的calculate方法，只保留带参数的版本
+bool DirectionFinding::calculate(double dev1MeanError, double dev1StdDev, 
+                             double dev2MeanError, double dev2StdDev) {
     if (!loadDeviceInfo() || !loadSourceInfo()) return false;
+    
+    // 清除之前的测向线信息
+    m_directionLines.clear();
+    m_deviceErrors.clear();
+    
     // 只用前两个设备
     const auto& dev1 = m_devices[0];
     const auto& dev2 = m_devices[1];
-    double esm1MeanError = 3.0;
-    double esm1StdDev = 1.0;
-    double esm2MeanError = 3.0;
-    double esm2StdDev = 1.0;
+
+    // 存储误差参数
+    m_deviceErrors.push_back(std::make_tuple(dev1MeanError, dev1StdDev));
+    m_deviceErrors.push_back(std::make_tuple(dev2MeanError, dev2StdDev));
+    
     double error = 0.0;
     // COORD3->Vector3
     COORD3 esm1_coord = lbh2xyz(dev1.getLongitude(), dev1.getLatitude(), dev1.getAltitude());
     COORD3 esm2_coord = lbh2xyz(dev2.getLongitude(), dev2.getLatitude(), dev2.getAltitude());
     COORD3 target_coord = lbh2xyz(m_source.getLongitude(), m_source.getLatitude(), m_source.getAltitude());
+    
     Vector3 esm1(esm1_coord.p1, esm1_coord.p2, esm1_coord.p3);
     Vector3 esm2(esm2_coord.p1, esm2_coord.p2, esm2_coord.p3);
     Vector3 target(target_coord.p1, target_coord.p2, target_coord.p3);
+    
     double commonHeight = esm1.z;
     esm2.z = commonHeight;
     target.z = commonHeight;
-    Vector3 dir1 = calculateDirectionWithError(esm1, target, esm1MeanError, esm1StdDev);
-    Vector3 dir2 = calculateDirectionWithError(esm2, target, esm2MeanError, esm2StdDev);
+    
+    Vector3 dir1 = calculateDirectionWithError(esm1, target, dev1MeanError, dev1StdDev);
+    Vector3 dir2 = calculateDirectionWithError(esm2, target, dev2MeanError, dev2StdDev);
+    
+    // 存储测向线信息
+    DirectionLine line1 = {0, esm1, dir1, dev1MeanError, dev1StdDev};
+    DirectionLine line2 = {1, esm2, dir2, dev2MeanError, dev2StdDev};
+    m_directionLines.push_back(line1);
+    m_directionLines.push_back(line2);
+    
     Vector3 estimatedPosition = intersectDirections2D(esm1, dir1, esm2, dir2);
     error = std::sqrt((estimatedPosition.x - target.x) * (estimatedPosition.x - target.x) +
                       (estimatedPosition.y - target.y) * (estimatedPosition.y - target.y));
@@ -99,7 +125,20 @@ bool DirectionFinding::calculate() {
     return true;
 }
 
-DirectionFinding::Result DirectionFinding::getResult() const { return m_result; }
+DirectionFinding::Result DirectionFinding::getResult() const { 
+    return m_result; 
+}
+
+std::vector<DirectionFinding::DirectionLine> DirectionFinding::getDirectionLines() const {
+    return m_directionLines;
+}
+
+std::tuple<double, double> DirectionFinding::getErrorAngles(int deviceIndex) const {
+    if (deviceIndex >= 0 && deviceIndex < m_deviceErrors.size()) {
+        return m_deviceErrors[deviceIndex];
+    }
+    return std::make_tuple(0.0, 0.0);
+}
 
 // 向量相关函数实现
 Vector3 calculateDirectionWithError(
