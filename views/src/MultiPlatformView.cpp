@@ -9,10 +9,16 @@
 #include <iomanip>
 
 // 实现MultiPlatformView类
-MultiPlatformView::MultiPlatformView() : m_view(nullptr), m_algoCombo(nullptr),  m_resultLabel(nullptr), m_errorLabel(nullptr), m_mapView(nullptr), m_sourceMarker(-1), m_timeEntry(nullptr) {
+MultiPlatformView::MultiPlatformView() : m_view(nullptr), m_algoCombo(nullptr), 
+    m_resultLabel(nullptr), m_errorLabel(nullptr), m_mapView(nullptr), 
+    m_sourceMarker(-1), m_timeEntry(nullptr), m_dfParamsFrame(nullptr) {
     // 初始化数组
     for (int i = 0; i < 4; ++i) {
         m_radarMarkers[i] = -1;
+    }
+    for (int i = 0; i < 2; ++i) {
+        m_dfMeanError[i] = nullptr;
+        m_dfStdDev[i] = nullptr;
     }
 }
 
@@ -107,6 +113,16 @@ GtkWidget* MultiPlatformView::createView() {
     // 保存时间输入框引用
     m_timeEntry = timeEntry;
     
+    // 创建测向误差参数UI - 将这部分移动到这里，在开始按钮之前
+    createDFParamsUI(rightBox);
+    
+    // 立即隐藏测向参数UI
+    if (m_dfParamsFrame) {
+        gtk_widget_set_no_show_all(m_dfParamsFrame, TRUE);
+        gtk_widget_hide(m_dfParamsFrame);
+        g_print("创建后立即隐藏测向参数UI\n");
+    }
+    
     // 开始按钮
     GtkWidget* startButton = gtk_button_new_with_label("开始");
     gtk_widget_set_size_request(startButton, -1, 40);
@@ -159,7 +175,7 @@ GtkWidget* MultiPlatformView::createView() {
     
     gtk_box_pack_start(GTK_BOX(resultBox), m_resultLabel, TRUE, TRUE, 0);
     
-    // 默认只显示3个侦察设备下拉框
+    // 默认只显示3个侦察设备下拉框，并隐藏测向参数
     for (int i = 0; i < 4; ++i) {
         gtk_widget_set_visible(m_radarFrame[i], i < 3);
     }
@@ -196,16 +212,29 @@ void MultiPlatformView::onTechSystemChanged() {
         for (int i = 0; i < 4; ++i) {
             gtk_widget_set_visible(m_radarFrame[i], true);
         }
+        // 隐藏测向参数
+        toggleDFParamsUI(false);
     } else if (idx == 1) {
         // 频差体制：显示3个侦察设备
         for (int i = 0; i < 4; ++i) {
             gtk_widget_set_visible(m_radarFrame[i], i < 3);
         }
-    } else {
+        // 隐藏测向参数
+        toggleDFParamsUI(false);
+    } else if (idx == 2) {
         // 测向体制：显示2个侦察设备
         for (int i = 0; i < 4; ++i) {
             gtk_widget_set_visible(m_radarFrame[i], i < 2);
         }
+        
+        // 切换到测向体制时，清除当前的选择，以确保仅显示固定设备
+        for (int i = 0; i < 2; ++i) {
+            gtk_combo_box_set_active(GTK_COMBO_BOX(m_radarCombo[i]), -1);
+        }
+        gtk_combo_box_set_active(GTK_COMBO_BOX(m_sourceCombo), -1);
+        
+        // 显示测向参数
+        toggleDFParamsUI(true);
     }
     updateDeviceCombos();
     updateSourceCombo();
@@ -221,8 +250,11 @@ void MultiPlatformView::updateDeviceCombos() {
             if (idx == 0 && !dev.getIsStationary()) continue;
             // 频差体制：1-3号可选全部，4号不显示
             if (idx == 1 && i >= 3) continue;
-            // 测向体制：1-2号可选全部，3-4号不显示
-            if (idx == 2 && i >= 2) continue;
+            // 测向体制：1-2号只能选固定设备，3-4号不显示
+            if (idx == 2) {
+                if (i >= 2) continue;
+                if (!dev.getIsStationary()) continue;
+            }
             gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(m_radarCombo[i]), dev.getDeviceName().c_str());
         }
         // 默认选中第i个（如有）
@@ -240,7 +272,9 @@ void MultiPlatformView::updateSourceCombo() {
     for (const auto& src : m_sources) {
         // 时差体制：只能选固定源
         if (idx == 0 && !src.getIsStationary()) continue;
-        // 频差体制和测向体制：全部可选
+        // 频差体制：全部可选
+        // 测向体制：只能选固定源
+        if (idx == 2 && !src.getIsStationary()) continue;
         gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(m_sourceCombo), src.getRadiationName().c_str());
     }
     if (gtk_combo_box_get_active(GTK_COMBO_BOX(m_sourceCombo)) < 0 && gtk_combo_box_get_active(GTK_COMBO_BOX(m_sourceCombo)) != 0) {
@@ -590,4 +624,106 @@ void MultiPlatformView::clearDirectionErrorLines() {
     if (!m_mapView) return;
     m_directionErrorLines.clearDirectionErrorLines(m_mapView);
     g_print("已清除测向误差线\n");
+}
+
+// 创建测向误差参数UI
+void MultiPlatformView::createDFParamsUI(GtkWidget* parent) {
+    // 创建框架
+    m_dfParamsFrame = gtk_frame_new("测向误差参数");
+    gtk_box_pack_start(GTK_BOX(parent), m_dfParamsFrame, FALSE, FALSE, 0);
+    
+    // 创建网格布局
+    GtkWidget* grid = gtk_grid_new();
+    gtk_grid_set_row_spacing(GTK_GRID(grid), 10);
+    gtk_grid_set_column_spacing(GTK_GRID(grid), 10);
+    gtk_container_set_border_width(GTK_CONTAINER(grid), 10);
+    gtk_container_add(GTK_CONTAINER(m_dfParamsFrame), grid);
+    
+    // 添加标题行
+    GtkWidget* deviceLabel = gtk_label_new("侦察设备");
+    GtkWidget* meanErrorLabel = gtk_label_new("均值误差");
+    GtkWidget* stdDevLabel = gtk_label_new("标准差");
+    
+    // 设置标签对齐方式
+    gtk_label_set_xalign(GTK_LABEL(deviceLabel), 0.0);  // 左对齐
+    gtk_label_set_xalign(GTK_LABEL(meanErrorLabel), 0.5);  // 居中对齐
+    gtk_label_set_xalign(GTK_LABEL(stdDevLabel), 0.5);  // 居中对齐
+    
+    gtk_grid_attach(GTK_GRID(grid), deviceLabel, 0, 0, 1, 1);
+    gtk_grid_attach(GTK_GRID(grid), meanErrorLabel, 1, 0, 1, 1);
+    gtk_grid_attach(GTK_GRID(grid), stdDevLabel, 2, 0, 1, 1);
+    
+    // 为两个设备添加输入行
+    for (int i = 0; i < 2; i++) {
+        char label[32];
+        snprintf(label, sizeof(label), "模型%d", i+1);
+        GtkWidget* deviceNameLabel = gtk_label_new(label);
+        gtk_label_set_xalign(GTK_LABEL(deviceNameLabel), 0.0);  // 左对齐
+        
+        // 创建均值误差输入框
+        m_dfMeanError[i] = gtk_entry_new();
+        gtk_entry_set_width_chars(GTK_ENTRY(m_dfMeanError[i]), 8);
+        
+        // 创建标准差输入框
+        m_dfStdDev[i] = gtk_entry_new();
+        gtk_entry_set_width_chars(GTK_ENTRY(m_dfStdDev[i]), 8);
+        
+        // 将控件添加到网格
+        gtk_grid_attach(GTK_GRID(grid), deviceNameLabel, 0, i+1, 1, 1);
+        gtk_grid_attach(GTK_GRID(grid), m_dfMeanError[i], 1, i+1, 1, 1);
+        gtk_grid_attach(GTK_GRID(grid), m_dfStdDev[i], 2, i+1, 1, 1);
+    }
+    
+    // 使用gtk_widget_set_no_show_all确保参数框默认不显示
+    gtk_widget_set_no_show_all(m_dfParamsFrame, TRUE);
+    gtk_widget_hide(m_dfParamsFrame);
+}
+
+// 显示/隐藏测向误差参数UI
+void MultiPlatformView::toggleDFParamsUI(bool show) {
+    if (m_dfParamsFrame) {
+        if (show) {
+            // 当选择测向体制时，设置默认值并显示
+            if (m_dfMeanError[0]) gtk_entry_set_text(GTK_ENTRY(m_dfMeanError[0]), "0");
+            if (m_dfMeanError[1]) gtk_entry_set_text(GTK_ENTRY(m_dfMeanError[1]), "0");
+            if (m_dfStdDev[0]) gtk_entry_set_text(GTK_ENTRY(m_dfStdDev[0]), "0");
+            if (m_dfStdDev[1]) gtk_entry_set_text(GTK_ENTRY(m_dfStdDev[1]), "0");
+            
+            gtk_widget_set_no_show_all(m_dfParamsFrame, FALSE);
+            gtk_widget_show_all(m_dfParamsFrame);
+            g_print("显示测向参数UI，并设置默认值\n");
+        } else {
+            // 隐藏参数框
+            gtk_widget_hide(m_dfParamsFrame);
+            gtk_widget_set_no_show_all(m_dfParamsFrame, TRUE);
+            g_print("隐藏测向参数UI\n");
+        }
+    }
+}
+
+// 获取测向误差参数
+double MultiPlatformView::getDFMeanError(int deviceIndex) const {
+    if (deviceIndex >= 0 && deviceIndex < 2 && m_dfMeanError[deviceIndex]) {
+        const char* text = gtk_entry_get_text(GTK_ENTRY(m_dfMeanError[deviceIndex]));
+        try {
+            return std::stod(text);
+        } catch (const std::exception& e) {
+            // 在异常情况下返回0
+            return 0.0;
+        }
+    }
+    return 0.0;
+}
+
+double MultiPlatformView::getDFStdDev(int deviceIndex) const {
+    if (deviceIndex >= 0 && deviceIndex < 2 && m_dfStdDev[deviceIndex]) {
+        const char* text = gtk_entry_get_text(GTK_ENTRY(m_dfStdDev[deviceIndex]));
+        try {
+            return std::stod(text);
+        } catch (const std::exception& e) {
+            // 在异常情况下返回0
+            return 0.0;
+        }
+    }
+    return 0.0;
 } 

@@ -45,6 +45,37 @@ public:
         const std::string& lineColor = "#FF0000",
         double lineLength = 10000.0
     );
+    
+    /**
+     * @brief 显示测向模拟的误差线
+     * 
+     * 该方法根据均值误差和标准差绘制3条线:
+     * 1. 中心线(方位角 + 均值误差)
+     * 2. 左边界线(中心线 - 标准差)
+     * 3. 右边界线(中心线 + 标准差)
+     * 
+     * @param mapView 地图视图对象
+     * @param device 侦察设备对象
+     * @param targetLongitude 目标辐射源经度
+     * @param targetLatitude 目标辐射源纬度
+     * @param targetAltitude 目标辐射源高度
+     * @param meanErrorDeg 均值误差(度)
+     * @param stdDevDeg 标准差(度)
+     * @param lineColor 线条颜色
+     * @param lineLength 线条长度(米)
+     * @return 是否成功显示
+     */
+    bool showDirectionSimulationLines(
+        MapView* mapView,
+        const ReconnaissanceDevice& device,
+        double targetLongitude,
+        double targetLatitude,
+        double targetAltitude,
+        double meanErrorDeg,
+        double stdDevDeg,
+        const std::string& lineColor = "#FF0000",
+        double lineLength = 20000.0
+    );
 
     /**
      * @brief 清除测向误差线

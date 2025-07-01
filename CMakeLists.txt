@@ -44,7 +44,6 @@ include_directories(
     ${CMAKE_CURRENT_SOURCE_DIR}  # 根目录，可以访问所有MVC目录
     ${CMAKE_CURRENT_SOURCE_DIR}/models
     ${MYSQL_INCLUDE_DIR}  # 添加 MySQL 头文件路径
-    ${EIGEN3_INCLUDE_DIR} # 添加 Eigen3 头文件路径
 )
 
 # 链接目录
