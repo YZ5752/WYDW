@@ -87,6 +87,8 @@ set(UTILS_SOURCES
     "${CMAKE_CURRENT_SOURCE_DIR}/utils/SNRValidator.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/utils/AngleValidator.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/utils/DirectionErrorLines.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/utils/ErrorCircle.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/utils/ErrorCircleDisplay.cpp"
 )
 
 # 检查文件存在

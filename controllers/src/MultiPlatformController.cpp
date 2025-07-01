@@ -3,6 +3,8 @@
 #include "../../models/RadiationSourceDAO.h"
 #include "../../models/TrajectorySimulator.h"
 #include "../../models/DirectionFindingAlgorithm.h"
+#include "../../utils/ErrorCircle.h"
+#include "../../utils/ErrorCircleDisplay.h"
 #include <iostream>
 #include <sstream>
 #include <iomanip>
@@ -349,6 +351,22 @@ void MultiPlatformController::startSimulation(const std::vector<std::string>& de
                 resultLBH.p3
             );
             
+            // 误差圆计算与显示
+            DFResult dfResult = calculateDFErrorCircle(
+                deviceNames,
+                sourceName,
+                3.0, 2.0, // 可根据实际需求调整误差均值和标准差
+                3.0, 1.0,
+                0//随机种子,0表示系统当前时间      
+            );
+            std::cout << "误差点数量: " << dfResult.estimatedPoints.size() << ", 误差圆半径: " << dfResult.cepRadius << std::endl;
+            showErrorPointsOnMap(mapView, dfResult.estimatedPoints);
+            // 圆心用定位结果的空间直角坐标
+            showErrorCircleOnMap(mapView, resultLBH, dfResult.cepRadius);
+
+
+
+
             // 显示测向误差线
             double errorAngle = 3.0; // 使用默认测向误差角度
             
