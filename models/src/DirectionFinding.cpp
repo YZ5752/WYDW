@@ -6,12 +6,17 @@
 #include <algorithm>
 #include <numeric>
 #include <string>
+#include "ReconnaissanceDeviceDAO.h"
+#include "RadiationSourceDAO.h"
 
-// 构造与析构
+DirectionFinding& DirectionFinding::getInstance() {
+    static DirectionFinding instance;
+    return instance;
+}
+
 DirectionFinding::DirectionFinding() : m_isInitialized(false), m_simulationTime(0) {}
 DirectionFinding::~DirectionFinding() = default;
 
-// 初始化
 void DirectionFinding::init(const std::vector<std::string>& deviceNames, const std::string& sourceName, double simulationTime) {
     m_deviceNames = deviceNames;
     m_sourceName = sourceName;
@@ -20,7 +25,7 @@ void DirectionFinding::init(const std::vector<std::string>& deviceNames, const s
     m_isInitialized = false;
     m_result = Result{};
 }
-// 加载侦察设备信息
+
 bool DirectionFinding::loadDeviceInfo() {
     m_devices.clear();
     ReconnaissanceDeviceDAO& deviceDAO = ReconnaissanceDeviceDAO::getInstance();
@@ -38,7 +43,7 @@ bool DirectionFinding::loadDeviceInfo() {
     }
     return m_devices.size() >= 2;
 }
-// 加载辐射源信息
+
 bool DirectionFinding::loadSourceInfo() {
     RadiationSourceDAO& sourceDAO = RadiationSourceDAO::getInstance();
     auto allSources = sourceDAO.getAllRadiationSources();
@@ -53,48 +58,47 @@ bool DirectionFinding::loadSourceInfo() {
         return false;
     }
 }
-// 获取设备和辐射源ID
+
 std::vector<int> DirectionFinding::getDeviceIds() const {
     std::vector<int> ids;
     for (const auto& d : m_devices) ids.push_back(d.getDeviceId());
     return ids;
 }
+
 int DirectionFinding::getSourceId() const { return m_source.getRadiationId(); }
-// 主定位计算
+
 bool DirectionFinding::calculate() {
     if (!loadDeviceInfo() || !loadSourceInfo()) return false;
     // 只用前两个设备
     const auto& dev1 = m_devices[0];
     const auto& dev2 = m_devices[1];
-    // 可根据设备参数调整误差
     double esm1MeanError = 3.0;
     double esm1StdDev = 1.0;
     double esm2MeanError = 3.0;
     double esm2StdDev = 1.0;
     double error = 0.0;
-    // 计算
-    Vector3 esm1 = lbh2xyz(dev1.getLongitude(), dev1.getLatitude(), dev1.getAltitude());
-    Vector3 esm2 = lbh2xyz(dev2.getLongitude(), dev2.getLatitude(), dev2.getAltitude());
-    Vector3 target = lbh2xyz(m_source.getLongitude(), m_source.getLatitude(), m_source.getAltitude());
-    // 将所有设备的高度设置为相同值
+    // COORD3->Vector3
+    COORD3 esm1_coord = lbh2xyz(dev1.getLongitude(), dev1.getLatitude(), dev1.getAltitude());
+    COORD3 esm2_coord = lbh2xyz(dev2.getLongitude(), dev2.getLatitude(), dev2.getAltitude());
+    COORD3 target_coord = lbh2xyz(m_source.getLongitude(), m_source.getLatitude(), m_source.getAltitude());
+    Vector3 esm1(esm1_coord.p1, esm1_coord.p2, esm1_coord.p3);
+    Vector3 esm2(esm2_coord.p1, esm2_coord.p2, esm2_coord.p3);
+    Vector3 target(target_coord.p1, target_coord.p2, target_coord.p3);
     double commonHeight = esm1.z;
     esm2.z = commonHeight;
     target.z = commonHeight;
-    // 计算带误差的方向向量
     Vector3 dir1 = calculateDirectionWithError(esm1, target, esm1MeanError, esm1StdDev);
     Vector3 dir2 = calculateDirectionWithError(esm2, target, esm2MeanError, esm2StdDev);
-    // 计算两条方向线的交点
     Vector3 estimatedPosition = intersectDirections2D(esm1, dir1, esm2, dir2);
     error = std::sqrt((estimatedPosition.x - target.x) * (estimatedPosition.x - target.x) +
                       (estimatedPosition.y - target.y) * (estimatedPosition.y - target.y));
-    // 转换为大地坐标
     auto lbh = xyz2lbh(estimatedPosition.x, estimatedPosition.y, estimatedPosition.z);
-    m_result.position = {lbh.p1, lbh.p2, lbh.p3}; // p1=经度, p2=纬度, p3=高度
+    m_result.position = {lbh.p1, lbh.p2, lbh.p3};
     m_result.error = error;
     m_isInitialized = true;
     return true;
 }
-// 获取定位结果
+
 DirectionFinding::Result DirectionFinding::getResult() const { return m_result; }
 
 // 向量相关函数实现

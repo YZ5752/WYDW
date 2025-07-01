@@ -2,6 +2,8 @@
 
 #include "ReconnaissanceDeviceModel.h"
 #include "RadiationSourceModel.h"
+#include "ReconnaissanceDeviceDAO.h"
+#include "RadiationSourceDAO.h"
 #include "../utils/CoordinateTransform.h"
 #include "../utils/Vector3.h"
 #include <vector>
@@ -14,7 +16,10 @@ public:
         double error;    // 定位误差
     };
 
-    static DirectionFindingAlgorithmSimple& getInstance();
+    static DirectionFinding& getInstance();
+
+    DirectionFinding();
+    ~DirectionFinding();
 
     void init(const std::vector<std::string>& deviceNames, const std::string& sourceName, double simulationTime);
     bool loadDeviceInfo();
@@ -25,8 +30,6 @@ public:
     int getSourceId() const;
 
 private:
-    DirectionFinding() : m_isInitialized(false), m_simulationTime(0) {}
-    ~DirectionFinding() = default;
     DirectionFinding(const DirectionFinding&) = delete;
     DirectionFinding& operator=(const DirectionFinding&) = delete;
 
