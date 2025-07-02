@@ -16,8 +16,18 @@ void showErrorPointsOnMap(MapView* mapView, const std::vector<COORD3>& points) {
         if (i < 10) {
             std::cout << "误差点" << i+1 << ": 经度=" << lon << ", 纬度=" << lat << ", 高度=" << alt << std::endl;
         }
-       // 只用最简单的点实体，避免批量添加时 Cesium 脚本出错
-        mapView->addMarker(lon, lat, "", "", "#FF0000");
+        
+        // 使用自定义脚本添加只有红色点的标记
+        std::stringstream script;
+        script << "viewer.entities.add({";
+        script << "position: Cesium.Cartesian3.fromDegrees(" << lon << ", " << lat << ", " << alt << "),";
+        script << "point: {";
+        script << "pixelSize: 5,"; // 点的大小
+        script << "color: Cesium.Color.RED,"; // 红色点
+        script << "outlineWidth: 0"; // 无轮廓
+        script << "}";
+        script << "});";
+        mapView->executeScript(script.str());
     }
 }
 
@@ -35,7 +45,7 @@ void showErrorCircleOnMap(MapView* mapView, const COORD3& center, double radius)
     script << "position: Cesium.Cartesian3.fromDegrees(" << lon << ", " << lat << ", " << alt << "),";
     script << "ellipse: {";
     script << "semiMajorAxis: " << radius << ",";
-    script << "semiMinorAxis: " << radius << ",";
+    script << "semiMinorAxis: " << radius << ","; 
     script << "height: " << alt << ",";
     script << "material: Cesium.Color.TRANSPARENT,"; // 无填充
     script << "outline: true, outlineColor: Cesium.Color.BLACK";

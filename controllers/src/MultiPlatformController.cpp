@@ -314,8 +314,6 @@ void MultiPlatformController::startSimulation(const std::vector<std::string>& de
             ss << "高度: " << selectedSource.getAltitude() << " 米\n";
             ss << "定位距离: " << distance << " 米\n";
             ss << "定位误差: " << result.error << " 米\n";
-            ss << "方位角: " << azimuth << " 度\n";
-            ss << "俯仰角: " << elevation << " 度\n";
             
             // 更新视图
             m_view->updateResult(ss.str());
@@ -365,17 +363,14 @@ void MultiPlatformController::startSimulation(const std::vector<std::string>& de
             DFResult dfResult = calculateDFErrorCircle(
                 deviceNames,
                 sourceName,
-                3.0, 2.0, // 可根据实际需求调整误差均值和标准差
-                3.0, 1.0,
-                0//随机种子,0表示系统当前时间      
+                dev1MeanError, dev1StdDev, // 使用从视图获取的误差参数，而不是固定值
+                dev2MeanError, dev2StdDev,
+                0 // 随机种子,0表示系统当前时间      
             );
             std::cout << "误差点数量: " << dfResult.estimatedPoints.size() << ", 误差圆半径: " << dfResult.cepRadius << std::endl;
             showErrorPointsOnMap(mapView, dfResult.estimatedPoints);
             // 圆心用定位结果的空间直角坐标
             showErrorCircleOnMap(mapView, resultLBH, dfResult.cepRadius);
-
-
-
 
             // 显示测向误差线
             DirectionErrorLines directionErrorLines;
@@ -389,19 +384,27 @@ void MultiPlatformController::startSimulation(const std::vector<std::string>& de
                 double meanError = (i == 0) ? dev1MeanError : dev2MeanError;
                 double stdDev = (i == 0) ? dev1StdDev : dev2StdDev;
                 
-                // 直接使用设备指向目标的方向，而不是计算的定位点
-                // 这样每个设备的测向线就独立于其他设备
+                // 使用计算的定位结果位置，而不是真实辐射源位置
+                // 这样测向线会指向计算结果，而不是真实目标位置
                 directionErrorLines.showDirectionSimulationLines(
                     mapView,
                     selectedDevices[i],
-                    selectedSource.getLongitude(),   // 使用真实辐射源位置，而不是计算结果
-                    selectedSource.getLatitude(),
-                    selectedSource.getAltitude(),
-                    meanError,        // 均值误差
-                    stdDev,           // 标准差
-                    colors[i],        // 不同设备使用不同颜色
-                    40000.0           // 足够长的线
+                    resultLBH.p1,   // 使用计算的定位结果经度
+                    resultLBH.p2,   // 使用计算的定位结果纬度
+                    resultLBH.p3,   // 使用计算的定位结果高度
+                    meanError,      // 均值误差
+                    stdDev,         // 标准差
+                    colors[i],      // 不同设备使用不同颜色
+                    40000.0         // 足够长的线
                 );
+                
+                // 添加日志，确认测向线指向计算结果位置
+                std::cout << "设备" << i+1 << " 测向线目标位置: (" 
+                          << resultLBH.p1 << ", " << resultLBH.p2 << ", " << resultLBH.p3 << ")" 
+                          << " 而不是真实位置: (" 
+                          << selectedSource.getLongitude() << ", " 
+                          << selectedSource.getLatitude() << ", " 
+                          << selectedSource.getAltitude() << ")" << std::endl;
             }
         }
     }

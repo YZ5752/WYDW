@@ -169,15 +169,15 @@ std::tuple<double, double, double> DirectionErrorLines::calculateEndPoint(
     return std::make_tuple(endLBH.p1, endLBH.p2, endLBH.p3);
 }
 
-// 在地图上显示测向模拟的误差线
+// 在地图上显示测向定位误差线
 bool DirectionErrorLines::showDirectionSimulationLines(
     MapView* mapView,
     const ReconnaissanceDevice& device,
     double targetLongitude,
     double targetLatitude,
     double targetAltitude,
-    double meanErrorDeg,   // 均值误差(度)
-    double stdDevDeg,      // 标准差(度)
+    double meanErrorDeg,   // 均值误差
+    double stdDevDeg,      // 标准差
     const std::string& lineColor,
     double lineLength) {
     
@@ -201,22 +201,15 @@ bool DirectionErrorLines::showDirectionSimulationLines(
     );
     
     // 强制设置elevation为0，使测向线水平发出
-    elevation = 0.0;
+    // elevation = 0.0;
     
     // 根据均值误差和标准差计算测向线的方位角
     // 修改：将方位角作为中心线，而不是"中心线+均值误差"
     double centralAzimuth = azimuth;
     
     // 左右两条线分别使用均值误差±标准差
-    double leftAzimuth = centralAzimuth - stdDevDeg;
-    double rightAzimuth = centralAzimuth + stdDevDeg;
-    
-    // 如果均值误差不为零，则应用到所有线上
-    if (std::abs(meanErrorDeg) > 1e-6) {
-        centralAzimuth += meanErrorDeg;
-        leftAzimuth += meanErrorDeg;
-        rightAzimuth += meanErrorDeg;
-    }
+    double leftAzimuth = azimuth + meanErrorDeg - stdDevDeg;   // 左误差线 = 基准方位角 + 均值误差 - 标准差
+    double rightAzimuth = azimuth + meanErrorDeg + stdDevDeg;  // 右误差线 = 基准方位角 + 均值误差 + 标准差
     
     // 确保方位角在[0, 360]范围内
     if (centralAzimuth < 0) centralAzimuth += 360.0;
