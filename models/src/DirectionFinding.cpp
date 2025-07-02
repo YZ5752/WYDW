@@ -98,13 +98,16 @@ bool DirectionFinding::calculate(double dev1MeanError, double dev1StdDev,
     COORD3 esm2_coord = lbh2xyz(dev2.getLongitude(), dev2.getLatitude(), dev2.getAltitude());
     COORD3 target_coord = lbh2xyz(m_source.getLongitude(), m_source.getLatitude(), m_source.getAltitude());
     
+    // 保存目标的真实高度值
+    // double targetAlt = m_source.getAltitude();
+    
     Vector3 esm1(esm1_coord.p1, esm1_coord.p2, esm1_coord.p3);
     Vector3 esm2(esm2_coord.p1, esm2_coord.p2, esm2_coord.p3);
     Vector3 target(target_coord.p1, target_coord.p2, target_coord.p3);
     
-    double commonHeight = esm1.z;
-    esm2.z = commonHeight;
-    target.z = commonHeight;
+    // double commonHeight = esm1.z;
+    // esm2.z = commonHeight;
+    // target.z = commonHeight;
     
     Vector3 dir1 = calculateDirectionWithError(esm1, target, dev1MeanError, dev1StdDev);
     Vector3 dir2 = calculateDirectionWithError(esm2, target, dev2MeanError, dev2StdDev);
@@ -117,8 +120,15 @@ bool DirectionFinding::calculate(double dev1MeanError, double dev1StdDev,
     
     Vector3 estimatedPosition = intersectDirections2D(esm1, dir1, esm2, dir2);
     error = std::sqrt((estimatedPosition.x - target.x) * (estimatedPosition.x - target.x) +
-                      (estimatedPosition.y - target.y) * (estimatedPosition.y - target.y));
-    auto lbh = xyz2lbh(estimatedPosition.x, estimatedPosition.y, estimatedPosition.z);
+                     (estimatedPosition.y - target.y) * (estimatedPosition.y - target.y));
+    
+    // 关键修复：直接使用目标真实高度进行坐标转换
+    // 1. 先使用估计位置的XY坐标和真实目标高度创建新的空间直角坐标
+    COORD3 correctedXYZ(estimatedPosition.x, estimatedPosition.y, target_coord.p3);
+    
+    // 2. 将修正后的空间直角坐标转换为大地坐标
+    auto lbh = xyz2lbh(correctedXYZ.p1, correctedXYZ.p2, correctedXYZ.p3);
+    
     m_result.position = {lbh.p1, lbh.p2, lbh.p3};
     m_result.error = error;
     m_isInitialized = true;
