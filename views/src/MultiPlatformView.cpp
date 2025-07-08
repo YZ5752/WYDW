@@ -124,7 +124,6 @@ GtkWidget* MultiPlatformView::createView() {
     if (m_dfParamsFrame) {
         gtk_widget_set_no_show_all(m_dfParamsFrame, TRUE);
         gtk_widget_hide(m_dfParamsFrame);
-        g_print("创建后立即隐藏测向参数UI\n");
     }
     
     if (m_tdoaParamsFrame) {
@@ -676,7 +675,6 @@ void MultiPlatformView::showMultipleDeviceErrorLines(const std::vector<int>& dev
 void MultiPlatformView::clearDirectionErrorLines() {
     if (!m_mapView) return;
     m_directionErrorLines.clearDirectionErrorLines(m_mapView);
-    g_print("已清除测向误差线\n");
 }
 
 // 创建测向误差参数UI
@@ -744,12 +742,10 @@ void MultiPlatformView::toggleDFParamsUI(bool show) {
             
             gtk_widget_set_no_show_all(m_dfParamsFrame, FALSE);
             gtk_widget_show_all(m_dfParamsFrame);
-            g_print("显示测向参数UI，并设置默认值\n");
         } else {
             // 隐藏参数框
             gtk_widget_hide(m_dfParamsFrame);
             gtk_widget_set_no_show_all(m_dfParamsFrame, TRUE);
-            g_print("隐藏测向参数UI\n");
         }
     }
 }
@@ -831,7 +827,6 @@ void MultiPlatformView::toggleTDOAParamsUI(bool show) {
             // 隐藏参数框
             gtk_widget_hide(m_tdoaParamsFrame);
             gtk_widget_set_no_show_all(m_tdoaParamsFrame, TRUE);
-            g_print("隐藏TDOA参数UI\n");
         }
     }
 }

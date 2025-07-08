@@ -25,12 +25,10 @@ void RadiationSourceModelController::init(RadiationSourceModelView* view) {
 void RadiationSourceModelController::loadSourceData() {
     if (!m_view) return;
     
-    std::cout << "RadiationSourceModelController: 从数据库加载辐射源数据..." << std::endl;
     
     // 从DAO加载辐射源数据
     try {
         m_sources = RadiationSourceDAO::getInstance().getAllRadiationSources();
-        std::cout << "RadiationSourceModelController: 成功加载 " << m_sources.size() << " 个辐射源" << std::endl;
         
         // 更新视图
         m_view->updateSourceList(m_sources);

@@ -13,9 +13,6 @@ void showErrorPointsOnMap(MapView* mapView, const std::vector<COORD3>& points) {
         double lon = lbh.p1;
         double lat = lbh.p2;
         double alt = lbh.p3;
-        if (i < 10) {
-            std::cout << "误差点" << i+1 << ": 经度=" << lon << ", 纬度=" << lat << ", 高度=" << alt << std::endl;
-        }
         
         // 使用自定义脚本添加只有红色点的标记
         std::stringstream script;
@@ -38,7 +35,6 @@ void showErrorCircleOnMap(MapView* mapView, const COORD3& center, double radius)
     double lon = center.p1;
     double lat = center.p2;
     double alt = center.p3;
-    std::cout <<"圆心位置：" << "经度: " << lon << ", 纬度: " << lat << ", 高度: " << alt << std::endl;
     // Cesium绘制圆的JS脚本
     std::stringstream script;
     script << "viewer.entities.add({";

@@ -13,7 +13,6 @@ ReconnaissanceDeviceModelController& ReconnaissanceDeviceModelController::getIns
 }
 
 ReconnaissanceDeviceModelController::ReconnaissanceDeviceModelController() : m_view(nullptr) {
-    g_print("创建侦察设备模型控制器\n");
 }
 
 ReconnaissanceDeviceModelController::~ReconnaissanceDeviceModelController() {
@@ -26,12 +25,10 @@ void ReconnaissanceDeviceModelController::init(ReconnaissanceDeviceModelView* vi
 }
 
 void ReconnaissanceDeviceModelController::loadDeviceData() {
-    g_print("加载侦察设备数据...\n");
     
     try {
         // 从数据库加载数据
         m_devices = ReconnaissanceDeviceDAO::getInstance().getAllReconnaissanceDevices();
-        g_print("成功加载 %zu 个侦察设备\n", m_devices.size());
         
         // 更新视图
         if (m_view) {
