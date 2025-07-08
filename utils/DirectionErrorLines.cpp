@@ -208,8 +208,8 @@ bool DirectionErrorLines::showDirectionSimulationLines(
     double centralAzimuth = azimuth;
     
     // 左右两条线分别使用均值误差±标准差
-    double leftAzimuth = azimuth + meanErrorDeg - stdDevDeg;   // 左误差线 = 基准方位角 + 均值误差 - 标准差
-    double rightAzimuth = azimuth + meanErrorDeg + stdDevDeg;  // 右误差线 = 基准方位角 + 均值误差 + 标准差
+    double leftAzimuth = azimuth  - stdDevDeg;   // 左误差线 = 基准方位角 - 标准差
+    double rightAzimuth = azimuth + stdDevDeg;  // 右误差线 = 基准方位角  + 标准差
     
     // 确保方位角在[0, 360]范围内
     if (centralAzimuth < 0) centralAzimuth += 360.0;

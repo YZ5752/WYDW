@@ -88,6 +88,7 @@ set(UTILS_SOURCES
     "${CMAKE_CURRENT_SOURCE_DIR}/utils/DirectionErrorLines.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/utils/ErrorCircle.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/utils/ErrorCircleDisplay.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/utils/HyperbolaLines.cpp"
 )
 
 # 检查文件存在

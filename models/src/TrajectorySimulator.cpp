@@ -318,34 +318,7 @@ void TrajectorySimulator::animateDeviceMovement(
            << "      backgroundColor: new Cesium.Color(0.165, 0.165, 0.165, 0.7)\n"
            << "    }\n"
            << "  });\n"
-           << "  \n"
-           << "  // 使用算法计算的定位结果\n"
-           << "  var calculatedLongitude = " << calculatedLongitude << ";\n"
-           << "  var calculatedLatitude = " << calculatedLatitude << ";\n"
-           << "  var calculatedAltitude = " << calculatedAltitude << ";\n"
-           << "  \n"
-           << "  // 添加计算定位位置标记\n"
-           << "  viewer.entities.add({\n"
-           << "    id: 'calculated-position',\n"
-           << "    position: Cesium.Cartesian3.fromDegrees(calculatedLongitude, calculatedLatitude, calculatedAltitude),\n"
-           << "    point: {\n"
-           << "      pixelSize: 12,\n"
-           << "      color: Cesium.Color.PURPLE,\n"
-           << "      outlineColor: Cesium.Color.WHITE,\n"
-           << "      outlineWidth: 2\n"
-           << "    },\n"
-           << "    label: {\n"
-           << "      text: '" << sourceName << "',\n"
-           << "      font: '14pt sans-serif',\n"
-           << "      style: Cesium.LabelStyle.FILL_AND_OUTLINE,\n"
-           << "      outlineWidth: 2,\n"
-           << "      verticalOrigin: Cesium.VerticalOrigin.BOTTOM,\n"
-           << "      pixelOffset: new Cesium.Cartesian2(0, -9),\n"
-           << "      showBackground: true,\n"
-           << "      backgroundColor: new Cesium.Color(0.165, 0.165, 0.165, 0.7)\n"
-           << "    }\n"
-           << "  });\n"
-           << "}\n";
+           << "  \n";
            
     // 启动动画
     script << "// 延迟一下启动动画，确保地图已加载\n"
@@ -439,7 +412,8 @@ void TrajectorySimulator::animateMultipleDevicesMovement(
     }
     script << "];\n"
            << "console.log('辐射源轨迹点数量: ' + sourceTrajectoryPoints.length);\n"
-           << "// 初始化辐射源轨迹线数组\n"
+           // 创建辐射源轨迹线变量，但不显示实际辐射源
+           << "// 初始化辐射源轨迹线变量\n"
            << "var sourceTrailPositions = [];\n";
            
     // 计算更新间隔（毫秒）
@@ -503,50 +477,37 @@ void TrajectorySimulator::animateMultipleDevicesMovement(
                << "deviceTrailEntities.push(deviceTrailEntity" << deviceIdx << ");\n";
     }
     
-    // 创建辐射源实体
-    script << "// 创建辐射源实体\n"
-           << "var sourceEntity = viewer.entities.add({\n"
-           << "  id: 'source-entity',\n"
-           << "  position: Cesium.Cartesian3.fromDegrees(sourceTrajectoryPoints[0][0], sourceTrajectoryPoints[0][1], " << source.getAltitude() << "),\n"
-           << "  point: {\n"
-           << "    pixelSize: 15,\n"
-           << "    color: Cesium.Color.BLUE,\n"
-           << "    outlineColor: Cesium.Color.WHITE,\n"
-           << "    outlineWidth: 2\n"
-           << "  },\n"
-           << "  label: {\n"
-           << "    text: '" << source.getRadiationName() << "',\n"
-           << "    font: '14pt sans-serif',\n"
-           << "    style: Cesium.LabelStyle.FILL_AND_OUTLINE,\n"
-           << "    outlineWidth: 2,\n"
-           << "    verticalOrigin: Cesium.VerticalOrigin.BOTTOM,\n"
-           << "    pixelOffset: new Cesium.Cartesian2(0, -20),\n"
-           << "    showBackground: true,\n"
-           << "    backgroundColor: new Cesium.Color(0.165, 0.165, 0.165, 0.7)\n"
-           << "  },\n"
-           << "  billboard: {\n"
-           << "    image: 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgd2lkdGg9IjI0IiBoZWlnaHQ9IjI0Ij48Y2lyY2xlIGN4PSIxMiIgY3k9IjEyIiByPSIxMCIgZmlsbD0iYmx1ZSIvPjwvc3ZnPg==',\n"
-           << "    width: 32,\n"
-           << "    height: 32,\n"
-           << "    verticalOrigin: Cesium.VerticalOrigin.BOTTOM,\n"
-           << "    color: Cesium.Color.BLUE\n"
-           << "  }\n"
-           << "});\n";
-           
-    // 创建辐射源轨迹线实体
-    script << "// 创建辐射源轨迹线实体\n"
-           << "sourceTrailPositions.push(Cesium.Cartesian3.fromDegrees(sourceTrajectoryPoints[0][0], sourceTrajectoryPoints[0][1], " << source.getAltitude() << "));\n"
-           << "var sourceTrailEntity = viewer.entities.add({\n"
-           << "  id: 'source-trail',\n"
-           << "  polyline: {\n"
-           << "    positions: sourceTrailPositions,\n"
-           << "    width: 3,\n"
-           << "    material: new Cesium.PolylineGlowMaterialProperty({\n"
-           << "      glowPower: 0.2,\n"
-           << "      color: Cesium.Color.BLUE\n"
-           << "    })\n"
-           << "  }\n"
-           << "});\n";
+    // 创建计算位置实体（目标辐射源）
+    if (calculatedLongitude != 0 && calculatedLatitude != 0) {
+        script << "// 创建计算位置实体（目标辐射源）\n"
+               << "var calculatedEntity = viewer.entities.add({\n"
+               << "  id: 'calculated-entity',\n"
+               << "  position: Cesium.Cartesian3.fromDegrees(" << calculatedLongitude << ", " << calculatedLatitude << ", " << calculatedAltitude << "),\n"
+               << "  point: {\n"
+               << "    pixelSize: 15,\n"
+               << "    color: Cesium.Color.BLUE,\n"
+               << "    outlineColor: Cesium.Color.WHITE,\n"
+               << "    outlineWidth: 2\n"
+               << "  },\n"
+               << "  label: {\n"
+               << "    text: '" << source.getRadiationName() << "',\n"
+               << "    font: '14pt sans-serif',\n"
+               << "    style: Cesium.LabelStyle.FILL_AND_OUTLINE,\n"
+               << "    outlineWidth: 2,\n"
+               << "    verticalOrigin: Cesium.VerticalOrigin.BOTTOM,\n"
+               << "    pixelOffset: new Cesium.Cartesian2(0, -20),\n"
+               << "    showBackground: true,\n"
+               << "    backgroundColor: new Cesium.Color(0.165, 0.165, 0.165, 0.7)\n"
+               << "  },\n"
+               << "  billboard: {\n"
+               << "    image: 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgd2lkdGg9IjI0IiBoZWlnaHQ9IjI0Ij48Y2lyY2xlIGN4PSIxMiIgY3k9IjEyIiByPSIxMCIgZmlsbD0iYmx1ZSIvPjwvc3ZnPg==',\n"
+               << "    width: 32,\n"
+               << "    height: 32,\n"
+               << "    verticalOrigin: Cesium.VerticalOrigin.BOTTOM,\n"
+               << "    color: Cesium.Color.BLUE\n"
+               << "  }\n"
+               << "});\n";
+    }
     
     // 修改移动函数，移除垂直连接线
     script << "// 移动函数\n"
@@ -557,14 +518,6 @@ void TrajectorySimulator::animateMultipleDevicesMovement(
            << "    var sourceLongitude = sourceTrajectoryPoints[currentIndex][0];\n"
            << "    var sourceLatitude = sourceTrajectoryPoints[currentIndex][1];\n"
            << "    var sourceAltitude = " << source.getAltitude() << ";\n"
-           << "    var sourcePosition = Cesium.Cartesian3.fromDegrees(sourceLongitude, sourceLatitude, sourceAltitude);\n"
-           << "    \n"
-           << "    // 更新辐射源位置\n"
-           << "    sourceEntity.position = sourcePosition;\n"
-           << "    \n"
-           << "    // 更新辐射源轨迹线\n"
-           << "    sourceTrailPositions.push(sourcePosition);\n"
-           << "    sourceTrailEntity.polyline.positions = sourceTrailPositions;\n"
            << "    \n"
            << "    // 更新每个设备位置\n"
            << "    for (var i = 0; i < deviceEntities.length; i++) {\n"
@@ -595,12 +548,10 @@ void TrajectorySimulator::animateMultipleDevicesMovement(
            << "  }\n"
            << "}\n";
     
-    // 修改显示最终结果函数，移除垂直连接线相关代码
+    // 修改显示最终结果函数，显示计算位置作为最终辐射源位置
     script << "// 显示最终结果\n"
            << "function showFinalResults() {\n"
            << "  // 隐藏动画中的实体\n"
-           << "  sourceEntity.show = false;\n"
-           << "  \n"
            << "  for (var i = 0; i < deviceEntities.length; i++) {\n"
            << "    deviceEntities[i].show = false;\n"
            << "  }\n"
@@ -642,34 +593,15 @@ void TrajectorySimulator::animateMultipleDevicesMovement(
            << "        backgroundColor: new Cesium.Color(0.165, 0.165, 0.165, 0.7)\n"
            << "      }\n"
            << "    });\n"
-           << "  }\n"
-           << "  \n"
-           << "  // 在最终位置添加辐射源标记点\n"
-           << "  var sourceFinalIndex = sourceTrajectoryPoints.length - 1;\n"
-           << "  var sourceFinalLongitude = sourceTrajectoryPoints[sourceFinalIndex][0];\n"
-           << "  var sourceFinalLatitude = sourceTrajectoryPoints[sourceFinalIndex][1];\n"
-           << "  \n"
-           << "  viewer.entities.add({\n"
-           << "    id: 'final-source-position',\n"
-           << "    position: Cesium.Cartesian3.fromDegrees(sourceFinalLongitude, sourceFinalLatitude, " << source.getAltitude() << "),\n"
-           << "    point: {\n"
-           << "      pixelSize: 12,\n"
-           << "      color: Cesium.Color.GREEN,\n"
-           << "      outlineColor: Cesium.Color.WHITE,\n"
-           << "      outlineWidth: 2\n"
-           << "    },\n"
-           << "    label: {\n"
-           << "      text: '" << source.getRadiationName() << "',\n"
-           << "      font: '14pt sans-serif',\n"
-           << "      style: Cesium.LabelStyle.FILL_AND_OUTLINE,\n"
-           << "      outlineWidth: 2,\n"
-           << "      verticalOrigin: Cesium.VerticalOrigin.BOTTOM,\n"
-           << "      pixelOffset: new Cesium.Cartesian2(0, -9),\n"
-           << "      showBackground: true,\n"
-           << "      backgroundColor: new Cesium.Color(0.165, 0.165, 0.165, 0.7)\n"
-           << "    }\n"
-           << "  });\n"
-           << "}\n";
+           << "  }\n";
+    
+    // 在showFinalResults函数中添加计算位置的最终显示
+    if (calculatedLongitude != 0 && calculatedLatitude != 0) {
+        script << "  // 保持计算位置实体可见，不需要创建新的\n"
+               << "  // calculatedEntity已经在动画开始时创建\n";
+    }
+    
+    script << "}\n";
            
     // 启动动画
     script << "// 延迟一下启动动画，确保地图已加载\n"
@@ -682,5 +614,5 @@ void TrajectorySimulator::animateMultipleDevicesMovement(
     // 执行脚本
     mapView->executeScript(script.str());
     
-   
+    g_print("多设备移动仿真已启动，仿真时间: %d秒\n", simulationTime);
 }

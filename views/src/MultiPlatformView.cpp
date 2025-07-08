@@ -11,7 +11,8 @@
 // 实现MultiPlatformView类
 MultiPlatformView::MultiPlatformView() : m_view(nullptr), m_algoCombo(nullptr), 
     m_resultLabel(nullptr), m_errorLabel(nullptr), m_mapView(nullptr), 
-    m_sourceMarker(-1), m_timeEntry(nullptr), m_dfParamsFrame(nullptr) {
+    m_sourceMarker(-1), m_timeEntry(nullptr), m_dfParamsFrame(nullptr), m_tdoaParamsFrame(nullptr), 
+    m_tdoaRmsError(nullptr), m_esmToaError(nullptr) {
     // 初始化数组
     for (int i = 0; i < 4; ++i) {
         m_radarMarkers[i] = -1;
@@ -116,6 +117,9 @@ GtkWidget* MultiPlatformView::createView() {
     // 创建测向误差参数UI - 将这部分移动到这里，在开始按钮之前
     createDFParamsUI(rightBox);
     
+    // 创建TDOA误差参数UI
+    createTDOAParamsUI(rightBox);
+    
     // 立即隐藏测向参数UI
     if (m_dfParamsFrame) {
         gtk_widget_set_no_show_all(m_dfParamsFrame, TRUE);
@@ -175,6 +179,22 @@ GtkWidget* MultiPlatformView::createView() {
     
     gtk_box_pack_start(GTK_BOX(resultBox), m_resultLabel, TRUE, TRUE, 0);
     
+    // 创建误差标签
+    m_errorLabel = gtk_label_new("");
+    gtk_label_set_line_wrap(GTK_LABEL(m_errorLabel), TRUE);
+    gtk_label_set_line_wrap_mode(GTK_LABEL(m_errorLabel), PANGO_WRAP_WORD);
+    gtk_label_set_justify(GTK_LABEL(m_errorLabel), GTK_JUSTIFY_LEFT);
+    gtk_label_set_xalign(GTK_LABEL(m_errorLabel), 0.0);
+    gtk_label_set_yalign(GTK_LABEL(m_errorLabel), 0.0);
+    
+    // 设置误差标签的边距
+    gtk_widget_set_margin_start(m_errorLabel, 5);
+    gtk_widget_set_margin_end(m_errorLabel, 5);
+    gtk_widget_set_margin_top(m_errorLabel, 5);
+    gtk_widget_set_margin_bottom(m_errorLabel, 5);
+    
+    gtk_box_pack_start(GTK_BOX(resultBox), m_errorLabel, FALSE, FALSE, 5);
+    
     // 默认只显示3个侦察设备下拉框，并隐藏测向参数
     for (int i = 0; i < 4; ++i) {
         gtk_widget_set_visible(m_radarFrame[i], i < 3);
@@ -212,15 +232,17 @@ void MultiPlatformView::onTechSystemChanged() {
         for (int i = 0; i < 4; ++i) {
             gtk_widget_set_visible(m_radarFrame[i], true);
         }
-        // 隐藏测向参数
+        // 显示TDOA误差参数UI，隐藏测向误差参数UI
         toggleDFParamsUI(false);
+        toggleTDOAParamsUI(true);
     } else if (idx == 1) {
         // 频差体制：显示3个侦察设备
         for (int i = 0; i < 4; ++i) {
             gtk_widget_set_visible(m_radarFrame[i], i < 3);
         }
-        // 隐藏测向参数
+        // 显示TDOA误差参数UI，隐藏测向误差参数UI
         toggleDFParamsUI(false);
+        toggleTDOAParamsUI(true);
     } else if (idx == 2) {
         // 测向体制：显示2个侦察设备
         for (int i = 0; i < 4; ++i) {
@@ -233,8 +255,9 @@ void MultiPlatformView::onTechSystemChanged() {
         }
         gtk_combo_box_set_active(GTK_COMBO_BOX(m_sourceCombo), -1);
         
-        // 显示测向参数
+        // 显示测向参数UI，隐藏TDOA误差参数UI
         toggleDFParamsUI(true);
+        toggleTDOAParamsUI(false);
     }
     updateDeviceCombos();
     updateSourceCombo();
@@ -450,13 +473,30 @@ void MultiPlatformView::onStartSimulation() {
         }
     }
     
-    // 调用控制器开始仿真
-    MultiPlatformController::getInstance().startSimulation(
-        deviceNames,
-        sourceName,
-        systemType,
-        simulationTime
-    );
+    if (strcmp(systemType, "时差体制") == 0) {
+        // 获取TDOA误差参数
+        double tdoaRmsError = getTDOARmsError();
+        double esmToaError = getESMToaError();
+        
+        // 将误差参数传递给控制器
+        MultiPlatformController::getInstance().startSimulation(
+            deviceNames,
+            sourceName,
+            systemType,
+            simulationTime
+        );
+        
+        // 在调用完成后设置全局误差参数供控制器使用
+        MultiPlatformController::getInstance().setTDOAErrorParams(tdoaRmsError, esmToaError);
+    } else {
+        // 调用控制器开始仿真
+        MultiPlatformController::getInstance().startSimulation(
+            deviceNames,
+            sourceName,
+            systemType,
+            simulationTime
+        );
+    }
     
     // 释放内存
     g_free(systemType);
@@ -528,6 +568,13 @@ bool MultiPlatformView::checkRadarModels() {
 void MultiPlatformView::updateResult(const std::string& result) {
     if (m_resultLabel) {
         gtk_label_set_markup(GTK_LABEL(m_resultLabel), result.c_str());
+    }
+}
+
+// 更新误差显示
+void MultiPlatformView::updateError(const std::string& error) {
+    if (m_errorLabel) {
+        gtk_label_set_markup(GTK_LABEL(m_errorLabel), error.c_str());
     }
 }
 
@@ -726,4 +773,88 @@ double MultiPlatformView::getDFStdDev(int deviceIndex) const {
         }
     }
     return 0.0;
+}
+
+// 创建TDOA误差参数UI
+void MultiPlatformView::createTDOAParamsUI(GtkWidget* parent) {
+    // 创建框架
+    m_tdoaParamsFrame = gtk_frame_new("时差定位误差参数");
+    gtk_box_pack_start(GTK_BOX(parent), m_tdoaParamsFrame, FALSE, FALSE, 0);
+    
+    // 创建网格布局
+    GtkWidget* grid = gtk_grid_new();
+    gtk_grid_set_row_spacing(GTK_GRID(grid), 10);
+    gtk_grid_set_column_spacing(GTK_GRID(grid), 10);
+    gtk_container_set_border_width(GTK_CONTAINER(grid), 10);
+    gtk_container_add(GTK_CONTAINER(m_tdoaParamsFrame), grid);
+    
+    // 添加参数标签和输入框
+    GtkWidget* tdoaRmsLabel = gtk_label_new("TDOA rms Error (秒):");
+    gtk_label_set_xalign(GTK_LABEL(tdoaRmsLabel), 0.0);  // 左对齐
+    
+    m_tdoaRmsError = gtk_entry_new();
+    gtk_entry_set_width_chars(GTK_ENTRY(m_tdoaRmsError), 10);
+    gtk_entry_set_text(GTK_ENTRY(m_tdoaRmsError), "2.0e-9");  // 默认值2纳秒
+    
+    GtkWidget* esmToaLabel = gtk_label_new("ESM toa Error (秒):");
+    gtk_label_set_xalign(GTK_LABEL(esmToaLabel), 0.0);  // 左对齐
+    
+    m_esmToaError = gtk_entry_new();
+    gtk_entry_set_width_chars(GTK_ENTRY(m_esmToaError), 10);
+    gtk_entry_set_text(GTK_ENTRY(m_esmToaError), "-0.33e-9");  // 默认值-0.33纳秒
+    
+    // 将控件添加到网格
+    gtk_grid_attach(GTK_GRID(grid), tdoaRmsLabel, 0, 0, 1, 1);
+    gtk_grid_attach(GTK_GRID(grid), m_tdoaRmsError, 1, 0, 1, 1);
+    gtk_grid_attach(GTK_GRID(grid), esmToaLabel, 0, 1, 1, 1);
+    gtk_grid_attach(GTK_GRID(grid), m_esmToaError, 1, 1, 1, 1);
+    
+    // 使用gtk_widget_set_no_show_all确保参数框默认不显示
+    gtk_widget_set_no_show_all(m_tdoaParamsFrame, TRUE);
+    gtk_widget_hide(m_tdoaParamsFrame);
+}
+
+// 显示/隐藏TDOA误差参数UI
+void MultiPlatformView::toggleTDOAParamsUI(bool show) {
+    if (m_tdoaParamsFrame) {
+        if (show) {
+            // 当选择TDOA体制时显示
+            gtk_widget_set_no_show_all(m_tdoaParamsFrame, FALSE);
+            gtk_widget_show_all(m_tdoaParamsFrame);
+            g_print("显示TDOA参数UI\n");
+        } else {
+            // 隐藏参数框
+            gtk_widget_hide(m_tdoaParamsFrame);
+            gtk_widget_set_no_show_all(m_tdoaParamsFrame, TRUE);
+            g_print("隐藏TDOA参数UI\n");
+        }
+    }
+}
+
+// 获取TDOA rms Error参数
+double MultiPlatformView::getTDOARmsError() const {
+    if (m_tdoaRmsError) {
+        const char* text = gtk_entry_get_text(GTK_ENTRY(m_tdoaRmsError));
+        try {
+            return std::stod(text);
+        } catch (const std::exception& e) {
+            // 在异常情况下返回默认值
+            return 2.0e-9;  // 2纳秒
+        }
+    }
+    return 2.0e-9;  // 默认值
+}
+
+// 获取ESM toa Error参数
+double MultiPlatformView::getESMToaError() const {
+    if (m_esmToaError) {
+        const char* text = gtk_entry_get_text(GTK_ENTRY(m_esmToaError));
+        try {
+            return std::stod(text);
+        } catch (const std::exception& e) {
+            // 在异常情况下返回默认值
+            return -0.33e-9;  // -0.33纳秒
+        }
+    }
+    return -0.33e-9;  // 默认值
 } 
