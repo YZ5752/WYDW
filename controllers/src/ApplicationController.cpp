@@ -79,16 +79,13 @@ ApplicationController::~ApplicationController() {
 }
 
 bool ApplicationController::init(int argc, char** argv) {
-    g_print("Starting application initialization...\n");
     gtk_init(&argc, &argv);
     
     // 初始化数据库连接
-    g_print("Initializing database connection...\n");
     if (!DBConnector::initDefaultConnection()) {
         g_print("Failed to connect to database, will continue with sample data\n");
         // 继续执行，使用示例数据
     } else {
-        g_print("Database connection established successfully\n");
     }
     
     // 创建主窗口
@@ -99,12 +96,9 @@ bool ApplicationController::init(int argc, char** argv) {
     }
     
     // 创建笔记本控件用于页面切换
-    g_print("Creating notebook for page navigation...\n");
     m_notebook = gtk_notebook_new();
     gtk_container_add(GTK_CONTAINER(m_mainWindow), m_notebook);
     
-    // 初始化各个控制器和视图
-    g_print("Initializing controllers and views...\n");
     
     // 创建视图实例
     m_reconDeviceView = new ReconnaissanceDeviceModelView();
@@ -115,7 +109,6 @@ bool ApplicationController::init(int argc, char** argv) {
     m_evaluationView = new EvaluationView();
     
     // 初始化控制器
-    g_print("Initializing controllers...\n");
     m_reconnaissanceDeviceModelController = &ReconnaissanceDeviceModelController::getInstance();
     m_reconnaissanceDeviceModelController->init(m_reconDeviceView);
     
@@ -156,15 +149,12 @@ bool ApplicationController::init(int argc, char** argv) {
     gtk_notebook_append_page(GTK_NOTEBOOK(m_notebook), evaluationPage, evaluationTab);
     
     // 加载数据
-    g_print("Loading initial data...\n");
     m_radiationSourceModelController->loadSourceData();
     m_reconnaissanceDeviceModelController->loadDeviceData();
 
     // 显示所有控件
-    g_print("Showing all widgets...\n");
     gtk_widget_show_all(m_mainWindow);
     
-    g_print("Application initialization completed\n");
     return true;
 }
 

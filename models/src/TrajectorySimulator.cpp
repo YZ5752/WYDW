@@ -613,6 +613,4 @@ void TrajectorySimulator::animateMultipleDevicesMovement(
     
     // 执行脚本
     mapView->executeScript(script.str());
-    
-    g_print("多设备移动仿真已启动，仿真时间: %d秒\n", simulationTime);
 }

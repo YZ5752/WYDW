@@ -906,5 +906,4 @@ void SinglePlatformView::showDirectionErrorLines(
 void SinglePlatformView::clearDirectionErrorLines() {
     if (!m_mapView) return;
     m_directionErrorLines.clearDirectionErrorLines(m_mapView);
-    g_print("已清除测向误差线\n");
 }

@@ -47,11 +47,9 @@ bool DBConnector::initDefaultConnection() {
 
 void DBConnector::close() {
     if (m_connected && m_conn) {
-        std::cout << "Closing MySQL connection" << std::endl;
         mysql_close(m_conn);
         m_conn = nullptr;
         m_connected = false;
-        std::cout << "MySQL connection closed" << std::endl;
     }
 }
 
