@@ -6,8 +6,16 @@
 #include "../utils/CoordinateTransform.h"
 #include "../models/RadiationSourceModel.h"
 #include "../models/ReconnaissanceDeviceModel.h"
+#include "../models/TDOAalgorithm.h"
+#include "../models/DirectionFinding.h"
+#include "../utils/ErrorCircleDisplay.h"
+#include "../utils/ErrorCircle.h"
+#include "../utils/HyperbolaLines.h"
 #include <string>
 #include <vector>
+#include <sstream>
+#include <iomanip>
+#include <ctime>
 
 class ApplicationController;  // 前向声明
 
@@ -29,6 +37,9 @@ public:
                         const std::string& sourceName,
                         const std::string& systemType,
                         double simulationTime);
+    
+    // 设置TDOA误差参数
+    void setTDOAErrorParams(double tdoaRmsError, double esmToaError);
 
 private:
     MultiPlatformController();
@@ -38,5 +49,12 @@ private:
     MultiPlatformController(const MultiPlatformController&) = delete;
     MultiPlatformController& operator=(const MultiPlatformController&) = delete;
     
+    // 计算两点之间的距离
+    double calculateDistance(const COORD3& p1, const COORD3& p2);
+    
     MultiPlatformView* m_view;
+    
+    // TDOA误差参数
+    double m_tdoaRmsError;
+    double m_esmToaError;
 }; 

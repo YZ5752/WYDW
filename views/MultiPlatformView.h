@@ -5,9 +5,13 @@
 #include <string>
 #include "../models/ReconnaissanceDeviceModel.h"
 #include "../models/RadiationSourceModel.h"
-#include "components/MapView.h"
 #include "../utils/DirectionErrorLines.h"
 
+class MapView;
+
+class MultiPlatformController;
+
+// 多平台定位视图类
 class MultiPlatformView {
 public:
     MultiPlatformView();
@@ -19,8 +23,14 @@ public:
     // 获取视图控件
     GtkWidget* getView() const;
 
+    // 设置控制器
+    void setController(MultiPlatformController* controller);
+    
     // 更新仿真结果显示
     void updateResult(const std::string& result);
+    
+    // 更新误差显示
+    void updateError(const std::string& error);
     
     // 获取地图视图
     MapView* getMapView() const { return m_mapView; }
@@ -42,8 +52,13 @@ public:
     // 获取测向误差参数
     double getDFMeanError(int deviceIndex) const;
     double getDFStdDev(int deviceIndex) const;
+    
+    // 获取TDOA误差参数
+    double getTDOARmsError() const;
+    double getESMToaError() const;
 
 private:
+    MultiPlatformController* m_controller;
     GtkWidget* m_view;//主视图
     GtkWidget* m_algoCombo;//技术体制
     GtkWidget* m_radarCombo[4]; // 4个侦察设备下拉框
@@ -57,6 +72,11 @@ private:
     GtkWidget* m_dfParamsFrame;    // 测向误差参数框架
     GtkWidget* m_dfMeanError[2];   // 均值误差输入框
     GtkWidget* m_dfStdDev[2];      // 标准差输入框
+    
+    // TDOA定位误差参数
+    GtkWidget* m_tdoaParamsFrame;  // TDOA误差参数框架
+    GtkWidget* m_tdoaRmsError;     // TDOA rms Error输入框
+    GtkWidget* m_esmToaError;      // ESM toa Error输入框
     
     std::vector<ReconnaissanceDevice> m_devices; // 设备数据
     std::vector<RadiationSource> m_sources;      // 辐射源数据
@@ -89,4 +109,9 @@ private:
     
     // 显示/隐藏测向误差参数UI
     void toggleDFParamsUI(bool show);
+    
+    // 创建TDOA误差参数UI
+    void createTDOAParamsUI(GtkWidget* parent);
+    // 显示/隐藏TDOA误差参数UI
+    void toggleTDOAParamsUI(bool show);
 }; 
