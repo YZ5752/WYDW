@@ -478,7 +478,6 @@ void MultiPlatformController::startSimulation(const std::vector<std::string>& de
                 dev2MeanError, dev2StdDev,
                 0 // 随机种子,0表示系统当前时间      
             );
-            std::cout << "误差点数量: " << dfResult.estimatedPoints.size() << ", 误差圆半径: " << dfResult.cepRadius << std::endl;
             showErrorPointsOnMap(mapView, dfResult.estimatedPoints);
             // 圆心用定位结果的空间直角坐标
             showErrorCircleOnMap(mapView, resultLBH, dfResult.cepRadius);
@@ -509,13 +508,6 @@ void MultiPlatformController::startSimulation(const std::vector<std::string>& de
                     40000.0         // 足够长的线
                 );
                 
-                // 添加日志，确认测向线指向计算结果位置
-                std::cout << "设备" << i+1 << " 测向线目标位置: (" 
-                          << resultLBH.p1 << ", " << resultLBH.p2 << ", " << resultLBH.p3 << ")" 
-                          << " 而不是真实位置: (" 
-                          << selectedSource.getLongitude() << ", " 
-                          << selectedSource.getLatitude() << ", " 
-                          << selectedSource.getAltitude() << ")" << std::endl;
             }
         }
     }

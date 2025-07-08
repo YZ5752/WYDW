@@ -303,11 +303,9 @@ static gboolean on_tree_view_query_tooltip(GtkWidget *widget,
 }
 
 ReconnaissanceDeviceModelView::ReconnaissanceDeviceModelView() : m_view(nullptr), m_deviceList(nullptr) {
-    g_print("创建侦察设备模型视图\n");
 }
 
 ReconnaissanceDeviceModelView::~ReconnaissanceDeviceModelView() {
-    g_print("销毁侦察设备模型视图\n");
 }
 
 // 设置容器控件
@@ -322,7 +320,6 @@ void ReconnaissanceDeviceModelView::setTreeView(GtkWidget* treeView) {
 
 // 创建侦察设备模型UI
 GtkWidget* ReconnaissanceDeviceModelView::createView() {
-    g_print("创建侦察设备模型UI组件...\n");
     
     try {
         // 创建页面的主容器
@@ -335,7 +332,6 @@ GtkWidget* ReconnaissanceDeviceModelView::createView() {
         gtk_container_set_border_width(GTK_CONTAINER(m_view), 15);
         
         // 标题
-        g_print("  创建标题标签...\n");
         GtkWidget* titleLabel = gtk_label_new(nullptr);
         if (!titleLabel) {
             g_print("创建标题标签失败\n");
@@ -348,7 +344,6 @@ GtkWidget* ReconnaissanceDeviceModelView::createView() {
         gtk_box_pack_start(GTK_BOX(m_view), titleLabel, FALSE, FALSE, 5);
         
         // 创建表格列表
-        g_print("  创建模型列表...\n");
         
         // 创建列表存储
         GtkListStore* store = gtk_list_store_new(7, 
@@ -428,7 +423,6 @@ GtkWidget* ReconnaissanceDeviceModelView::createView() {
         gtk_tree_view_append_column(GTK_TREE_VIEW(m_deviceList), column);
         
         // 滚动窗口
-        g_print("  创建滚动窗口...\n");
         GtkWidget* scrollWin = gtk_scrolled_window_new(NULL, NULL);
         if (!scrollWin) {
             g_print("创建滚动窗口失败\n");
@@ -446,7 +440,6 @@ GtkWidget* ReconnaissanceDeviceModelView::createView() {
         gtk_box_pack_start(GTK_BOX(m_view), scrollWin, TRUE, TRUE, 0);
         
         // 按钮区域
-        g_print("  创建按钮区域...\n");
         GtkWidget* buttonBox = gtk_button_box_new(GTK_ORIENTATION_HORIZONTAL);
         if (!buttonBox) {
             g_print("创建按钮区域失败\n");
@@ -484,10 +477,8 @@ GtkWidget* ReconnaissanceDeviceModelView::createView() {
         g_signal_connect(m_deviceList, "query-tooltip", G_CALLBACK(on_tree_view_query_tooltip), NULL);
         
         // 加载设备数据
-        g_print("  加载侦察设备数据...\n");
         ReconnaissanceDeviceModelController::getInstance().loadDeviceData();
         
-        g_print("侦察设备模型UI创建成功\n");
         return m_view;
     } catch (const std::exception& e) {
         g_print("创建侦察设备模型UI异常: %s\n", e.what());
@@ -853,7 +844,6 @@ void ReconnaissanceDeviceModelView::updateDeviceList(const std::vector<Reconnais
     m_devices = devices;
     
     if (!m_deviceList) {
-        g_print("设备列表未初始化，无法更新\n");
         return;
     }
     
