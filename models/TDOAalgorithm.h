@@ -34,13 +34,21 @@ public:
     void init(const std::vector<std::string>& deviceNames, 
              const std::string& sourceName,
              const std::string& systemType,
-             double simulationTime);
+             double simulationTime,
+             double tdoaRmsError = 0.0,
+             double esmToaError = 0.0);
 
     // 执行定位算法
     bool calculate();
 
     // 获取定位结果
     LocationResult getResult() const;
+    
+    // 设置误差参数
+    void setErrorParams(double tdoaRmsError, double esmToaError) {
+        m_tdoaRmsError = tdoaRmsError;
+        m_esmToaError = esmToaError;
+    }
 
 private:
     TDOAalgorithm();
@@ -64,5 +72,9 @@ private:
     double m_simulationTime;                   
     std::vector<ReconnaissanceDevice> m_devices;  
     RadiationSource m_source;                  
-    LocationResult m_result;                   
+    LocationResult m_result;
+    
+    // 误差参数
+    double m_tdoaRmsError;  // TDOA均方根误差（秒）
+    double m_esmToaError;   // ESM TOA误差（秒）                   
 };

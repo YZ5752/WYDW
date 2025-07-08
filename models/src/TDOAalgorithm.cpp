@@ -134,7 +134,7 @@ TDOAalgorithm& TDOAalgorithm::getInstance() {
 }
 
 // 构造函数
-TDOAalgorithm::TDOAalgorithm() : m_simulationTime(0.0) {
+TDOAalgorithm::TDOAalgorithm() : m_simulationTime(0.0), m_tdoaRmsError(0.0), m_esmToaError(0.0) {
     m_result = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
 }
 
@@ -145,11 +145,15 @@ TDOAalgorithm::~TDOAalgorithm() {}
 void TDOAalgorithm::init(const std::vector<std::string>& deviceNames, 
                         const std::string& sourceName,
                         const std::string& systemType,
-                        double simulationTime) {
+                        double simulationTime,
+                        double tdoaRmsError,
+                        double esmToaError) {
     m_deviceNames = deviceNames;
     m_sourceName = sourceName;
     m_systemType = systemType;
     m_simulationTime = simulationTime;
+    m_tdoaRmsError = tdoaRmsError;
+    m_esmToaError = esmToaError;
     m_devices.clear();
     m_result = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
     
@@ -158,6 +162,8 @@ void TDOAalgorithm::init(const std::vector<std::string>& deviceNames,
     std::cout << "      TDOA Algorithm Process Started" << std::endl;
     std::cout << "=============================================" << std::endl;
     std::cout << "[INIT] Target Source: " << m_sourceName << std::endl;
+    std::cout << "[INIT] TDOA RMS Error: " << m_tdoaRmsError * 1e9 << " ns" << std::endl;
+    std::cout << "[INIT] ESM TOA Error: " << m_esmToaError * 1e9 << " ns" << std::endl;
     std::cout << "[INIT] Participating Devices:" << std::endl;
     for(const auto& name : m_deviceNames) {
         std::cout << "       - " << name << std::endl;
@@ -240,54 +246,68 @@ bool TDOAalgorithm::calculate() {
     
     // ==================== 核心仿真算法部分 ====================
 
-    // 步骤 4: 计算绝对到达时间 (TOA)
+    // 步骤 4: 计算理想到达时间 (TOA)
     std::vector<double> true_toas(m_devices.size()); 
     for (size_t i = 0; i < m_devices.size(); ++i) {
         true_toas[i] = calculateDistance(stationPos_xyz[i], sourcePos_xyz) / Constants::c;
     }
 
-    // ** 关键修正: 自动选择中心站作为参考站以提高数值稳定性 **
-    COORD3 centroid = {0, 0, 0};
-    for(const auto& pos : stationPos_xyz) {
-        centroid.p1 += pos.p1;
-        centroid.p2 += pos.p2;
-        centroid.p3 += pos.p3;
-    }
-    centroid.p1 /= stationPos_xyz.size();
-    centroid.p2 /= stationPos_xyz.size();
-    centroid.p3 /= stationPos_xyz.size();
-    int best_ref_idx = 0;
-    double min_dist_to_centroid = -1.0;
-    for(size_t i = 0; i < stationPos_xyz.size(); ++i) {
-        double d = calculateDistance(stationPos_xyz[i], centroid);
-        if(min_dist_to_centroid < 0 || d < min_dist_to_centroid) {
-            min_dist_to_centroid = d;
-            best_ref_idx = i;
-        }
-    }
-    std::cout << "\n[INFO] Selected station " << best_ref_idx << " (" << m_devices[best_ref_idx].getDeviceName() << ") as the central reference to avoid ambiguity." << std::endl;
+    // ** 使用第一个侦察站作为参考站 **
+    int ref_idx = 0; 
+    std::cout << "\n[INFO] Using station " << ref_idx << " (" << m_devices[ref_idx].getDeviceName() << ") as the reference station." << std::endl;
 
-    // 根据新的参考站，重新组织侦察站和TDOA数据
-    std::vector<COORD3> reordered_stations = stationPos_xyz;
-    std::vector<double> reordered_true_toas = true_toas;
-    std::swap(reordered_stations[0], reordered_stations[best_ref_idx]);
-    std::swap(reordered_true_toas[0], reordered_true_toas[best_ref_idx]);
+    // 组织侦察站和TOA数据
+    std::vector<COORD3> stations = stationPos_xyz;
+    std::vector<double> measured_toas = true_toas;
+    
+    // 输出误差参数
+    std::cout << "\n--- Stage 3: Error Parameters ---" << std::endl;
+    std::cout << "TDOA RMS Error: " << m_tdoaRmsError * 1e6 << " μs" << std::endl;
+    std::cout << "ESM TOA Error: " << m_esmToaError * 1e6 << " μs" << std::endl;
 
-    std::vector<double> final_tdoas(m_devices.size(), 0.0); 
-    std::cout << "\n--- Stage 3: Ideal TDOA Calculation (Relative to new reference) ---" << std::endl;
-    std::cout << std::scientific << std::setprecision(6);
+    // 应用TOA系统误差（固定偏差）到参考站
+    // 根据公式: Δt^meas = Δt + δA，其中δA是参考站的系统误差
+    if (m_esmToaError != 0.0) {
+        measured_toas[ref_idx] += m_esmToaError;
+        std::cout << "Applied TOA system error to reference station: " << m_esmToaError * 1e6 << " μs" << std::endl;
+    }
+
+    // 计算带误差的TDOA
+    std::vector<double> measured_tdoas(m_devices.size(), 0.0);
+    std::cout << "\n--- Stage 4: TDOA Calculation with Errors ---" << std::endl;
+    
+    // 创建随机数生成器，用于TDOA随机误差
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    std::normal_distribution<double> noise_dist(0.0, m_tdoaRmsError); // 均值0，标准差为设定值
+    
     for (size_t i = 1; i < m_devices.size(); ++i) {
-        final_tdoas[i] = reordered_true_toas[i] - reordered_true_toas[0];
-        std::cout << "Ideal TDOA (Station " << i << " - Station 0): " << final_tdoas[i] << " s" << std::endl;
+        // 计算理想TDOA
+        double ideal_tdoa = true_toas[i] - true_toas[ref_idx];
+        
+        // 应用随机误差 - 根据公式: Δd = c·(Δt + ε)，这里我们直接应用到时间差上
+        double random_error = 0.0;
+        if (m_tdoaRmsError > 0.0) {
+            random_error = noise_dist(gen);
+        }
+        
+        // 计算带误差的TDOA - 包含了参考站的系统误差和随机误差
+        // 根据公式: Δt^meas = Δt + δA + ε
+        measured_tdoas[i] = ideal_tdoa + random_error;
+        
+        std::cout << std::scientific << std::setprecision(6);
+        std::cout << "Station " << i << " TDOA: Ideal=" << ideal_tdoa 
+                  << "s, Random Error=" << random_error * 1e6 << "μs, Measured=" 
+                  << measured_tdoas[i] << "s" << std::endl;
     }
     
     // 步骤 5: 两步定位解算
-    std::cout << "\n--- Stage 4: Localization Calculation ---" << std::endl;
-    COORD3 initial_guess = tdoaLocate_chan_initial(reordered_stations, final_tdoas);
+    std::cout << "\n--- Stage 5: Localization Calculation ---" << std::endl;
+    COORD3 initial_guess = tdoaLocate_chan_initial(stations, measured_tdoas);
     std::cout << std::fixed << std::setprecision(3);
     std::cout << "Initial Approx. Position (XYZ): " 
               << initial_guess.p1 << ", " << initial_guess.p2 << ", " << initial_guess.p3 << " m" << std::endl;
-    COORD3 final_position = tdoaRefinePosition_taylor(reordered_stations, final_tdoas, initial_guess);
+    COORD3 final_position = tdoaRefinePosition_taylor(stations, measured_tdoas, initial_guess);
     std::cout << "Final Refined Position (XYZ):   " 
               << final_position.p1 << ", " << final_position.p2 << ", " << final_position.p3 << " m" << std::endl;
     

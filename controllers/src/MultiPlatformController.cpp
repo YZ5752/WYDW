@@ -14,15 +14,16 @@
 #include <sstream>
 #include <iomanip>
 #include <cmath>
+#include <random>
 
-// 声明外部函数
-extern TDOAResult calculateTDOAErrorCircle(
-    const std::vector<std::string>& deviceNames,
-    const std::string& sourceName,
-    double tdoaErrorMean,
-    double tdoaErrorSigma,
-    unsigned int seed
-);
+// // 声明外部函数
+// extern TDOAResult calculateTDOAErrorCircle(
+//     const std::vector<std::string>& deviceNames,
+//     const std::string& sourceName,
+//     double tdoaErrorMean,
+//     double tdoaErrorSigma,
+//     unsigned int seed
+// );
 
 // 单例实现
 MultiPlatformController& MultiPlatformController::getInstance() {
@@ -220,31 +221,6 @@ void MultiPlatformController::startSimulation(const std::vector<std::string>& de
                 calculatedLatitude,
                 calculatedAltitude
             );
-            
-            // 显示测向误差线
-            // 假设角度误差为5度（可以根据实际算法计算结果调整）
-            double errorAngle = 5.0;
-            std::vector<int> activeDeviceIndices;
-            for (int i = 0; i < deviceNames.size(); ++i) {
-                activeDeviceIndices.push_back(i);
-            }
-            
-            // 清除可能存在的测向误差线
-            m_view->clearDirectionErrorLines();
-            
-            // 添加0.5秒延迟，等待轨迹动画开始后再显示测向误差线
-            // 注意：这里的延迟是为了避免视觉冲突，确保轨迹动画先开始
-            std::string delayScript = "setTimeout(function() { console.log('Ready to show direction error lines'); }, 500);";
-            mapView->executeScript(delayScript);
-            
-            // 显示所有设备的测向误差线
-            m_view->showMultipleDeviceErrorLines(
-                activeDeviceIndices,
-                resultLBH.p1,  // 使用计算得到的位置
-                resultLBH.p2,
-                resultLBH.p3,
-                errorAngle
-            );
         } else {
             m_view->updateResult("定位计算失败");
         }
@@ -252,8 +228,24 @@ void MultiPlatformController::startSimulation(const std::vector<std::string>& de
         // 获取TDOA算法实例
         TDOAalgorithm& algorithm = TDOAalgorithm::getInstance();
 
+        // 从视图获取TDOA误差参数（单位：纳秒，需要转换为秒）
+        if (m_view) {
+            double tdoaRmsError = m_view->getTDOARmsError();
+            double esmToaError = m_view->getESMToaError();
+            
+            // 更新控制器的成员变量
+            setTDOAErrorParams(tdoaRmsError, esmToaError);
+            
+            std::cout << "从视图获取TDOA误差参数：TDOA RMS误差 = " << tdoaRmsError << " s (" 
+                      << tdoaRmsError * 1e9 << " ns), ESM TOA误差 = " << esmToaError 
+                      << " s (" << esmToaError * 1e9 << " ns)" << std::endl;
+        }
+
         // 初始化算法参数
         algorithm.init(deviceNames, sourceName, systemType, simulationTime);
+        
+        // 设置误差参数（从控制器成员变量获取）
+        algorithm.setErrorParams(m_tdoaRmsError, m_esmToaError);
 
         // 执行算法
         if (algorithm.calculate()) {
@@ -270,94 +262,70 @@ void MultiPlatformController::startSimulation(const std::vector<std::string>& de
             ss << "纬度：" << result.latitude << "°\n";
             ss << "高度：" << result.altitude << " 米\n\n";
 
-            // 运动参数
-            ss << "<span weight='bold'>运动参数</span>\n";
-            ss << "方位角：" << result.azimuth << "°\n";
-            ss << "俯仰角：" << result.elevation << "°\n";
-            ss << "速度：" << result.velocity << " 米/秒\n\n";
-
-            // 定位参数
-            ss << "<span weight='bold'>定位参数</span>\n";
-            ss << "定位时间：" << result.locationTime << " 秒\n";
-            ss << "定位距离：" << result.distance << " 米\n";
-            ss << "定位精度：" << result.accuracy << " 米";
-
             // 更新界面显示
             if (m_view) {
                 m_view->updateResult(ss.str());
             }
             
-            // 使用成员变量获取TDOA误差参数
-            double tdoaRmsError = m_tdoaRmsError;
-            double esmToaError = m_esmToaError;
-            
-            // 查询辐射源真实位置
-            RadiationSourceDAO& sourceDAO = RadiationSourceDAO::getInstance();
-            std::vector<RadiationSource> sources = sourceDAO.getAllRadiationSources();
-            RadiationSource targetSource;
-            bool found = false;
-            
-            for (const auto& source : sources) {
-                if (source.getRadiationName() == sourceName) {
-                    targetSource = source;
-                    found = true;
-                    break;
-                }
+            // 查询辐射源真实位置和侦察站位置
+            std::vector<COORD3> stationPositions_xyz;
+            for (const auto& device : selectedDevices) {
+                COORD3 pos_xyz = lbh2xyz(device.getLongitude(), device.getLatitude(), device.getAltitude());
+                stationPositions_xyz.push_back(pos_xyz);
             }
             
-            if (found) {
-                // 计算并显示TDOA误差圆
-                TDOAResult errorResult = calculateTDOAErrorCircle(
-                    deviceNames, 
-                    sourceName, 
-                    esmToaError,  // 使用ESM toa Error作为均值误差
-                    tdoaRmsError, // 使用TDOA rms Error作为标准差
-                    static_cast<unsigned int>(time(nullptr))  // 使用当前时间作为随机种子
-                );
-                
-                // 获取地图视图并显示误差点和误差圆
-                MapView* mapView = m_view->getMapView();
-                if (mapView && !errorResult.estimatedPoints.empty()) {
-                    // 显示误差点
-                    showErrorPointsOnMap(mapView, errorResult.estimatedPoints);
-                    
-                    // 显示误差圆
-                    COORD3 centerLBH = xyz2lbh(errorResult.centerPoint.p1, errorResult.centerPoint.p2, errorResult.centerPoint.p3);
-                    showErrorCircleOnMap(mapView, centerLBH, errorResult.cepRadius);
-                    
-                    // 绘制双曲线
-                    std::vector<COORD3> stationPositions;
-                    std::vector<double> tdoas;
-                    
-                    // 转换设备位置到空间直角坐标
-                    for (const auto& device : selectedDevices) {
-                        COORD3 pos = lbh2xyz(device.getLongitude(), device.getLatitude(), device.getAltitude());
-                        stationPositions.push_back(pos);
-                    }
-                    
-                    // 计算理论TDOA值
-                    COORD3 sourcePos = lbh2xyz(targetSource.getLongitude(), targetSource.getLatitude(), targetSource.getAltitude());
-                    tdoas.push_back(0.0); // 参考站的TDOA为0
-                    
-                    for (size_t i = 1; i < stationPositions.size(); i++) {
-                        double dist1 = calculateDistance(stationPositions[0], sourcePos);
-                        double dist2 = calculateDistance(stationPositions[i], sourcePos);
-                        double tdoa = (dist2 - dist1) / Constants::c;
-                        tdoas.push_back(tdoa);
-                    }
-                    
-                    // 绘制双曲线
-                    HyperbolaLines::drawTDOAHyperbolas(mapView, stationPositions, tdoas, sourcePos);
-                    
-                    // 显示误差统计信息
-                    std::stringstream errorSS;
-                    errorSS << std::fixed << std::setprecision(2);
-                    errorSS << "TDOA误差统计:\n";
-                    errorSS << "CEP半径: " << errorResult.cepRadius << " 米\n";
-                    errorSS << "TDOA rms Error: " << tdoaRmsError * 1e9 << " ns\n";
-                    errorSS << "ESM toa Error: " << esmToaError * 1e9 << " ns\n";
-                    m_view->updateError(errorSS.str());
-                }
+            COORD3 sourcePos_xyz = lbh2xyz(selectedSource.getLongitude(), selectedSource.getLatitude(), selectedSource.getAltitude());
+            
+            // 计算TDOA值（用于绘制双曲线）
+            std::vector<double> tdoas(selectedDevices.size(), 0.0);
+            for (size_t i = 1; i < selectedDevices.size(); ++i) {
+                double dist_i = calculateDistance(stationPositions_xyz[i], sourcePos_xyz);
+                double dist_0 = calculateDistance(stationPositions_xyz[0], sourcePos_xyz);
+                tdoas[i] = (dist_i - dist_0) / Constants::c;
+            }
+            
+            // 绘制双曲线 - 传递误差参数（单位：纳秒）
+            std::vector<std::string> colors = {"#FF0000", "#00FF00", "#0000FF", "#FF00FF"};
+            HyperbolaLines::drawTDOAHyperbolas(
+                mapView,
+                stationPositions_xyz,
+                tdoas,
+                sourcePos_xyz,
+                colors,
+                m_tdoaRmsError * 1e9,  // 转换为纳秒
+                m_esmToaError * 1e9    // 转换为纳秒
+            );
+            
+            // 添加误差信息到结果显示
+            std::stringstream errorInfo;
+            errorInfo << std::fixed << std::setprecision(3);
+            errorInfo << "\n<span weight='bold'>误差参数</span>\n";
+            errorInfo << "TDOA均方根误差: " << m_tdoaRmsError * 1e9 << " ns\n";
+            errorInfo << "ESM TOA误差: " << m_esmToaError * 1e9 << " ns\n";
+            errorInfo << "定位误差: " << result.accuracy << " 米\n";
+            
+            if (m_view) {
+                m_view->updateError(errorInfo.str());
+            }
+            
+            // 保存多平台仿真任务信息到数据库
+            MultiPlatformTask task;
+            task.techSystem = "TDOA";
+            task.radiationId = selectedSource.getRadiationId();
+            task.executionTime = simulationTime;
+            task.targetLongitude = result.longitude;
+            task.targetLatitude = result.latitude;
+            task.targetAltitude = result.altitude;
+            task.movementSpeed = 0.0f;  // 静止目标
+            task.movementAzimuth = 0.0;
+            task.movementElevation = 0.0;
+            task.positioningTime = simulationTime;
+            task.positioningAccuracy = result.accuracy;
+            task.deviceIds = deviceIds;
+            
+            int taskId;
+            if (!MultiPlatformTaskDAO::getInstance().addMultiPlatformTask(task, taskId)) {
+                std::cerr << "多平台仿真任务保存失败" << std::endl;
             }
         } else {
             if (m_view) {
@@ -416,9 +384,6 @@ void MultiPlatformController::startSimulation(const std::vector<std::string>& de
             
             // 计算俯仰角（相对水平面的仰角）
             double elevation = std::atan2(dz, horizontalDist) * Constants::RAD2DEG;
-            
-            // // 计算距离
-            // double distance = std::sqrt(dx*dx + dy*dy + dz*dz);
             
             // 输出结果
             std::stringstream ss;

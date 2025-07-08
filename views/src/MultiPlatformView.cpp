@@ -58,7 +58,7 @@ GtkWidget* MultiPlatformView::createView() {
     gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(m_algoCombo), "时差体制");
     gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(m_algoCombo), "频差体制");
     gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(m_algoCombo), "测向体制");
-    gtk_combo_box_set_active(GTK_COMBO_BOX(m_algoCombo), 0);
+    gtk_combo_box_set_active(GTK_COMBO_BOX(m_algoCombo), 1);  // 默认选择频差体制
     gtk_box_pack_start(GTK_BOX(algoBox), m_algoCombo, TRUE, TRUE, 5);
     g_signal_connect(m_algoCombo, "changed", G_CALLBACK(onTechSystemChangedCallback), this);
     
@@ -108,7 +108,7 @@ GtkWidget* MultiPlatformView::createView() {
     gtk_box_pack_start(GTK_BOX(timeBox), timeLabel, FALSE, FALSE, 5);
     
     GtkWidget* timeEntry = gtk_entry_new();
-    gtk_entry_set_text(GTK_ENTRY(timeEntry), "20");
+    gtk_entry_set_text(GTK_ENTRY(timeEntry), "10");
     gtk_box_pack_start(GTK_BOX(timeBox), timeEntry, TRUE, TRUE, 5);
     
     // 保存时间输入框引用
@@ -120,10 +120,16 @@ GtkWidget* MultiPlatformView::createView() {
     // 创建TDOA误差参数UI
     createTDOAParamsUI(rightBox);
     
-    // 立即隐藏测向参数UI
+    // 立即隐藏测向参数UI和TDOA参数UI
     if (m_dfParamsFrame) {
         gtk_widget_set_no_show_all(m_dfParamsFrame, TRUE);
         gtk_widget_hide(m_dfParamsFrame);
+    }
+    
+    if (m_tdoaParamsFrame) {
+        gtk_widget_set_no_show_all(m_tdoaParamsFrame, TRUE);
+        gtk_widget_hide(m_tdoaParamsFrame);
+        g_print("创建后立即隐藏TDOA参数UI\n");
     }
     
     // 开始按钮
@@ -239,9 +245,9 @@ void MultiPlatformView::onTechSystemChanged() {
         for (int i = 0; i < 4; ++i) {
             gtk_widget_set_visible(m_radarFrame[i], i < 3);
         }
-        // 显示TDOA误差参数UI，隐藏测向误差参数UI
+        // 隐藏TDOA误差参数UI和测向误差参数UI
         toggleDFParamsUI(false);
-        toggleTDOAParamsUI(true);
+        toggleTDOAParamsUI(false);
     } else if (idx == 2) {
         // 测向体制：显示2个侦察设备
         for (int i = 0; i < 4; ++i) {
@@ -439,7 +445,7 @@ void MultiPlatformView::onStartSimulation() {
     }
     
     // 获取仿真时间
-    double simulationTime = 20.0; // 默认值
+    double simulationTime = 10.0; // 默认值
     if (m_timeEntry) {
         const char* timeStr = gtk_entry_get_text(GTK_ENTRY(m_timeEntry));
         if (timeStr && *timeStr) {
@@ -452,7 +458,7 @@ void MultiPlatformView::onStartSimulation() {
                         GTK_DIALOG_MODAL,
                         GTK_MESSAGE_WARNING,
                         GTK_BUTTONS_OK,
-                        "仿真时间必须在1到3600秒之间，使用默认值20秒"
+                        "仿真时间必须在1到3600秒之间，使用默认值10秒"
                     );
                     gtk_dialog_run(GTK_DIALOG(dialog));
                     gtk_widget_destroy(dialog);
@@ -464,7 +470,7 @@ void MultiPlatformView::onStartSimulation() {
                     GTK_DIALOG_MODAL,
                     GTK_MESSAGE_WARNING,
                     GTK_BUTTONS_OK,
-                    "仿真时间格式无效，使用默认值20秒"
+                    "仿真时间格式无效，使用默认值10秒"
                 );
                 gtk_dialog_run(GTK_DIALOG(dialog));
                 gtk_widget_destroy(dialog);
@@ -785,20 +791,19 @@ void MultiPlatformView::createTDOAParamsUI(GtkWidget* parent) {
     gtk_container_add(GTK_CONTAINER(m_tdoaParamsFrame), grid);
     
     // 添加参数标签和输入框
-    GtkWidget* tdoaRmsLabel = gtk_label_new("TDOA rms Error (秒):");
+    GtkWidget* tdoaRmsLabel = gtk_label_new("均方根误差(us):");
     gtk_label_set_xalign(GTK_LABEL(tdoaRmsLabel), 0.0);  // 左对齐
     
     m_tdoaRmsError = gtk_entry_new();
     gtk_entry_set_width_chars(GTK_ENTRY(m_tdoaRmsError), 10);
-    gtk_entry_set_text(GTK_ENTRY(m_tdoaRmsError), "2.0e-9");  // 默认值2纳秒
+    gtk_entry_set_text(GTK_ENTRY(m_tdoaRmsError), "0");  
     
-    GtkWidget* esmToaLabel = gtk_label_new("ESM toa Error (秒):");
+    GtkWidget* esmToaLabel = gtk_label_new("TOA误差(us):");
     gtk_label_set_xalign(GTK_LABEL(esmToaLabel), 0.0);  // 左对齐
     
     m_esmToaError = gtk_entry_new();
     gtk_entry_set_width_chars(GTK_ENTRY(m_esmToaError), 10);
-    gtk_entry_set_text(GTK_ENTRY(m_esmToaError), "-0.33e-9");  // 默认值-0.33纳秒
-    
+    gtk_entry_set_text(GTK_ENTRY(m_esmToaError), "0"); 
     // 将控件添加到网格
     gtk_grid_attach(GTK_GRID(grid), tdoaRmsLabel, 0, 0, 1, 1);
     gtk_grid_attach(GTK_GRID(grid), m_tdoaRmsError, 1, 0, 1, 1);
@@ -831,13 +836,13 @@ double MultiPlatformView::getTDOARmsError() const {
     if (m_tdoaRmsError) {
         const char* text = gtk_entry_get_text(GTK_ENTRY(m_tdoaRmsError));
         try {
-            return std::stod(text);
+            return std::stod(text) * 1.0e-6;  // 将微秒转换为秒
         } catch (const std::exception& e) {
             // 在异常情况下返回默认值
-            return 2.0e-9;  // 2纳秒
+            return 0;  
         }
     }
-    return 2.0e-9;  // 默认值
+    return 0;  // 默认值
 }
 
 // 获取ESM toa Error参数
@@ -845,11 +850,11 @@ double MultiPlatformView::getESMToaError() const {
     if (m_esmToaError) {
         const char* text = gtk_entry_get_text(GTK_ENTRY(m_esmToaError));
         try {
-            return std::stod(text);
+            return std::stod(text) * 1.0e-6;  // 将微秒转换为秒
         } catch (const std::exception& e) {
             // 在异常情况下返回默认值
-            return -0.33e-9;  // -0.33纳秒
+            return 0;  
         }
     }
-    return -0.33e-9;  // 默认值
+    return 0;  // 默认值
 } 
