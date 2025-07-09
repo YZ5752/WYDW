@@ -149,8 +149,8 @@ void SinglePlatformController::startSimulation() {
                    << "高度: " << source.getAltitude() << "米\n"
                    << "频率: " << source.getCarrierFrequency() << "GHz";
         
-        // 确保清除之前的标记
-        mapView->clearMarkers();
+        // 不再清除之前的标记
+        // mapView->clearMarkers();
         
         // 直接添加标记点 - 而不是调用updateRadarMarker和updateSourceMarker
         int radarMarker = mapView->addMarker(

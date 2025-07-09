@@ -158,10 +158,21 @@ void TrajectorySimulator::animateDeviceMovement(
     if (!mapView || trajectoryPoints.empty()) return;
     
     
-    // 清除之前的所有实体
+    // 不再移除所有实体，而是只移除动画相关的实体，保留侦察设备和辐射源标记
     std::string cleanupScript = 
-        "// 移除所有实体 \n"
-        "viewer.entities.removeAll(); ";
+        "// 只移除动画相关的实体，保留地图上的其他标记 \n"
+        "var entitiesToRemove = []; \n"
+        "viewer.entities.values.forEach(function(entity) { \n"
+        "  if (entity.id && (entity.id.indexOf('device-trail') !== -1 || \n"
+        "      entity.id.indexOf('device-entity') !== -1 || \n"
+        "      entity.id.indexOf('start-point') !== -1 || \n"
+        "      entity.id.indexOf('final-position') !== -1)) { \n"
+        "    entitiesToRemove.push(entity); \n"
+        "  } \n"
+        "}); \n"
+        "for (var i = 0; i < entitiesToRemove.length; i++) { \n"
+        "  viewer.entities.remove(entitiesToRemove[i]); \n"
+        "}";
     mapView->executeScript(cleanupScript);
     
     // 获取设备高度
@@ -347,10 +358,18 @@ void TrajectorySimulator::animateMultipleDevicesMovement(
     if (!mapView || devices.empty()) return;
     
     
-    // 清除之前的所有实体
+    // 修改为移除所有实体，确保地图上不会有重复标记
     std::string cleanupScript = 
         "// 移除所有实体 \n"
-        "viewer.entities.removeAll(); ";
+        "var entitiesToRemove = []; \n"
+        "viewer.entities.values.forEach(function(entity) { \n"
+        "  if (entity.id) { \n"
+        "    entitiesToRemove.push(entity); \n"
+        "  } \n"
+        "}); \n"
+        "for (var i = 0; i < entitiesToRemove.length; i++) { \n"
+        "  viewer.entities.remove(entitiesToRemove[i]); \n"
+        "}";
     mapView->executeScript(cleanupScript);
     
     // 构建新的轨迹动画JavaScript代码
