@@ -556,8 +556,8 @@ void SinglePlatformView::onSinglePlatformSimulation(GtkWidget* widget, gpointer 
         return;
     }
     
-    // 清除之前的测向误差线
-    view->clearDirectionErrorLines();
+    // 注释掉清除测向误差线的代码
+    // view->clearDirectionErrorLines();
     
     g_print("调用SinglePlatformController::startSimulation()...\n");
     
@@ -691,6 +691,8 @@ void SinglePlatformView::animateDeviceMovement(const ReconnaissanceDevice& devic
         return G_SOURCE_REMOVE;
     }, self);
     
+    // 注释掉动画结束后显示测向误差线的代码
+    /*
     // 动画结束后显示测向误差线
     g_timeout_add(simulationTime * 1000 + 1500, [](gpointer data) -> gboolean {
         auto* view = static_cast<SinglePlatformView*>(data);
@@ -808,6 +810,7 @@ void SinglePlatformView::animateDeviceMovement(const ReconnaissanceDevice& devic
         
         return G_SOURCE_REMOVE;
     }, self);
+    */
 }
 
 void SinglePlatformView::showSimulationResult(double lon, double lat, double alt, double az, double el) {

@@ -5,6 +5,7 @@
 
 #include "../../utils/ErrorCircle.h"
 #include "../../utils/ErrorCircleDisplay.h"
+#include "../../utils/HyperbolaLines.h"
 
 #include "../../models/TDOAalgorithm.h"
 #include "../../models/DirectionFinding.h"
@@ -282,11 +283,162 @@ void MultiPlatformController::startSimulation(const std::vector<std::string>& de
                 double dist_i = calculateDistance(stationPositions_xyz[i], sourcePos_xyz);
                 double dist_0 = calculateDistance(stationPositions_xyz[0], sourcePos_xyz);
                 tdoas[i] = (dist_i - dist_0) / Constants::c;
+                
+                // 添加详细调试信息
+                std::cout << "==== TDOA " << i << " 详细信息 ====" << std::endl;
+                std::cout << "站点 0 (" << selectedDevices[0].getDeviceName() << ") 坐标: " 
+                         << "(" << stationPositions_xyz[0].p1 << ", " 
+                         << stationPositions_xyz[0].p2 << ", " 
+                         << stationPositions_xyz[0].p3 << ")" << std::endl;
+                
+                std::cout << "站点 " << i << " (" << selectedDevices[i].getDeviceName() << ") 坐标: " 
+                         << "(" << stationPositions_xyz[i].p1 << ", " 
+                         << stationPositions_xyz[i].p2 << ", " 
+                         << stationPositions_xyz[i].p3 << ")" << std::endl;
+                
+                std::cout << "辐射源坐标: " 
+                         << "(" << sourcePos_xyz.p1 << ", " 
+                         << sourcePos_xyz.p2 << ", " 
+                         << sourcePos_xyz.p3 << ")" << std::endl;
+                
+                std::cout << "dist_0 = " << dist_0 << " 米" << std::endl;
+                std::cout << "dist_" << i << " = " << dist_i << " 米" << std::endl;
+                std::cout << "距离差 = " << (dist_i - dist_0) << " 米" << std::endl;
+                std::cout << "TDOA = " << tdoas[i] << " 秒 (" << tdoas[i] * 1e9 << " ns)" << std::endl;
+                
+                // 检查是否可以构造双曲线
+                double focusDistance = calculateDistance(stationPositions_xyz[0], stationPositions_xyz[i]);
+                std::cout << "焦距 = " << focusDistance << " 米" << std::endl;
+                
+                if (std::abs(dist_i - dist_0) >= focusDistance) {
+                    std::cout << "警告: TDOA距离差(" << (dist_i - dist_0) << " 米)大于等于焦距(" 
+                             << focusDistance << " 米)，无法构造双曲线" << std::endl;
+                } else {
+                    std::cout << "距离差/焦距比率 = " << std::abs(dist_i - dist_0) / focusDistance << std::endl;
+                }
+                
+                std::cout << "========================" << std::endl;
             }
             
-            // 绘制双曲线 - 传递误差参数（单位：纳秒）
+            // 使用HyperbolaLines类绘制双曲线
             std::vector<std::string> colors = {"#FF0000", "#00FF00", "#0000FF", "#FF00FF"};
-            HyperbolaLines::drawTDOAHyperbolas(
+            
+            // 添加双曲线绘制前的调试信息
+            std::cout << "\n========= 开始绘制双曲线 =========" << std::endl;
+            std::cout << "侦察站数量: " << stationPositions_xyz.size() << std::endl;
+            std::cout << "TDOA值数量: " << tdoas.size() << std::endl;
+            for (size_t i = 1; i < tdoas.size(); ++i) {
+                std::cout << "TDOA[" << i << "] = " << tdoas[i] << " 秒" << std::endl;
+            }
+            std::cout << "TDOA RMS误差: " << m_tdoaRmsError << " 秒 (" << m_tdoaRmsError * 1e9 << " ns)" << std::endl;
+            std::cout << "ESM TOA误差: " << m_esmToaError << " 秒 (" << m_esmToaError * 1e9 << " ns)" << std::endl;
+            
+            // 先清除地图上的所有实体
+            mapView->clearMarkers();
+            
+            // 添加侦察设备标记
+            for (const auto& device : selectedDevices) {
+                mapView->addMarker(
+                    device.getLongitude(),
+                    device.getLatitude(),
+                    device.getDeviceName(),
+                    "",
+                    "red"
+                );
+            }
+            
+            // 添加辐射源标记
+            mapView->addMarker(
+                selectedSource.getLongitude(),
+                selectedSource.getLatitude(),
+                selectedSource.getRadiationName(),
+                "",
+                "blue"
+            );
+            
+            // 添加计算结果标记
+            mapView->addMarker(
+                result.longitude,
+                result.latitude,
+                "计算结果",
+                "",
+                "green"
+            );
+            
+            // 尝试使用JavaScript直接检查Cesium是否加载
+            std::string checkScript = "if (typeof viewer !== 'undefined') { console.log('Cesium已加载'); } else { console.log('Cesium未加载'); }";
+            mapView->executeScript(checkScript);
+            
+            // 添加调试代码，测试基本的JavaScript执行是否正常
+            std::string testScript = "try {\n"
+                                   "  var testEntity = viewer.entities.add({\n"
+                                   "    position: Cesium.Cartesian3.fromDegrees(116.0, 39.0, 0),\n"
+                                   "    point: { pixelSize: 10, color: Cesium.Color.RED }\n"
+                                   "  });\n"
+                                   "  console.log('测试实体添加成功');\n"
+                                   "} catch(e) {\n"
+                                   "  console.error('测试实体添加失败: ' + e.message);\n"
+                                   "}\n";
+            mapView->executeScript(testScript);
+            
+            // 添加特殊测试代码，测试计算双曲线点的函数
+            std::cout << "\n========= 直接测试双曲线点计算函数 =========" << std::endl;
+            // 简化测试：使用前两个侦察站创建一个简单的双曲线
+            if (stationPositions_xyz.size() >= 2) {
+                COORD3 testFocus1 = stationPositions_xyz[0];
+                COORD3 testFocus2 = stationPositions_xyz[1];
+                
+                // 测试1：使用小TDOA值
+                double testTdoa1 = 0.00001; // 10微秒，对应距离差约3米
+                std::cout << "测试1 - 小TDOA值:" << std::endl;
+                std::cout << "TDOA = " << testTdoa1 << " 秒" << std::endl;
+                
+                std::vector<COORD3> testPoints1 = HyperbolaLines::calculateHyperbolaPoints(
+                    testFocus1, testFocus2, testTdoa1, 0.0, 100, 100000.0);
+                
+                if (!testPoints1.empty()) {
+                    bool drawTestSuccess1 = HyperbolaLines::drawHyperbolaLine(
+                        mapView, testPoints1, "#FF00FF", 3.0);
+                    std::cout << "测试1绘制结果: " << (drawTestSuccess1 ? "成功" : "失败") << std::endl;
+                }
+                
+                // 测试2：使用临界TDOA值（接近焦距对应的时间差）
+                double focusDistance = calculateDistance(testFocus1, testFocus2);
+                double criticalTdoa = focusDistance / Constants::c * 0.95; // 设为焦距95%对应的时间差
+                
+                std::cout << "测试2 - 临界TDOA值:" << std::endl;
+                std::cout << "焦距 = " << focusDistance << " 米" << std::endl;
+                std::cout << "临界TDOA = " << criticalTdoa << " 秒" << std::endl;
+                
+                std::vector<COORD3> testPoints2 = HyperbolaLines::calculateHyperbolaPoints(
+                    testFocus1, testFocus2, criticalTdoa, 0.0, 100, 100000.0);
+                
+                if (!testPoints2.empty()) {
+                    bool drawTestSuccess2 = HyperbolaLines::drawHyperbolaLine(
+                        mapView, testPoints2, "#00FFFF", 3.0);
+                    std::cout << "测试2绘制结果: " << (drawTestSuccess2 ? "成功" : "失败") << std::endl;
+                }
+                
+                // 测试3：使用超过临界值的TDOA，测试自动调整功能
+                double overCriticalTdoa = focusDistance / Constants::c * 1.2; // 设为焦距120%对应的时间差
+                
+                std::cout << "测试3 - 超临界TDOA值:" << std::endl;
+                std::cout << "超临界TDOA = " << overCriticalTdoa << " 秒" << std::endl;
+                
+                std::vector<COORD3> testPoints3 = HyperbolaLines::calculateHyperbolaPoints(
+                    testFocus1, testFocus2, overCriticalTdoa, 0.0, 100, 100000.0);
+                
+                if (!testPoints3.empty()) {
+                    bool drawTestSuccess3 = HyperbolaLines::drawHyperbolaLine(
+                        mapView, testPoints3, "#FFFF00", 3.0);
+                    std::cout << "测试3绘制结果: " << (drawTestSuccess3 ? "成功" : "失败") << std::endl;
+                }
+            } else {
+                std::cout << "侦察站数量不足，无法测试双曲线计算" << std::endl;
+            }
+            std::cout << "========= 测试结束 =========" << std::endl;
+            
+            bool drawSuccess = HyperbolaLines::drawTDOAHyperbolas(
                 mapView,
                 stationPositions_xyz,
                 tdoas,
@@ -295,6 +447,16 @@ void MultiPlatformController::startSimulation(const std::vector<std::string>& de
                 m_tdoaRmsError * 1e9,  // 转换为纳秒
                 m_esmToaError * 1e9    // 转换为纳秒
             );
+            
+            // 添加双曲线绘制后的调试信息
+            std::cout << "双曲线绘制结果: " << (drawSuccess ? "成功" : "失败") << std::endl;
+            std::cout << "========= 结束绘制双曲线 =========" << std::endl;
+            
+            if (!drawSuccess) {
+                std::cerr << "绘制TDOA双曲线失败" << std::endl;
+            } else {
+                std::cout << "成功绘制TDOA双曲线" << std::endl;
+            }
             
             // 添加误差信息到结果显示
             std::stringstream errorInfo;
@@ -332,17 +494,6 @@ void MultiPlatformController::startSimulation(const std::vector<std::string>& de
                 m_view->updateResult("<span color='red'>仿真计算失败</span>");
             }
         }
-        
-        // 执行轨迹动画
-        TrajectorySimulator::getInstance().animateMultipleDevicesMovement(
-            mapView,
-            selectedDevices,
-            selectedSource,
-            simulationTime,
-            calculatedLongitude,
-            calculatedLatitude,
-            calculatedAltitude
-        );
     } else if (systemType == "测向体制") {
         // 使用测向定位算法实现
         DirectionFinding& algorithm = DirectionFinding::getInstance();

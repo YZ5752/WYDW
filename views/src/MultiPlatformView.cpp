@@ -796,14 +796,14 @@ void MultiPlatformView::createTDOAParamsUI(GtkWidget* parent) {
     
     m_tdoaRmsError = gtk_entry_new();
     gtk_entry_set_width_chars(GTK_ENTRY(m_tdoaRmsError), 10);
-    gtk_entry_set_text(GTK_ENTRY(m_tdoaRmsError), "0");  
+    gtk_entry_set_text(GTK_ENTRY(m_tdoaRmsError), "0.01");  
     
     GtkWidget* esmToaLabel = gtk_label_new("TOA误差(us):");
     gtk_label_set_xalign(GTK_LABEL(esmToaLabel), 0.0);  // 左对齐
     
     m_esmToaError = gtk_entry_new();
     gtk_entry_set_width_chars(GTK_ENTRY(m_esmToaError), 10);
-    gtk_entry_set_text(GTK_ENTRY(m_esmToaError), "0"); 
+    gtk_entry_set_text(GTK_ENTRY(m_esmToaError), "0.01"); 
     // 将控件添加到网格
     gtk_grid_attach(GTK_GRID(grid), tdoaRmsLabel, 0, 0, 1, 1);
     gtk_grid_attach(GTK_GRID(grid), m_tdoaRmsError, 1, 0, 1, 1);
