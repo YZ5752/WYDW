@@ -52,6 +52,11 @@ public:
     // 显示任务详情对话框
     void showTaskDetailsDialog(int taskId, const std::string& taskType);
 
+    void updateAllTaskList();
+
+    GtkWidget* getDataList() const { return m_dataList; }
+    GtkWidget* getTargetCombo() const { return m_targetCombo; }
+
 private:
     GtkWidget* m_view;
     GtkWidget* m_dataList;

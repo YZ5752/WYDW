@@ -7,7 +7,12 @@
 #include "../../models/DBConnector.h"
 #include "../../models/ReconnaissanceDeviceDAO.h"
 #include "../../models/ReconnaissanceDeviceModel.h"
+#include "../../controllers/DataSelectionController.h"
 
+// 添加refreshTechCombo声明，确保后续能正常调用
+void refreshTechCombo(GtkComboBoxText* techCombo, bool isSingle);
+// 添加refreshDeviceCombo声明
+void refreshDeviceCombo(GtkComboBoxText* deviceCombo, const std::vector<ReconnaissanceDevice>& allDevices, const std::vector<ReconnaissanceDevice>& fixedDevices, bool isSingle, const std::string& tech);
 struct ImportDialogContext {
     GtkWidget* radioSingle;
     GtkWidget* deviceLabel;
@@ -17,6 +22,9 @@ struct ImportDialogContext {
     std::vector<GtkWidget*>* singleRowWidgets;
     std::vector<GtkWidget*>* multiRowWidgets;
     GtkWidget* techCombo;
+    GtkWidget** multiDeviceLabels;
+    GtkWidget** multiDeviceCombos;
+    GtkWidget* azElBox;
 };
 
 struct MultiDeviceComboContext {
@@ -35,10 +43,7 @@ static void on_radio_single_toggled(GtkToggleButton* btn, gpointer user_data) {
         gtk_widget_hide(ctx->multiDeviceCombo);
         for (auto w : *(ctx->singleRowWidgets)) gtk_widget_show(w);
         for (auto w : *(ctx->multiRowWidgets)) gtk_widget_hide(w);
-        gtk_combo_box_text_remove_all(GTK_COMBO_BOX_TEXT(ctx->techCombo));
-        gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(ctx->techCombo), "时差定位");
-        gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(ctx->techCombo), "干涉仪定位");
-        gtk_combo_box_set_active(GTK_COMBO_BOX(ctx->techCombo), 0);
+        refreshTechCombo(GTK_COMBO_BOX_TEXT(ctx->techCombo), true);
     }
 }
 // 多平台任务类型选择事件回调函数
@@ -52,18 +57,42 @@ static void on_radio_multi_toggled(GtkToggleButton* btn, gpointer user_data) {
         gtk_widget_show(ctx->multiDeviceCombo);
         for (auto w : *(ctx->singleRowWidgets)) gtk_widget_hide(w);
         for (auto w : *(ctx->multiRowWidgets)) gtk_widget_show(w);
-        gtk_combo_box_text_remove_all(GTK_COMBO_BOX_TEXT(ctx->techCombo));
-        gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(ctx->techCombo), "时差定位");
-        gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(ctx->techCombo), "频差定位");
-        gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(ctx->techCombo), "测向定位");
-        gtk_combo_box_set_active(GTK_COMBO_BOX(ctx->techCombo), 0);
+        refreshTechCombo(GTK_COMBO_BOX_TEXT(ctx->techCombo), false);
     }
 }
+// 刷新技术体制下拉框
+void refreshTechCombo(GtkComboBoxText* techCombo, bool isSingle) {
+    gtk_combo_box_text_remove_all(techCombo);
+    if (isSingle) {
+        gtk_combo_box_text_append_text(techCombo, "时差定位");
+        gtk_combo_box_text_append_text(techCombo, "干涉仪定位");
+    } else {
+        gtk_combo_box_text_append_text(techCombo, "时差定位");
+        gtk_combo_box_text_append_text(techCombo, "频差定位");
+        gtk_combo_box_text_append_text(techCombo, "测向定位");
+    }
+    gtk_combo_box_set_active(GTK_COMBO_BOX(techCombo), 0);
+}
+
 //多平台技术体制选择事件回调函数
 static void on_multi_tech_changed(GtkComboBox* combo, gpointer user_data) {
     MultiDeviceComboContext* ctx = static_cast<MultiDeviceComboContext*>(user_data);
     gchar* tech = gtk_combo_box_text_get_active_text(GTK_COMBO_BOX_TEXT(ctx->techCombo));
-    gtk_combo_box_text_remove_all(GTK_COMBO_BOX_TEXT(ctx->multiDeviceCombo));
+    if (tech) {
+        if (std::string(tech) == "频差定位") {
+            refreshDeviceCombo(GTK_COMBO_BOX_TEXT(ctx->multiDeviceCombo), *(ctx->allDevices), *(ctx->allDevices), false, tech);
+        } else {
+            // 只显示固定设备
+            std::vector<ReconnaissanceDevice> fixedDevices;
+            for (const auto& dev : *(ctx->allDevices)) {
+                if (dev.getIsStationary()) fixedDevices.push_back(dev);
+            }
+            refreshDeviceCombo(GTK_COMBO_BOX_TEXT(ctx->multiDeviceCombo), *(ctx->allDevices), fixedDevices, false, tech);
+        }
+    } else {
+        refreshDeviceCombo(GTK_COMBO_BOX_TEXT(ctx->multiDeviceCombo), *(ctx->allDevices), *(ctx->allDevices), false, "");
+    }
+    // 保持原有多平台下拉框显示/隐藏逻辑
     std::vector<ReconnaissanceDevice> devicesToShow;
     if (tech && std::string(tech) == "频差定位") {
         devicesToShow = *(ctx->allDevices);
@@ -78,7 +107,22 @@ static void on_multi_tech_changed(GtkComboBox* combo, gpointer user_data) {
     if (!devicesToShow.empty()) gtk_combo_box_set_active(GTK_COMBO_BOX(ctx->multiDeviceCombo), 0);
     if (tech) g_free(tech);
 }
-
+// 刷新侦察设备下拉框
+void refreshDeviceCombo(GtkComboBoxText* deviceCombo, const std::vector<ReconnaissanceDevice>& allDevices, const std::vector<ReconnaissanceDevice>& fixedDevices, bool isSingle, const std::string& tech) {
+    gtk_combo_box_text_remove_all(deviceCombo);
+    const std::vector<ReconnaissanceDevice>* showList = nullptr;
+    if (isSingle) {
+        showList = &fixedDevices;
+    } else {
+        if (tech == "频差定位") showList = &allDevices;
+        else showList = &fixedDevices;
+    }
+    for (const auto& dev : *showList) {
+        gtk_combo_box_text_append_text(deviceCombo, dev.getDeviceName().c_str());
+    }
+    if (!showList->empty()) gtk_combo_box_set_active(GTK_COMBO_BOX(deviceCombo), 0);
+    else gtk_combo_box_set_active(GTK_COMBO_BOX(deviceCombo), -1);
+}
 // 实现DataSelectionView类
 DataSelectionView::DataSelectionView() : m_view(nullptr), m_dataList(nullptr), m_filterEntry(nullptr), m_startTimeEntry(nullptr), m_endTimeEntry(nullptr), m_targetCombo(nullptr) {
 }
@@ -86,73 +130,13 @@ DataSelectionView::DataSelectionView() : m_view(nullptr), m_dataList(nullptr), m
 DataSelectionView::~DataSelectionView() {
 }
 
-// 从数据库获取关联任务数据
-std::vector<std::vector<std::string>> DataSelectionView::getRelatedTasks(int radiationId) {
-    std::vector<std::vector<std::string>> tasks;
-    DBConnector& db = DBConnector::getInstance();
-    MYSQL* conn = db.getConnection();
-    if (!conn) {
-        std::cerr << "No valid database connection" << std::endl;
-        return tasks;
-    }
-
-// 查询单平台任务
-std::string singleSql = "SELECT '单平台', rd.device_name, sp.task_id, sp.target_longitude, sp.target_latitude, sp.target_altitude, sp.azimuth, sp.elevation "
-                            "FROM single_platform_task sp "
-                            "JOIN reconnaissance_device_models rd ON sp.device_id = rd.device_id "
-                            "WHERE sp.radiation_id = " + std::to_string(radiationId);
-    if (mysql_query(conn, singleSql.c_str()) == 0) {
-        MYSQL_RES *result = mysql_store_result(conn);
-        if (result != nullptr) {
-            MYSQL_ROW row;
-            while ((row = mysql_fetch_row(result))) {
-                std::vector<std::string> task;
-                for (int i = 0; i < mysql_num_fields(result); ++i) {
-                    task.push_back(row[i] ? row[i] : "");
-                }
-                tasks.push_back(task);
-            }
-            mysql_free_result(result);
-        }
-    } else {
-        // 调用新增的公共成员函数
-        db.showError();
-    }
-
-// 查询多平台任务
-std::string multiSql = "SELECT '多平台', GROUP_CONCAT(rd.device_name SEPARATOR ', '), mp.task_id, mp.target_longitude, mp.target_latitude, mp.target_altitude, mp.azimuth, mp.elevation "
-                           "FROM multi_platform_task mp "
-                           "JOIN platform_task_relation ptr ON mp.task_id = ptr.simulation_id "
-                           "JOIN reconnaissance_device_models rd ON ptr.device_id = rd.device_id "
-                           "WHERE mp.radiation_id = " + std::to_string(radiationId) +
-                           " GROUP BY mp.task_id";
-    if (mysql_query(conn, multiSql.c_str()) == 0) {
-        MYSQL_RES *result = mysql_store_result(conn);
-        if (result != nullptr) {
-            MYSQL_ROW row;
-            while ((row = mysql_fetch_row(result))) {
-                std::vector<std::string> task;
-                for (int i = 0; i < mysql_num_fields(result); ++i) {
-                    task.push_back(row[i] ? row[i] : "");
-                }
-                tasks.push_back(task);
-            }
-            mysql_free_result(result);
-        }
-    } else {
-        // 调用新增的公共成员函数
-        db.showError();
-    }
-
-    return tasks;
-}
-
 // 更新目标数据列表
 void DataSelectionView::updateTaskList(int radiationId) {
     GtkListStore *store = GTK_LIST_STORE(gtk_tree_view_get_model(GTK_TREE_VIEW(m_dataList)));
     gtk_list_store_clear(store);
 
-    std::vector<std::vector<std::string>> tasks = getRelatedTasks(radiationId);
+    // 通过Controller获取数据
+    std::vector<std::vector<std::string>> tasks = DataSelectionController::getInstance().getRelatedTasks(radiationId);
     GtkTreeIter iter;
     for (const auto &task : tasks) {
         gtk_list_store_append(store, &iter);
@@ -294,10 +278,7 @@ GtkWidget* DataSelectionView::createView() {
     // 连接行激活事件
     g_signal_connect(G_OBJECT(m_dataList), "row-activated", G_CALLBACK(on_row_activated), this);
     
-    // 启用指针悬停效果
-    gtk_widget_set_has_tooltip(m_dataList, TRUE);
     
-    // 添加列
     // 选择列
     GtkCellRenderer* toggleRenderer = gtk_cell_renderer_toggle_new();
     GtkTreeViewColumn* toggleColumn = gtk_tree_view_column_new_with_attributes(
@@ -323,7 +304,7 @@ GtkWidget* DataSelectionView::createView() {
     GtkCellRenderer* textRenderer4 = gtk_cell_renderer_text_new();
     GtkTreeViewColumn* column4 = gtk_tree_view_column_new_with_attributes(
         "测向数据(方位角，俯仰角)", textRenderer4, "text", 3, NULL);
-    gtk_tree_view_column_set_min_width(column4, 150);
+    gtk_tree_view_column_set_min_width(column4, 200);
     gtk_tree_view_append_column(GTK_TREE_VIEW(m_dataList), column4);
     
     // 查看按钮列
@@ -359,16 +340,11 @@ GtkWidget* DataSelectionView::createView() {
 
     // 初始化数据列表
     if (!sources.empty()) {
-        int radiationId = sources[0].getRadiationId(); // 假设 RadiationSource 类有 getRadiationId 方法
+        int radiationId = sources[0].getRadiationId(); 
         updateTaskList(radiationId);
     }
     
     return m_view;
-}
-
-// 更新数据列表
-void DataSelectionView::updateDataList(const std::vector<std::string>& dataItems) {
-    // 实现更新数据列表的逻辑
 }
 
 // 获取选中的数据项
@@ -408,100 +384,14 @@ std::vector<std::vector<std::string>> DataSelectionView::getSelectedData() const
     return selectedData;
 }
 
-// 删除选中的数据项
-void DataSelectionView::deleteSelectedItems() {
-    DBConnector& db = DBConnector::getInstance();
-    MYSQL* conn = db.getConnection();
-    if (!conn || mysql_ping(conn) != 0) {
-        std::cerr << "数据库连接异常" << std::endl;
-        std::cerr.flush();
-        return;
-    }
-
-    GtkTreeSelection *selection = gtk_tree_view_get_selection(GTK_TREE_VIEW(m_dataList));
-    GtkTreeModel *model;
-    GList *selectedRows = gtk_tree_selection_get_selected_rows(selection, &model);
-    GList *iter = selectedRows;
-    while (iter != nullptr) {
-        GtkTreePath *path = static_cast<GtkTreePath*>(iter->data);
-        GtkTreeIter treeIter;
-        if (gtk_tree_model_get_iter(model, &treeIter, path)) {
-            // 获取任务类型
-            gchar *taskTypeValue;
-            gtk_tree_model_get(model, &treeIter, 1, &taskTypeValue, -1);
-            std::string taskType = taskTypeValue ? taskTypeValue : "";
-            g_free(taskTypeValue);
-            // 获取任务ID
-            int taskId = 0;
-            gtk_tree_model_get(model, &treeIter, 5, &taskId, -1);
-            // 根据任务类型和任务ID删除
-            std::string tableName;
-            if (taskType == "单平台") {
-                tableName = "single_platform_task";
-            } else if (taskType == "多平台") {
-                tableName = "multi_platform_task";
-            } else {
-                std::cerr << "未知任务类型: " << taskType << std::endl;
-                continue;
-            }
-            std::string sql = "DELETE FROM " + tableName + " WHERE task_id = " + std::to_string(taskId);
-            if (mysql_query(conn, sql.c_str()) != 0) {
-                std::cerr << "删除失败: " << mysql_error(conn) << std::endl;
-            } else {
-                std::cout << "成功删除任务ID: " << taskId << std::endl;
-            }
-        }
-        iter = g_list_next(iter);
-    }
-    g_list_free_full(selectedRows, reinterpret_cast<GDestroyNotify>(gtk_tree_path_free));
-    // 刷新列表
-    if (GTK_IS_COMBO_BOX(m_targetCombo)) {
-        int active = gtk_combo_box_get_active(GTK_COMBO_BOX(m_targetCombo));
-        if (active >= 0) {
-            auto sources = RadiationSourceDAO::getInstance().getAllRadiationSources();
-            if (active < static_cast<int>(sources.size())) {
-                updateTaskList(sources[active].getRadiationId());
-            }
-        }
-    }
+// 删除选中数据项操作
+void DataSelectionView::onDeleteButtonClicked(GtkWidget* widget, gpointer user_data) {
+    DataSelectionView* view = static_cast<DataSelectionView*>(user_data);
+    DataSelectionController::getInstance().deleteSelectedItems(view);
 }
 
-// 1. 移除 multiDeviceCombo 相关结构体、信号、回调
-// 2. 新增刷新 techCombo 和 deviceCombo 的辅助函数
-// 3. onImportButtonClicked 内部重构
-// 4. on_radio_single_toggled、on_radio_multi_toggled、on_tech_changed 统一逻辑
 
-// --- 辅助函数 ---
-// 刷新技术体制下拉框
-void refreshTechCombo(GtkComboBoxText* techCombo, bool isSingle) {
-    gtk_combo_box_text_remove_all(techCombo);
-    if (isSingle) {
-        gtk_combo_box_text_append_text(techCombo, "时差定位");
-        gtk_combo_box_text_append_text(techCombo, "干涉仪定位");
-    } else {
-        gtk_combo_box_text_append_text(techCombo, "时差定位");
-        gtk_combo_box_text_append_text(techCombo, "频差定位");
-        gtk_combo_box_text_append_text(techCombo, "测向定位");
-    }
-    gtk_combo_box_set_active(GTK_COMBO_BOX(techCombo), 0);
-}
-// 刷新侦察设备下拉框
-void refreshDeviceCombo(GtkComboBoxText* deviceCombo, const std::vector<ReconnaissanceDevice>& allDevices, const std::vector<ReconnaissanceDevice>& fixedDevices, bool isSingle, const std::string& tech) {
-    gtk_combo_box_text_remove_all(deviceCombo);
-    const std::vector<ReconnaissanceDevice>* showList = nullptr;
-    if (isSingle) {
-        showList = &fixedDevices;
-    } else {
-        if (tech == "频差定位") showList = &allDevices;
-        else showList = &fixedDevices;
-    }
-    for (const auto& dev : *showList) {
-        gtk_combo_box_text_append_text(deviceCombo, dev.getDeviceName().c_str());
-    }
-    if (!showList->empty()) gtk_combo_box_set_active(GTK_COMBO_BOX(deviceCombo), 0);
-    else gtk_combo_box_set_active(GTK_COMBO_BOX(deviceCombo), -1);
-}
-// 技术体制切换回调
+// 根据技术体制展示设备列表
 static void on_tech_changed(GtkComboBox* combo, gpointer user_data) {
     auto ctx = static_cast<ImportDialogContext*>(user_data);
     bool isSingle = gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(ctx->radioSingle));
@@ -512,6 +402,40 @@ static void on_tech_changed(GtkComboBox* combo, gpointer user_data) {
     std::string tech = techText ? techText : "";
     if (techText) g_free(techText);
     refreshDeviceCombo(GTK_COMBO_BOX_TEXT(ctx->deviceCombo), *allDevices, *fixedDevices, isSingle, tech);
+    // 多平台设备下拉框动态控制
+    if (!isSingle && ctx->multiDeviceLabels && ctx->multiDeviceCombos) {
+        int needCount = 0;
+        const std::vector<ReconnaissanceDevice>* showList = nullptr;
+        if (tech == "时差定位") { needCount = 4; showList = fixedDevices; }
+        else if (tech == "测向定位") { needCount = 2; showList = fixedDevices; }
+        else if (tech == "频差定位") { needCount = 3; showList = allDevices; }
+        // 先全部隐藏
+        for (int i = 0; i < 4; ++i) {
+            gtk_widget_hide(ctx->multiDeviceLabels[i]);
+            gtk_widget_hide(ctx->multiDeviceCombos[i]);
+        }
+        // 显示需要的下拉框并填充
+        for (int i = 0; i < needCount; ++i) {
+            gtk_widget_show(ctx->multiDeviceLabels[i]);
+            gtk_widget_show(ctx->multiDeviceCombos[i]);
+            gtk_combo_box_text_remove_all(GTK_COMBO_BOX_TEXT(ctx->multiDeviceCombos[i]));
+            if (showList) {
+                for (const auto& dev : *showList) {
+                    gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(ctx->multiDeviceCombos[i]), dev.getDeviceName().c_str());
+                }
+                if (!showList->empty())
+                    gtk_combo_box_set_active(GTK_COMBO_BOX(ctx->multiDeviceCombos[i]), 0);
+                else
+                    gtk_combo_box_set_active(GTK_COMBO_BOX(ctx->multiDeviceCombos[i]), -1);
+            }
+        }
+    } else if (ctx->multiDeviceLabels && ctx->multiDeviceCombos) {
+        // 单平台时全部隐藏
+        for (int i = 0; i < 4; ++i) {
+            gtk_widget_hide(ctx->multiDeviceLabels[i]);
+            gtk_widget_hide(ctx->multiDeviceCombos[i]);
+        }
+    }
 }
 // 单/多平台切换回调
 static void on_radio_type_toggled(GtkToggleButton* btn, gpointer user_data) {
@@ -527,16 +451,76 @@ static void on_radio_type_toggled(GtkToggleButton* btn, gpointer user_data) {
     refreshDeviceCombo(GTK_COMBO_BOX_TEXT(ctx->deviceCombo), *allDevices, *fixedDevices, isSingle, tech);
     // 字段显示
     if (isSingle) {
+        gtk_widget_show(ctx->deviceLabel);
+        gtk_widget_show(ctx->deviceCombo);
         for (auto w : *(ctx->singleRowWidgets)) gtk_widget_show(w);
         for (auto w : *(ctx->multiRowWidgets)) gtk_widget_hide(w);
     } else {
+        gtk_widget_hide(ctx->deviceLabel);
+        gtk_widget_hide(ctx->deviceCombo);
         for (auto w : *(ctx->singleRowWidgets)) gtk_widget_hide(w);
         for (auto w : *(ctx->multiRowWidgets)) gtk_widget_show(w);
+        // 多平台切换时自动刷新设备下拉框
+        on_tech_changed(GTK_COMBO_BOX(ctx->techCombo), ctx);
     }
 }
-// --- onImportButtonClicked 重构 ---
+
 void DataSelectionView::onImportButtonClicked(GtkWidget* widget, gpointer user_data) {
-    DataSelectionView* view = static_cast<DataSelectionView*>(user_data);
+    // 字段名、Entry控件映射
+    struct FieldEntry { const char* label; GtkWidget* entry; };
+    // 侦察设备
+    GtkWidget* deviceLabel = gtk_label_new("侦察设备");
+    gtk_widget_set_halign(deviceLabel, GTK_ALIGN_START);
+    // 目标坐标（经度/纬度/高度）
+    GtkWidget* posLabel = gtk_label_new("目标坐标");
+    gtk_widget_set_halign(posLabel, GTK_ALIGN_START);
+    // 执行时间 定位时间
+    GtkWidget* execTimeEntry = gtk_entry_new();//执行时间
+    GtkWidget* posTimeEntry = gtk_entry_new();//定位时间
+    GtkWidget* timeBox = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 5);
+    gtk_box_pack_start(GTK_BOX(timeBox), gtk_label_new("执行时间(s)"), FALSE, FALSE, 0);
+    gtk_box_pack_start(GTK_BOX(timeBox), execTimeEntry, TRUE, TRUE, 0);
+    gtk_box_pack_start(GTK_BOX(timeBox), gtk_label_new("定位时间(s)"), FALSE, FALSE, 0);
+    gtk_box_pack_start(GTK_BOX(timeBox), posTimeEntry, TRUE, TRUE, 0);
+    // 定位距离 定位精度合并一行
+    GtkWidget* posDistEntry = gtk_entry_new();//定位距离
+    GtkWidget* posAccEntry = gtk_entry_new();//定位精度
+    GtkWidget* distBox = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 5);
+    gtk_box_pack_start(GTK_BOX(distBox), gtk_label_new("定位距离(m)"), FALSE, FALSE, 0);
+    gtk_box_pack_start(GTK_BOX(distBox), posDistEntry, TRUE, TRUE, 0);
+    gtk_box_pack_start(GTK_BOX(distBox), gtk_label_new("定位精度(m)"), FALSE, FALSE, 0);
+    gtk_box_pack_start(GTK_BOX(distBox), posAccEntry, TRUE, TRUE, 0);
+    // 单平台特有字段合并一行
+    GtkWidget* angleErrorEntry = gtk_entry_new(); // 测向误差
+    GtkWidget* directionAccEntry = gtk_entry_new(); // 测向精度
+    GtkWidget* singleExtraBox = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 5);
+    gtk_box_pack_start(GTK_BOX(singleExtraBox), gtk_label_new("测向误差(°)"), FALSE, FALSE, 0);
+    gtk_box_pack_start(GTK_BOX(singleExtraBox), angleErrorEntry, TRUE, TRUE, 0);
+    gtk_box_pack_start(GTK_BOX(singleExtraBox), gtk_label_new("测向精度(°)"), FALSE, FALSE, 0);
+    gtk_box_pack_start(GTK_BOX(singleExtraBox), directionAccEntry, TRUE, TRUE, 0);
+    // 多平台特有字段合并一行
+    GtkWidget* moveSpeedEntry = gtk_entry_new(); // 运动速度
+    GtkWidget* moveAzEntry = gtk_entry_new();    // 运动方位角
+    GtkWidget* moveElEntry = gtk_entry_new();    // 运动俯仰角
+    GtkWidget* multiExtraBox = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 5);
+    gtk_box_pack_start(GTK_BOX(multiExtraBox), gtk_label_new("运动速度(m/s)"), FALSE, FALSE, 0);
+    gtk_box_pack_start(GTK_BOX(multiExtraBox), moveSpeedEntry, TRUE, TRUE, 0);
+    gtk_box_pack_start(GTK_BOX(multiExtraBox), gtk_label_new("运动方位角(°)"), FALSE, FALSE, 0);
+    gtk_box_pack_start(GTK_BOX(multiExtraBox), moveAzEntry, TRUE, TRUE, 0);
+    gtk_box_pack_start(GTK_BOX(multiExtraBox), gtk_label_new("运动俯仰角(°)"), FALSE, FALSE, 0);
+    gtk_box_pack_start(GTK_BOX(multiExtraBox), moveElEntry, TRUE, TRUE, 0);
+    
+    // 方位角和俯仰角（公共字段）
+    GtkWidget* azElBox = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 5);
+    GtkWidget* azimuthLabel = gtk_label_new("方位角(°)");
+    GtkWidget* azimuthEntry = gtk_entry_new();
+    GtkWidget* elevationLabel = gtk_label_new("俯仰角(°)");
+    GtkWidget* elevationEntry = gtk_entry_new();
+    gtk_box_pack_start(GTK_BOX(azElBox), azimuthLabel, FALSE, FALSE, 0);
+    gtk_box_pack_start(GTK_BOX(azElBox), azimuthEntry, TRUE, TRUE, 0);
+    gtk_box_pack_start(GTK_BOX(azElBox), elevationLabel, FALSE, FALSE, 0);
+    gtk_box_pack_start(GTK_BOX(azElBox), elevationEntry, TRUE, TRUE, 0);
+    
     // 设备列表准备
     auto& deviceDao = ReconnaissanceDeviceDAO::getInstance();
     std::vector<ReconnaissanceDevice> allDevices = deviceDao.getAllReconnaissanceDevices();
@@ -546,6 +530,7 @@ void DataSelectionView::onImportButtonClicked(GtkWidget* widget, gpointer user_d
     }
     // 当前辐射源ID
     int radiationId = -1;
+    DataSelectionView* view = static_cast<DataSelectionView*>(user_data);
     if (GTK_IS_COMBO_BOX(view->m_targetCombo)) {
         int active = gtk_combo_box_get_active(GTK_COMBO_BOX(view->m_targetCombo));
         auto sources = RadiationSourceDAO::getInstance().getAllRadiationSources();
@@ -556,14 +541,14 @@ void DataSelectionView::onImportButtonClicked(GtkWidget* widget, gpointer user_d
     // 创建对话框时设置父窗口
     GtkWidget* parentWindow = gtk_widget_get_toplevel(GTK_WIDGET(view->m_view));
     GtkWidget* dialog = gtk_dialog_new_with_buttons(
-        "新建任务",
+        "录入任务",
         GTK_WINDOW(GTK_IS_WINDOW(parentWindow) ? parentWindow : nullptr),
         GTK_DIALOG_MODAL,
         "取消", GTK_RESPONSE_CANCEL,
         "确定", GTK_RESPONSE_OK,
         nullptr
     );
-    gtk_window_set_default_size(GTK_WINDOW(dialog), 500, 600);
+    gtk_window_set_default_size(GTK_WINDOW(dialog), 400, 500);
     GtkWidget* contentArea = gtk_dialog_get_content_area(GTK_DIALOG(dialog));
     gtk_container_set_border_width(GTK_CONTAINER(contentArea), 10);
     GtkWidget* grid = gtk_grid_new();
@@ -587,71 +572,68 @@ void DataSelectionView::onImportButtonClicked(GtkWidget* widget, gpointer user_d
     gtk_widget_set_halign(techLabel, GTK_ALIGN_START);
     gtk_grid_attach(GTK_GRID(grid), techLabel, 0, row, 1, 1);
     GtkWidget* techCombo = gtk_combo_box_text_new();
-    gtk_grid_attach(GTK_GRID(grid), techCombo, 1, row, 1, 1);
+    gtk_grid_attach(GTK_GRID(grid), techCombo, 1, row, 3, 1);
     row++;
-    // 侦察设备
-    GtkWidget* deviceLabel = gtk_label_new("侦察设备");
-    gtk_widget_set_halign(deviceLabel, GTK_ALIGN_START);
+    // 侦察设备（单平台）
     gtk_grid_attach(GTK_GRID(grid), deviceLabel, 0, row, 1, 1);
     GtkWidget* deviceCombo = gtk_combo_box_text_new();
-    gtk_grid_attach(GTK_GRID(grid), deviceCombo, 1, row, 1, 1);
+    gtk_grid_attach(GTK_GRID(grid), deviceCombo, 1, row, 3, 1);
     row++;
-    // 字段名、Entry控件映射
-    struct FieldEntry { const char* label; GtkWidget* entry; };
-    std::vector<FieldEntry> singleFields = {
-        {"执行时间(s)", gtk_entry_new()},           // 0
-        {"目标经度(°)", gtk_entry_new()},           // 1
-        {"目标纬度(°)", gtk_entry_new()},           // 2
-        {"目标高度(m)", gtk_entry_new()},           // 3
-        {"方位角(°)", gtk_entry_new()},             // 4
-        {"俯仰角(°)", gtk_entry_new()},             // 5
-        {"测向误差(°)", gtk_entry_new()},           // 6
-        {"定位距离(m)", gtk_entry_new()},           // 7
-        {"定位时间(s)", gtk_entry_new()},           // 8
-        {"定位精度(m)", gtk_entry_new()},           // 9
-        {"测向精度(°)", gtk_entry_new()}            // 10
-    };
-    std::vector<FieldEntry> multiFields = {
-        {"执行时间(s)", gtk_entry_new()},
-        {"目标经度(°)", gtk_entry_new()},
-        {"目标纬度(°)", gtk_entry_new()},
-        {"目标高度(m)", gtk_entry_new()},
-        {"定位距离(m)", gtk_entry_new()},
-        {"定位时间(s)", gtk_entry_new()},
-        {"定位精度(m)", gtk_entry_new()},
-        {"运动速度(m/s)", gtk_entry_new()},
-        {"运动方位角(°)", gtk_entry_new()},
-        {"运动俯仰角(°)", gtk_entry_new()},
-        {"方位角(°)", gtk_entry_new()},
-        {"俯仰角(°)", gtk_entry_new()}
-    };
+    // 目标经度/纬度/高度
+    gtk_grid_attach(GTK_GRID(grid), posLabel, 0, row, 1, 1);
+    GtkWidget* posBox = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 5);
+    GtkWidget* longitudeEntry = gtk_entry_new();
+    GtkWidget* latitudeEntry = gtk_entry_new();
+    GtkWidget* altitudeEntry = gtk_entry_new();
+    gtk_box_pack_start(GTK_BOX(posBox), longitudeEntry, TRUE, TRUE, 0);
+    gtk_box_pack_start(GTK_BOX(posBox), latitudeEntry, TRUE, TRUE, 0);
+    gtk_box_pack_start(GTK_BOX(posBox), altitudeEntry, TRUE, TRUE, 0);
+    gtk_grid_attach(GTK_GRID(grid), posBox, 1, row, 3, 1);
+    row++;
+    // 公共字段
+    gtk_grid_attach(GTK_GRID(grid), timeBox, 0, row, 4, 1);
+    row++;
+    // 定位距离/定位精度
+    gtk_grid_attach(GTK_GRID(grid), distBox, 0, row, 4, 1);
+    row++;
+    // 方位角/俯仰角
+    gtk_grid_attach(GTK_GRID(grid), azElBox, 0, row, 4, 1);
+    row++;
+    // 单平台
     std::vector<GtkWidget*> singleRowWidgets, multiRowWidgets;
-    for (auto& f : singleFields) {
-        GtkWidget* lbl = gtk_label_new(f.label);
-        gtk_widget_set_halign(lbl, GTK_ALIGN_START);
-        gtk_grid_attach(GTK_GRID(grid), lbl, 0, row, 1, 1);
-        gtk_grid_attach(GTK_GRID(grid), f.entry, 1, row, 1, 1);
-        singleRowWidgets.push_back(lbl);
-        singleRowWidgets.push_back(f.entry);
-        row++;
+    // 添加单平台特有字段
+    gtk_grid_attach(GTK_GRID(grid), singleExtraBox, 0, row, 4, 1);
+    singleRowWidgets.push_back(singleExtraBox);
+    row++;
+    // 多平台
+    int multiRow = row;
+    // 添加多平台特有字段
+    gtk_grid_attach(GTK_GRID(grid), multiExtraBox, 0, multiRow, 4, 1);
+    multiRowWidgets.push_back(multiExtraBox);
+    multiRow++;
+    GtkWidget* multiDeviceLabels[4];
+    GtkWidget* multiDeviceCombos[4];
+    // 设备下拉框放在multiFields之后，2*2布局，保证宽度一致
+    for (int i = 0; i < 4; ++i) {
+        char labelTxt[16];
+        snprintf(labelTxt, sizeof(labelTxt), "设备%d", i+1);
+        multiDeviceLabels[i] = gtk_label_new(labelTxt);
+        gtk_widget_set_halign(multiDeviceLabels[i], GTK_ALIGN_START);
+        gtk_widget_set_hexpand(multiDeviceLabels[i], TRUE);
+        int deviceRow = multiRow + i / 2;
+        int deviceCol = (i % 2) * 2; // 0/2
+        gtk_grid_attach(GTK_GRID(grid), multiDeviceLabels[i], deviceCol, deviceRow, 1, 1);
+        multiDeviceCombos[i] = gtk_combo_box_text_new();
+        gtk_widget_set_hexpand(multiDeviceCombos[i], TRUE);
+        gtk_grid_attach(GTK_GRID(grid), multiDeviceCombos[i], deviceCol + 1, deviceRow, 1, 1);
+        gtk_widget_hide(multiDeviceLabels[i]);
+        gtk_widget_hide(multiDeviceCombos[i]);
     }
-    int multiRow = 3;
-    for (auto& f : multiFields) {
-        GtkWidget* lbl = gtk_label_new(f.label);
-        gtk_widget_set_halign(lbl, GTK_ALIGN_START);
-        gtk_grid_attach(GTK_GRID(grid), lbl, 0, multiRow, 1, 1);
-        gtk_grid_attach(GTK_GRID(grid), f.entry, 1, multiRow, 1, 1);
-        multiRowWidgets.push_back(lbl);
-        multiRowWidgets.push_back(f.entry);
-        multiRow++;
-    }
-    // 默认只显示单平台字段
-    for (auto w : multiRowWidgets) gtk_widget_hide(w);
     // 绑定设备列表到 techCombo，便于回调使用
     g_object_set_data(G_OBJECT(techCombo), "allDevices", &allDevices);
     g_object_set_data(G_OBJECT(techCombo), "fixedDevices", &fixedDevices);
-    // 绑定设备列表到 ctx
-    ImportDialogContext* ctx = new ImportDialogContext{radioSingle, deviceLabel, deviceCombo, nullptr, nullptr, &singleRowWidgets, &multiRowWidgets, techCombo};
+    // 绑定设备列表到 ctx，增加azElBox
+    ImportDialogContext* ctx = new ImportDialogContext{radioSingle, deviceLabel, deviceCombo, nullptr, nullptr, &singleRowWidgets, &multiRowWidgets, techCombo, multiDeviceLabels, multiDeviceCombos, azElBox};
     g_object_set_data(G_OBJECT(techCombo), "ctx", ctx);
     // 信号连接
     g_signal_connect(radioSingle, "toggled", G_CALLBACK(on_radio_type_toggled), ctx);
@@ -662,6 +644,13 @@ void DataSelectionView::onImportButtonClicked(GtkWidget* widget, gpointer user_d
     refreshDeviceCombo(GTK_COMBO_BOX_TEXT(deviceCombo), allDevices, fixedDevices, true, "时差定位");
     // 显示对话框
     gtk_widget_show_all(dialog);
+    // 确保初始时为单平台则隐藏所有多平台设备下拉框
+    if (!gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(radioMulti))) {
+        for (int i = 0; i < 4; ++i) {
+            gtk_widget_hide(multiDeviceLabels[i]);
+            gtk_widget_hide(multiDeviceCombos[i]);
+        }
+    }
     for (auto w : multiRowWidgets) gtk_widget_hide(w);
 
     // 录入逻辑
@@ -706,161 +695,58 @@ void DataSelectionView::onImportButtonClicked(GtkWidget* widget, gpointer user_d
             errMsg = "请选择有效的侦察设备！";
         }
         if (isSingle) {
-            // 字段校验
-            for (auto& f : singleFields) {
-                const char* txt = gtk_entry_get_text(GTK_ENTRY(f.entry));
-                if (!txt || strlen(txt) == 0) { valid = false; errMsg = std::string(f.label) + "不能为空！"; break; }
-                values.push_back(txt ? txt : "");
-            }
-            // 非负数校验
-            if (valid) {
-                double execTime = atof(values[0].c_str());
-                double positioningTime = atof(values[8].c_str());
-                double angleError = atof(values[6].c_str());
-                double directionFindingAccuracy = atof(values[10].c_str());
-                double positioningDistance = atof(values[7].c_str());
-                if (execTime < 0) { valid = false; errMsg = "执行时间不能为负数！"; }
-                else if (positioningTime < 0) { valid = false; errMsg = "定位时间不能为负数！"; }
-                else if (angleError < 0) { valid = false; errMsg = "测向误差不能为负数！"; }
-                else if (directionFindingAccuracy < 0) { valid = false; errMsg = "测向精度不能为负数！"; }
-                else if (positioningDistance < 0) { valid = false; errMsg = "定位距离不能为负数！"; }
-            }
-            if (!valid) {
-                GtkWidget* err = gtk_message_dialog_new(GTK_WINDOW(dialog), GTK_DIALOG_MODAL, GTK_MESSAGE_ERROR, GTK_BUTTONS_OK, "%s", errMsg.c_str());
-                gtk_dialog_run(GTK_DIALOG(err));
-                gtk_widget_destroy(err);
-                continue;
-            }
-            // 插入数据库
-            DBConnector& db = DBConnector::getInstance();
-            MYSQL* conn = db.getConnection();
-            char sql[1024];
-            snprintf(sql, sizeof(sql),
-                "INSERT INTO single_platform_task (device_id, radiation_id, tech_system, execution_time, target_longitude, target_latitude, target_altitude, azimuth, elevation, angle_error, positioning_distance, positioning_time, positioning_accuracy, direction_finding_accuracy) "
-                "VALUES (%d, %d, '%s', %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)",
-                deviceId, radiationId, techSystem.c_str(),
-                values[0].c_str(), values[1].c_str(), values[2].c_str(), values[3].c_str(), values[4].c_str(), values[5].c_str(), values[6].c_str(), values[7].c_str(), values[8].c_str(), values[9].c_str(), values[10].c_str()
-            );
-            if (mysql_query(conn, sql) != 0) {
-                GtkWidget* err = gtk_message_dialog_new(GTK_WINDOW(dialog), GTK_DIALOG_MODAL, GTK_MESSAGE_ERROR, GTK_BUTTONS_OK, "数据库插入失败: %s", mysql_error(conn));
-                gtk_dialog_run(GTK_DIALOG(err));
-                gtk_widget_destroy(err);
-                continue;
-            } else {
-                // 刷新列表
-                if (GTK_IS_COMBO_BOX(view->m_targetCombo)) {
-                    int active = gtk_combo_box_get_active(GTK_COMBO_BOX(view->m_targetCombo));
-                    auto sources = RadiationSourceDAO::getInstance().getAllRadiationSources();
-                    if (active >= 0 && active < (int)sources.size()) {
-                        view->updateTaskList(sources[active].getRadiationId());
-                    }
-                }
-                gtk_widget_destroy(dialog);
-                break;
-            }
+            // 校验单平台特有字段
+            const char* angleErrorTxt = gtk_entry_get_text(GTK_ENTRY(angleErrorEntry));
+            if (!angleErrorTxt || strlen(angleErrorTxt) == 0) { valid = false; errMsg = "测向误差不能为空！"; }
+            values.push_back(angleErrorTxt ? angleErrorTxt : "");
+
+            const char* directionAccTxt = gtk_entry_get_text(GTK_ENTRY(directionAccEntry));
+            if (!directionAccTxt || strlen(directionAccTxt) == 0) { valid = false; errMsg = "测向精度不能为空！"; }
+            values.push_back(directionAccTxt ? directionAccTxt : "");
         } else { // 多平台
-            for (auto& f : multiFields) {
-                const char* txt = gtk_entry_get_text(GTK_ENTRY(f.entry));
-                if (!txt || strlen(txt) == 0) { valid = false; errMsg = std::string(f.label) + "不能为空！"; break; }
-                values.push_back(txt ? txt : "");
-            }
-            if (!valid) {
-                GtkWidget* err = gtk_message_dialog_new(GTK_WINDOW(dialog), GTK_DIALOG_MODAL, GTK_MESSAGE_ERROR, GTK_BUTTONS_OK, "%s", errMsg.c_str());
-                gtk_dialog_run(GTK_DIALOG(err));
-                gtk_widget_destroy(err);
-                continue;
-            }
-            // 插入数据库
-            DBConnector& db = DBConnector::getInstance();
-            MYSQL* conn = db.getConnection();
-            char sql[1024];
-            snprintf(sql, sizeof(sql),
-                "INSERT INTO multi_platform_task (radiation_id, tech_system, execution_time, target_longitude, target_latitude, target_altitude, positioning_distance, positioning_time, positioning_accuracy, movement_speed, movement_azimuth, movement_elevation, azimuth, elevation) "
-                "VALUES (%d, '%s', %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)",
-                radiationId, techSystem.c_str(),
-                values[0].c_str(), values[1].c_str(), values[2].c_str(), values[3].c_str(), values[4].c_str(), values[5].c_str(), values[6].c_str(), values[7].c_str(), values[8].c_str(), values[9].c_str(), values[10].c_str(), values[11].c_str()
-            );
-            if (mysql_query(conn, sql) != 0) {
-                GtkWidget* err = gtk_message_dialog_new(GTK_WINDOW(dialog), GTK_DIALOG_MODAL, GTK_MESSAGE_ERROR, GTK_BUTTONS_OK, "数据库插入失败: %s", mysql_error(conn));
-                gtk_dialog_run(GTK_DIALOG(err));
-                gtk_widget_destroy(err);
-                continue;
-            } else {
-                // TODO: 插入deviceId到平台任务关联表（如有）
-                if (GTK_IS_COMBO_BOX(view->m_targetCombo)) {
-                    int active = gtk_combo_box_get_active(GTK_COMBO_BOX(view->m_targetCombo));
-                    auto sources = RadiationSourceDAO::getInstance().getAllRadiationSources();
-                    if (active >= 0 && active < (int)sources.size()) {
-                        view->updateTaskList(sources[active].getRadiationId());
-                    }
-                }
-                gtk_widget_destroy(dialog);
-                break;
-            }
+            const char* moveSpeedTxt = gtk_entry_get_text(GTK_ENTRY(moveSpeedEntry));
+            if (!moveSpeedTxt || strlen(moveSpeedTxt) == 0) { valid = false; errMsg = "运动速度不能为空！"; }
+            values.push_back(moveSpeedTxt ? moveSpeedTxt : "");
+
+            const char* moveAzTxt = gtk_entry_get_text(GTK_ENTRY(moveAzEntry));
+            if (!moveAzTxt || strlen(moveAzTxt) == 0) { valid = false; errMsg = "运动方位角不能为空！"; }
+            values.push_back(moveAzTxt ? moveAzTxt : "");
+
+            const char* moveElTxt = gtk_entry_get_text(GTK_ENTRY(moveElEntry));
+            if (!moveElTxt || strlen(moveElTxt) == 0) { valid = false; errMsg = "运动俯仰角不能为空！"; }
+            values.push_back(moveElTxt ? moveElTxt : "");
+        }
+        if (!valid) {
+            GtkWidget* err = gtk_message_dialog_new(GTK_WINDOW(dialog), GTK_DIALOG_MODAL, GTK_MESSAGE_ERROR, GTK_BUTTONS_OK, "%s", errMsg.c_str());
+            gtk_dialog_run(GTK_DIALOG(err));
+            gtk_widget_destroy(err);
+            continue;
+        }
+        // 使用Controller进行数据库操作
+        if (DataSelectionController::getInstance().importData(view, isSingle, values, deviceId, radiationId, techSystem)) {
+            gtk_widget_destroy(dialog);
+            break;
+        } else {
+            GtkWidget* err = gtk_message_dialog_new(GTK_WINDOW(dialog), GTK_DIALOG_MODAL, GTK_MESSAGE_ERROR, GTK_BUTTONS_OK, "数据库插入失败");
+            gtk_dialog_run(GTK_DIALOG(err));
+            gtk_widget_destroy(err);
+            continue;
         }
     }
 }
 
-// 获取视图控件
-GtkWidget* DataSelectionView::getView() const {
-    return m_view;
-}
-
-// 删除按钮点击事件回调函数，触发删除选中数据项操作。
-void DataSelectionView::onDeleteButtonClicked(GtkWidget* widget, gpointer user_data) {
-    DataSelectionView* view = static_cast<DataSelectionView*>(user_data);
-    view->deleteSelectedItems();
-}
-
 // 显示任务详情对话框
 void DataSelectionView::showTaskDetailsDialog(int taskId, const std::string& taskType) {
-    DBConnector& db = DBConnector::getInstance();
-    MYSQL* conn = db.getConnection();
-    if (!conn || mysql_ping(conn) != 0) {
-        std::cerr << "数据库连接异常" << std::endl;
+    // 通过控制器获取任务详情数据
+    std::map<std::string, std::string> taskDetails = DataSelectionController::getInstance().showTaskDetails(taskId, taskType);
+    
+    // 检查是否有错误
+    if (taskDetails.find("error") != taskDetails.end()) {
+        std::cerr << taskDetails["error"] << std::endl;
         std::cerr.flush();
         return;
     }
-
-    // 根据任务类型和ID查询详细信息
-    std::string tableName;
-    std::string sql;
-    if (taskType == "单平台") {
-        tableName = "single_platform_task";
-        sql = "SELECT spt.*, rdm.device_name, rsm.radiation_name "
-              "FROM single_platform_task spt "
-              "JOIN reconnaissance_device_models rdm ON spt.device_id = rdm.device_id "
-              "JOIN radiation_source_models rsm ON spt.radiation_id = rsm.radiation_id "
-              "WHERE spt.task_id = " + std::to_string(taskId);
-    } else if (taskType == "多平台") {
-        tableName = "multi_platform_task";
-        sql = "SELECT mpt.*, rsm.radiation_name "
-              "FROM multi_platform_task mpt "
-              "JOIN radiation_source_models rsm ON mpt.radiation_id = rsm.radiation_id "
-              "WHERE mpt.task_id = " + std::to_string(taskId);
-    } else {
-        std::cerr << "未知任务类型: " << taskType << std::endl;
-        return;
-    }
-
-    if (mysql_query(conn, sql.c_str()) != 0) {
-        std::cerr << "查询失败: " << mysql_error(conn) << std::endl;
-        return;
-    }
-
-    MYSQL_RES* result = mysql_store_result(conn);
-    if (!result) {
-        std::cerr << "获取结果集失败: " << mysql_error(conn) << std::endl;
-        return;
-    }
-
-    MYSQL_ROW row = mysql_fetch_row(result);
-    if (!row) {
-        std::cerr << "未找到任务ID: " << taskId << std::endl;
-        mysql_free_result(result);
-        return;
-    }
-
+    
     // 创建对话框
     GtkWidget* dialog = gtk_dialog_new_with_buttons(
         (taskType + "任务详情").c_str(),
@@ -888,223 +774,101 @@ void DataSelectionView::showTaskDetailsDialog(int taskId, const std::string& tas
     gtk_grid_attach(GTK_GRID(grid), separator, 0, 0, 2, 1);
     int row_idx = 1;
 
-    // 多平台任务：最上面显示辐射源名称和关联侦察设备
-    if (taskType == "多平台") {
-        // 先查辐射源名称
-        int mpRadiationNameIdx = mysql_num_fields(result) - 1;
-        std::string mpRadiationName = row[mpRadiationNameIdx] ? row[mpRadiationNameIdx] : "";
-        GtkWidget* nameLabel1 = gtk_label_new("辐射源名称");
-        gtk_widget_set_halign(nameLabel1, GTK_ALIGN_START);
-        gtk_grid_attach(GTK_GRID(grid), nameLabel1, 0, row_idx, 1, 1);
-        GtkWidget* valueLabel1 = gtk_label_new(mpRadiationName.c_str());
-        gtk_widget_set_halign(valueLabel1, GTK_ALIGN_START);
-        gtk_grid_attach(GTK_GRID(grid), valueLabel1, 1, row_idx, 1, 1);
-        row_idx++;
-        // 关联侦察设备
-        std::string deviceSql = "SELECT rdm.device_name "
-                               "FROM platform_task_relation ptr "
-                               "JOIN reconnaissance_device_models rdm ON ptr.device_id = rdm.device_id "
-                               "WHERE ptr.simulation_id = " + std::to_string(taskId);
-        if (mysql_query(conn, deviceSql.c_str()) == 0) {
-            MYSQL_RES* deviceResult = mysql_store_result(conn);
-            if (deviceResult) {
-                std::vector<std::string> deviceNames;
-                MYSQL_ROW deviceRow;
-                while ((deviceRow = mysql_fetch_row(deviceResult))) {
-                    if (deviceRow[0]) deviceNames.push_back(deviceRow[0]);
-                }
-                if (!deviceNames.empty()) {
-                    GtkWidget* deviceLabel = gtk_label_new("关联侦察设备");
-                    gtk_widget_set_halign(deviceLabel, GTK_ALIGN_START);
-                    gtk_grid_attach(GTK_GRID(grid), deviceLabel, 0, row_idx, 1, 1);
-                    std::string allDevices;
-                    for (size_t i = 0; i < deviceNames.size(); ++i) {
-                        if (i > 0) allDevices += "，";
-                        allDevices += deviceNames[i];
-                    }
-                    GtkWidget* deviceValueLabel = gtk_label_new(allDevices.c_str());
-                    gtk_widget_set_halign(deviceValueLabel, GTK_ALIGN_START);
-                    gtk_grid_attach(GTK_GRID(grid), deviceValueLabel, 1, row_idx, 1, 1);
-                    row_idx++;
-                }
-                mysql_free_result(deviceResult);
-            }
-        }
-    }
-
-    // 获取字段名和值
-    unsigned int num_fields = mysql_num_fields(result);
-    MYSQL_FIELD* fields = mysql_fetch_fields(result);
-    // 在for循环外部声明
-    int deviceNameIdx = -1, radiationNameIdx = -1;
+    // 设备和辐射源信息
     if (taskType == "单平台") {
-        deviceNameIdx = num_fields - 2;
-        radiationNameIdx = num_fields - 1;
-        std::string deviceName = row[deviceNameIdx] ? row[deviceNameIdx] : "";
-        std::string radiationName = row[radiationNameIdx] ? row[radiationNameIdx] : "";
         // 先显示设备名称
         GtkWidget* nameLabel1 = gtk_label_new("设备名称");
         gtk_widget_set_halign(nameLabel1, GTK_ALIGN_START);
         gtk_grid_attach(GTK_GRID(grid), nameLabel1, 0, row_idx, 1, 1);
-        GtkWidget* valueLabel1 = gtk_label_new(deviceName.c_str());
+        GtkWidget* valueLabel1 = gtk_label_new(taskDetails["deviceName"].c_str());
         gtk_widget_set_halign(valueLabel1, GTK_ALIGN_START);
         gtk_grid_attach(GTK_GRID(grid), valueLabel1, 1, row_idx, 1, 1);
         row_idx++;
-        // 再显示辐射源名称
+        
+        // 显示辐射源名称
         GtkWidget* nameLabel2 = gtk_label_new("辐射源名称");
         gtk_widget_set_halign(nameLabel2, GTK_ALIGN_START);
         gtk_grid_attach(GTK_GRID(grid), nameLabel2, 0, row_idx, 1, 1);
-        GtkWidget* valueLabel2 = gtk_label_new(radiationName.c_str());
+        GtkWidget* valueLabel2 = gtk_label_new(taskDetails["radiationName"].c_str());
         gtk_widget_set_halign(valueLabel2, GTK_ALIGN_START);
         gtk_grid_attach(GTK_GRID(grid), valueLabel2, 1, row_idx, 1, 1);
         row_idx++;
-    }
-    for (unsigned int i = 0; i < num_fields; i++) {
-        const char* fieldName = fields[i].name;
-        const char* value = row[i] ? row[i] : "NULL";
-        std::string displayName; // 先声明
-        // 多平台任务字段名映射
-        if (taskType == "多平台") {
-            if (strcmp(fieldName, "positioning_distance") == 0) {
-                displayName = "定位距离";
-                std::string str = value;
-                str += "m";
-                value = str.c_str();
-            } else if (strcmp(fieldName, "movement_speed") == 0) {
-                displayName = "运动速度";
-                std::string str = value;
-                str += "m/s";
-                value = str.c_str();
-            } else if (strcmp(fieldName, "movement_azimuth") == 0) {
-                displayName = "运动方位角";
-                std::string str = value;
-                str += "°";
-                value = str.c_str();
-            } else if (strcmp(fieldName, "movement_elevation") == 0) {
-                displayName = "运动俯仰角";
-                std::string str = value;
-                str += "°";
-                value = str.c_str();
-            } else if (strcmp(fieldName, "azimuth") == 0) {
-                displayName = "方位角";
-                std::string str = value;
-                str += "°";
-                value = str.c_str();
-            } else if (strcmp(fieldName, "elevation") == 0) {
-                displayName = "俯仰角";
-                std::string str = value;
-                str += "°";
-                value = str.c_str();
-            }
-        }
-        // 单平台任务跳过设备ID、辐射源ID、任务ID、设备名称、辐射源名称
-        if (taskType == "单平台") {
-            if (strcmp(fieldName, "device_id") == 0 || strcmp(fieldName, "radiation_id") == 0 || strcmp(fieldName, "task_id") == 0) continue;
-            if ((int)i == deviceNameIdx || (int)i == radiationNameIdx) continue;
-        }
-        // 多平台任务跳过radiation_id、radiation_name、task_id
-        else if (taskType == "多平台") {
-            if (strcmp(fieldName, "radiation_id") == 0 || strcmp(fieldName, "radiation_name") == 0 || strcmp(fieldName, "task_id") == 0) continue;
-        }
-        // 格式化字段名称
-        if (displayName.empty()) {
-            if (strcmp(fieldName, "tech_system") == 0) {
-                // 技术体制映射
-                if (strcmp(value, "FDOA") == 0) {
-                    displayName = "技术体制";
-                    value = "频差定位";
-                } else if (strcmp(value, "TDOA") == 0) {
-                    displayName = "技术体制";
-                    value = "时差定位";
-                } else if (strcmp(value, "INTERFEROMETER") == 0) {
-                    displayName = "技术体制";
-                    value = "干涉仪定位";
-                } else if (strcmp(value, "FD") == 0) {
-                    displayName = "技术体制";
-                    value = "测向定位";
-                } else {
-                    displayName = "技术体制";
-                }
-            } else if (strcmp(fieldName, "execution_time") == 0) {
-                displayName = "执行时间";
-                std::string timeStr = value;
-                timeStr += "s";
-                value = timeStr.c_str();
-            } else if (strcmp(fieldName, "target_longitude") == 0) {
-                displayName = "目标经度";
-                std::string str = value;
-                str += "°";
-                value = str.c_str();
-            } else if (strcmp(fieldName, "target_latitude") == 0) {
-                displayName = "目标纬度";
-                std::string str = value;
-                str += "°";
-                value = str.c_str();
-            } else if (strcmp(fieldName, "target_altitude") == 0) {
-                displayName = "目标高度";
-                std::string str = value;
-                str += "m";
-                value = str.c_str();
-            } else if (strcmp(fieldName, "target_angle") == 0) {
-                displayName = "测向数据(度)";
-            } else if (strcmp(fieldName, "angle_error") == 0) {
-                displayName = "测向误差";
-                std::string str = value;
-                str += "°";
-                value = str.c_str();
-            } else if (strcmp(fieldName, "positioning_distance") == 0) {
-                displayName = "定位距离";
-                std::string str = value;
-                str += "m";
-                value = str.c_str();
-            } else if (strcmp(fieldName, "positioning_time") == 0) {
-                displayName = "定位时间";
-                std::string str = value;
-                str += "s";
-                value = str.c_str();
-            } else if (strcmp(fieldName, "positioning_accuracy") == 0) {
-                displayName = "定位精度";
-                std::string str = value;
-                str += "m";
-                value = str.c_str();
-            } else if (strcmp(fieldName, "direction_finding_accuracy") == 0) {
-                displayName = "测向精度";
-                std::string str = value;
-                str += "°";
-                value = str.c_str();
-            } else if (strcmp(fieldName, "created_at") == 0) {
-                displayName = "创建时间";
-            } else if (taskType == "单平台" && strcmp(fieldName, "azimuth") == 0) {
-                displayName = "方位角";
-                std::string str = value;
-                str += "°";
-                value = str.c_str();
-            } else if (taskType == "单平台" && strcmp(fieldName, "elevation") == 0) {
-                displayName = "俯仰角";
-                std::string str = value;
-                str += "°";
-                value = str.c_str();
-            } else {
-                // 将下划线转换为空格，首字母大写
-                displayName = fieldName;
-                for (char& c : displayName) {
-                    if (c == '_') c = ' ';
-                }
-                if (!displayName.empty()) {
-                    displayName[0] = toupper(displayName[0]);
-                }
-            }
-        }
-        GtkWidget* nameLabel = gtk_label_new(displayName.c_str());
-        gtk_widget_set_halign(nameLabel, GTK_ALIGN_START);
-        gtk_grid_attach(GTK_GRID(grid), nameLabel, 0, row_idx, 1, 1);
-        GtkWidget* valueLabel = gtk_label_new(value);
-        gtk_widget_set_halign(valueLabel, GTK_ALIGN_START);
-        gtk_grid_attach(GTK_GRID(grid), valueLabel, 1, row_idx, 1, 1);
+    } else if (taskType == "多平台") {
+        // 显示辐射源名称
+        GtkWidget* nameLabel1 = gtk_label_new("辐射源名称");
+        gtk_widget_set_halign(nameLabel1, GTK_ALIGN_START);
+        gtk_grid_attach(GTK_GRID(grid), nameLabel1, 0, row_idx, 1, 1);
+        GtkWidget* valueLabel1 = gtk_label_new(taskDetails["radiationName"].c_str());
+        gtk_widget_set_halign(valueLabel1, GTK_ALIGN_START);
+        gtk_grid_attach(GTK_GRID(grid), valueLabel1, 1, row_idx, 1, 1);
         row_idx++;
+        
+        // 显示关联设备
+        if (taskDetails.find("deviceNames") != taskDetails.end()) {
+            GtkWidget* deviceLabel = gtk_label_new("关联侦察设备");
+            gtk_widget_set_halign(deviceLabel, GTK_ALIGN_START);
+            gtk_grid_attach(GTK_GRID(grid), deviceLabel, 0, row_idx, 1, 1);
+            GtkWidget* deviceValueLabel = gtk_label_new(taskDetails["deviceNames"].c_str());
+            gtk_widget_set_halign(deviceValueLabel, GTK_ALIGN_START);
+            gtk_grid_attach(GTK_GRID(grid), deviceValueLabel, 1, row_idx, 1, 1);
+            row_idx++;
+        }
     }
 
-    mysql_free_result(result);
+    // 显示其他字段，定义字段名映射和单位
+    struct FieldInfo {
+        const char* key;
+        const char* displayName;
+        const char* unit;
+    };
+
+    // 定义常用字段的显示名称和单位
+    const FieldInfo fieldInfos[] = {
+        {"tech_system", "技术体制", ""},
+        {"execution_time", "执行时间", "s"},
+        {"target_longitude", "目标经度", "°"},
+        {"target_latitude", "目标纬度", "°"},
+        {"target_altitude", "目标高度", "m"},
+        {"azimuth", "方位角", "°"},
+        {"elevation", "俯仰角", "°"},
+        {"angle_error", "测向误差", "°"},
+        {"positioning_distance", "定位距离", "m"},
+        {"positioning_time", "定位时间", "s"},
+        {"positioning_accuracy", "定位精度", "m"},
+        {"direction_finding_accuracy", "测向精度", "°"},
+        {"created_at", "创建时间", ""},
+        {"movement_speed", "运动速度", "m/s"},
+        {"movement_azimuth", "运动方位角", "°"},
+        {"movement_elevation", "运动俯仰角", "°"}
+    };
+
+    // 遍历字段信息
+    for (const auto& field : fieldInfos) {
+        if (taskDetails.find(field.key) != taskDetails.end()) {
+            GtkWidget* nameLabel = gtk_label_new(field.displayName);
+            gtk_widget_set_halign(nameLabel, GTK_ALIGN_START);
+            gtk_grid_attach(GTK_GRID(grid), nameLabel, 0, row_idx, 1, 1);
+            
+            // 处理特殊情况：技术体制
+            std::string displayValue = taskDetails[field.key];
+            if (strcmp(field.key, "tech_system") == 0) {
+                if (displayValue == "FDOA") displayValue = "频差定位";
+                else if (displayValue == "TDOA") displayValue = "时差定位";
+                else if (displayValue == "INTERFEROMETER") displayValue = "干涉仪定位";
+                else if (displayValue == "FD") displayValue = "测向定位";
+            }
+            
+            // 添加单位
+            if (strlen(field.unit) > 0) {
+                displayValue += field.unit;
+            }
+            
+            GtkWidget* valueLabel = gtk_label_new(displayValue.c_str());
+            gtk_widget_set_halign(valueLabel, GTK_ALIGN_START);
+            gtk_grid_attach(GTK_GRID(grid), valueLabel, 1, row_idx, 1, 1);
+            row_idx++;
+        }
+    }
 
     // 显示对话框
     gtk_widget_show_all(dialog);
