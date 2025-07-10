@@ -10,9 +10,8 @@
 
 // 实现MultiPlatformView类
 MultiPlatformView::MultiPlatformView() : m_view(nullptr), m_algoCombo(nullptr), 
-    m_resultLabel(nullptr), m_errorLabel(nullptr), m_mapView(nullptr), 
-    m_sourceMarker(-1), m_timeEntry(nullptr), m_dfParamsFrame(nullptr), m_tdoaParamsFrame(nullptr), 
-    m_tdoaRmsError(nullptr), m_esmToaError(nullptr) {
+    m_resultLabel(nullptr), m_timeEntry(nullptr), m_dfParamsFrame(nullptr), m_tdoaParamsFrame(nullptr), 
+    m_tdoaRmsError(nullptr), m_esmToaError(nullptr), m_mapView(nullptr), m_sourceMarker(-1) {
     // 初始化数组
     for (int i = 0; i < 4; ++i) {
         m_radarMarkers[i] = -1;
@@ -42,9 +41,16 @@ GtkWidget* MultiPlatformView::createView() {
     GtkWidget* mapWidget = m_mapView->create();
     gtk_container_add(GTK_CONTAINER(mapFrame), mapWidget);
     
-    // 右侧：参数设置和结果区域
+    // 右侧：创建一个固定大小的滚动窗口，容纳所有参数和结果
+    GtkWidget* rightScrollWin = gtk_scrolled_window_new(NULL, NULL);
+    gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(rightScrollWin), 
+                                 GTK_POLICY_NEVER, GTK_POLICY_AUTOMATIC);
+    gtk_widget_set_size_request(rightScrollWin, 350, 700);
+    gtk_box_pack_start(GTK_BOX(m_view), rightScrollWin, FALSE, FALSE, 0);
+    
+    // 创建右侧内容容器
     GtkWidget* rightBox = gtk_box_new(GTK_ORIENTATION_VERTICAL, 10);
-    gtk_box_pack_start(GTK_BOX(m_view), rightBox, FALSE, FALSE, 0);
+    gtk_container_add(GTK_CONTAINER(rightScrollWin), rightBox);
     
     // 技术体制选择
     GtkWidget* algoFrame = gtk_frame_new("技术体制");
@@ -161,6 +167,9 @@ GtkWidget* MultiPlatformView::createView() {
     GtkWidget* resultFrame = gtk_frame_new("仿真结果");
     gtk_box_pack_start(GTK_BOX(rightBox), resultFrame, TRUE, TRUE, 0);
     
+    // 设置固定尺寸，防止窗口大小变化
+    gtk_widget_set_size_request(resultFrame, 300, 200);
+    
     GtkWidget* resultBox = gtk_box_new(GTK_ORIENTATION_VERTICAL, 5);
     gtk_container_add(GTK_CONTAINER(resultFrame), resultBox);
     gtk_container_set_border_width(GTK_CONTAINER(resultBox), 10);
@@ -173,32 +182,19 @@ GtkWidget* MultiPlatformView::createView() {
     gtk_label_set_xalign(GTK_LABEL(m_resultLabel), 0.0);
     gtk_label_set_yalign(GTK_LABEL(m_resultLabel), 0.0);
     
-    // 设置结果标签的最小高度，确保有足够空间显示所有内容
-    gtk_widget_set_size_request(m_resultLabel, -1, 300);
-    
     // 设置结果标签的边距
     gtk_widget_set_margin_start(m_resultLabel, 5);
     gtk_widget_set_margin_end(m_resultLabel, 5);
     gtk_widget_set_margin_top(m_resultLabel, 5);
     gtk_widget_set_margin_bottom(m_resultLabel, 5);
     
-    gtk_box_pack_start(GTK_BOX(resultBox), m_resultLabel, TRUE, TRUE, 0);
-    
-    // 创建误差标签
-    m_errorLabel = gtk_label_new("");
-    gtk_label_set_line_wrap(GTK_LABEL(m_errorLabel), TRUE);
-    gtk_label_set_line_wrap_mode(GTK_LABEL(m_errorLabel), PANGO_WRAP_WORD);
-    gtk_label_set_justify(GTK_LABEL(m_errorLabel), GTK_JUSTIFY_LEFT);
-    gtk_label_set_xalign(GTK_LABEL(m_errorLabel), 0.0);
-    gtk_label_set_yalign(GTK_LABEL(m_errorLabel), 0.0);
-    
-    // 设置误差标签的边距
-    gtk_widget_set_margin_start(m_errorLabel, 5);
-    gtk_widget_set_margin_end(m_errorLabel, 5);
-    gtk_widget_set_margin_top(m_errorLabel, 5);
-    gtk_widget_set_margin_bottom(m_errorLabel, 5);
-    
-    gtk_box_pack_start(GTK_BOX(resultBox), m_errorLabel, FALSE, FALSE, 5);
+    // 创建滚动窗口，用于容纳结果标签
+    GtkWidget* resultScrollWin = gtk_scrolled_window_new(NULL, NULL);
+    gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(resultScrollWin), 
+                                 GTK_POLICY_AUTOMATIC, GTK_POLICY_AUTOMATIC);
+    gtk_widget_set_size_request(resultScrollWin, -1, 180);
+    gtk_container_add(GTK_CONTAINER(resultScrollWin), m_resultLabel);
+    gtk_box_pack_start(GTK_BOX(resultBox), resultScrollWin, TRUE, TRUE, 0);
     
     // 默认只显示3个侦察设备下拉框，并隐藏测向参数
     for (int i = 0; i < 4; ++i) {
@@ -572,15 +568,21 @@ bool MultiPlatformView::checkRadarModels() {
 // 更新仿真结果显示
 void MultiPlatformView::updateResult(const std::string& result) {
     if (m_resultLabel) {
+        // 更新结果标签
         gtk_label_set_markup(GTK_LABEL(m_resultLabel), result.c_str());
+        
+        // 确保滚动到顶部显示最新结果
+        GtkWidget* parent = gtk_widget_get_parent(m_resultLabel);
+        if (GTK_IS_SCROLLED_WINDOW(parent)) {
+            GtkAdjustment* adj = gtk_scrolled_window_get_vadjustment(GTK_SCROLLED_WINDOW(parent));
+            gtk_adjustment_set_value(adj, 0);
+        }
     }
 }
 
-// 更新误差显示
+// 更新误差显示 - 由于已经删除误差标签，这个函数现在可以留空或者合并到updateResult中
 void MultiPlatformView::updateError(const std::string& error) {
-    if (m_errorLabel) {
-        gtk_label_set_markup(GTK_LABEL(m_errorLabel), error.c_str());
-    }
+    // 不再需要单独的误差显示
 }
 
 // 显示测向误差线 - 从设备到目标位置，带误差角度
