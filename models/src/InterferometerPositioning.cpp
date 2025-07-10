@@ -194,7 +194,7 @@ LocationResult InterferometerPositioning::runSimulation(const ReconnaissanceDevi
     task.azimuth = result.azimuth;
     task.elevation = result.elevation;
     task.angleError = directionFindingAccuracy;
-    task.maxPositioningDistance = static_cast<float>(maxDetectionRange);
+    task.positioningDistance = static_cast<float>(maxDetectionRange);
     task.positioningTime = static_cast<float>(simulationTime); // 假设定位时间等于仿真时间
     task.positioningAccuracy = positioningAccuracy;
     task.directionFindingAccuracy = directionFindingAccuracy;

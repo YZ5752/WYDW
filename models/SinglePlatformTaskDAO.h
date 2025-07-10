@@ -19,7 +19,7 @@ struct SinglePlatformTask {
     double azimuth;            // 方位角（度）
     double elevation;          // 俯仰角（度）
     double angleError;          // 测向误差（度）
-    float maxPositioningDistance; // 最远定位距离（米）
+    float positioningDistance; // 最远定位距离（米）
     float positioningTime;      // 定位时间（秒）
     double positioningAccuracy; // 定位精度（米）
     double directionFindingAccuracy; // 测向精度（度）

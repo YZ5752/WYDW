@@ -64,12 +64,9 @@ std::vector<std::vector<std::string>> DataSelectionController::getRelatedTasks(i
                 tasks.push_back(task);
                 rowCount++;
             }
-            std::cout << "[单平台任务查询] 查到 " << rowCount << " 条记录" << std::endl;
             mysql_free_result(result);
         }
     } else {
-        std::cerr << "[单平台任务查询失败] SQL: " << singleSql << std::endl;
-        std::cerr << "[单平台任务查询失败] MySQL错误: " << mysql_error(conn) << std::endl;
         db.showError();
     }
     // 查询多平台任务
@@ -92,17 +89,14 @@ std::vector<std::vector<std::string>> DataSelectionController::getRelatedTasks(i
                 tasks.push_back(task);
                 rowCount++;
             }
-            std::cout << "[多平台任务查询] 查到 " << rowCount << " 条记录" << std::endl;
             mysql_free_result(result);
         }
     } else {
-        std::cerr << "[多平台任务查询失败] SQL: " << multiSql << std::endl;
-        std::cerr << "[多平台任务查询失败] MySQL错误: " << mysql_error(conn) << std::endl;
         db.showError();
     }
     return tasks;
 }
-
+//删除选中的数据项
 void DataSelectionController::deleteSelectedItems(DataSelectionView* view) {
     DBConnector& db = DBConnector::getInstance();
     MYSQL* conn = db.getConnection();
@@ -164,57 +158,61 @@ void DataSelectionController::deleteSelectedItems(DataSelectionView* view) {
 
 // 向数据库录入数据
 bool DataSelectionController::importData(DataSelectionView* view, bool isSingle, const std::vector<std::string>& values,
-                                       int deviceId, int radiationId, const std::string& techSystem) {
+                                       const std::vector<int>& deviceIds, int radiationId, const std::string& techSystem) {
     DBConnector& db = DBConnector::getInstance();
     MYSQL* conn = db.getConnection();
-    
     if (!conn || mysql_ping(conn) != 0) {
         std::cerr << "数据库连接异常" << std::endl;
         std::cerr.flush();
         return false;
     }
-    
-    // SQL语句准备
     char sql[1024];
     if (isSingle) {
-        // 单平台任务插入
+        int deviceId = deviceIds.empty() ? -1 : deviceIds[0];
         snprintf(sql, sizeof(sql),
-            "INSERT INTO single_platform_task (device_id, radiation_id, tech_system, execution_time, "
-            "target_longitude, target_latitude, target_altitude, azimuth, elevation, angle_error, "
-            "positioning_distance, positioning_time, positioning_accuracy, direction_finding_accuracy) "
+            "INSERT INTO single_platform_task (device_id, radiation_id, tech_system, "
+            "target_longitude, target_latitude, target_altitude, azimuth, elevation, execution_time,positioning_time, "
+            "positioning_distance,  positioning_accuracy, angle_error,direction_finding_accuracy) "
             "VALUES (%d, %d, '%s', %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)",
             deviceId, radiationId, techSystem.c_str(),
             values[0].c_str(), values[1].c_str(), values[2].c_str(), values[3].c_str(), 
             values[4].c_str(), values[5].c_str(), values[6].c_str(), values[7].c_str(), 
             values[8].c_str(), values[9].c_str(), values[10].c_str()
         );
+        if (mysql_query(conn, sql) != 0) {
+            std::cerr << "数据库插入失败: " << mysql_error(conn) << std::endl;
+            return false;
+        }
     } else {
-        // 多平台任务插入
         snprintf(sql, sizeof(sql),
-            "INSERT INTO multi_platform_task (radiation_id, tech_system, execution_time, "
+            "INSERT INTO multi_platform_task (radiation_id, tech_system, "
             "target_longitude, target_latitude, target_altitude, azimuth, elevation, "
-            "movement_speed, movement_azimuth, movement_elevation, "
-            "positioning_distance, positioning_time, positioning_accuracy) "
+            "execution_time, positioning_time, positioning_distance,positioning_accuracy, "
+            "movement_speed, movement_azimuth, movement_elevation) "
             "VALUES (%d, '%s', %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)",
             radiationId, techSystem.c_str(),
             values[0].c_str(), values[1].c_str(), values[2].c_str(), values[3].c_str(),
             values[4].c_str(), values[5].c_str(), values[6].c_str(), values[7].c_str(),
             values[8].c_str(), values[9].c_str(), values[10].c_str(), values[11].c_str()
         );
-    }
-    
-    // 执行SQL语句
-    if (mysql_query(conn, sql) != 0) {
-        std::cerr << "数据库插入失败: " << mysql_error(conn) << std::endl;
-        return false;
-    }
-    
-    // 如果是多平台任务，还需要添加设备关联关系
-    if (!isSingle) {
+        //打印sql语句
+        std::cout << "sql: " << sql << std::endl;
+        if (mysql_query(conn, sql) != 0) {
+            std::cerr << "数据库插入失败: " << mysql_error(conn) << std::endl;
+            return false;
+        }
         int taskId = mysql_insert_id(conn);
-        // 这里应该添加设备关联代码，但因为没有完整的多平台录入代码，先留空
+        // 插入设备关联关系(devId和taskId均为int类型)
+        for (int devId : deviceIds) {
+            char relSql[128];
+            snprintf(relSql, sizeof(relSql),
+                "INSERT INTO platform_task_relation (simulation_id, device_id) VALUES (%d, %d)",
+                taskId, devId);
+            if (mysql_query(conn, relSql) != 0) {
+                std::cerr << "插入设备关联失败: " << mysql_error(conn) << std::endl;
+            }
+        }
     }
-    
     // 刷新列表显示
     if (view && GTK_IS_COMBO_BOX(view->getTargetCombo())) {
         int active = gtk_combo_box_get_active(GTK_COMBO_BOX(view->getTargetCombo()));
@@ -223,7 +221,6 @@ bool DataSelectionController::importData(DataSelectionView* view, bool isSingle,
             view->updateTaskList(sources[active].getRadiationId());
         }
     }
-    
     return true;
 } 
 
@@ -253,22 +250,17 @@ std::map<std::string, std::string> DataSelectionController::showTaskDetails(int 
               "FROM multi_platform_task mpt "
               "JOIN radiation_source_models rsm ON mpt.radiation_id = rsm.radiation_id "
               "WHERE mpt.task_id = " + std::to_string(taskId);
-    } else {
-        taskDetails["error"] = "未知任务类型: " + taskType;
-        return taskDetails;
     }
-
+    // 先执行SQL查询
     if (mysql_query(conn, sql.c_str()) != 0) {
-        taskDetails["error"] = "查询失败: " + std::string(mysql_error(conn));
+        taskDetails["error"] = "SQL执行失败: " + std::string(mysql_error(conn));
         return taskDetails;
     }
-
     MYSQL_RES* result = mysql_store_result(conn);
     if (!result) {
         taskDetails["error"] = "获取结果集失败: " + std::string(mysql_error(conn));
         return taskDetails;
     }
-
     MYSQL_ROW row = mysql_fetch_row(result);
     if (!row) {
         taskDetails["error"] = "未找到任务ID: " + std::to_string(taskId);
@@ -336,7 +328,6 @@ std::map<std::string, std::string> DataSelectionController::showTaskDetails(int 
                 continue;
             }
         }
-        
         // 添加字段和值到结果
         taskDetails[fieldName] = value;
     }

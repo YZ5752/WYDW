@@ -299,6 +299,18 @@ GtkWidget* EvaluationView::createView() {
     GtkWidget* multiRadio = gtk_radio_button_new_with_label_from_widget(GTK_RADIO_BUTTON(singleRadio), "多平台");
     gtk_box_pack_start(GTK_BOX(typeBox), multiRadio, FALSE, FALSE, 0);
     
+    // 添加模式切换信号
+    g_signal_connect(singleRadio, "toggled", G_CALLBACK(+[](GtkToggleButton* button, gpointer data) {
+        if (gtk_toggle_button_get_active(button)) {
+            static_cast<EvaluationView*>(data)->onModeChanged(true);
+        }
+    }), this);
+    g_signal_connect(multiRadio, "toggled", G_CALLBACK(+[](GtkToggleButton* button, gpointer data) {
+        if (gtk_toggle_button_get_active(button)) {
+            static_cast<EvaluationView*>(data)->onModeChanged(false);
+        }
+    }), this);
+    
     // 开始评估按钮
     GtkWidget* startButton = gtk_button_new_with_label("开始评估");
     gtk_widget_set_size_request(startButton, 100, 35);
@@ -348,26 +360,7 @@ GtkWidget* EvaluationView::createView() {
     gtk_grid_set_column_spacing(GTK_GRID(m_resultsTable), 15);
     gtk_box_pack_start(GTK_BOX(tableBox), m_resultsTable, TRUE, TRUE, 0);
     
-    // 表头
-    GtkWidget* headerLabel1 = gtk_label_new("指标");
-    gtk_widget_set_halign(headerLabel1, GTK_ALIGN_START);
-    gtk_grid_attach(GTK_GRID(m_resultsTable), headerLabel1, 0, 0, 1, 1);
-    
-    GtkWidget* headerLabel2 = gtk_label_new("数值");
-    gtk_widget_set_halign(headerLabel2, GTK_ALIGN_END);
-    gtk_grid_attach(GTK_GRID(m_resultsTable), headerLabel2, 1, 0, 1, 1);
-    
-    // 添加指标行
-    const char* metrics[] = {"最远定位距离", "定位时间", "定位精度", "测向精度"};
-    for (int i = 0; i < 4; i++) {
-        GtkWidget* metricLabel = gtk_label_new(metrics[i]);
-        gtk_widget_set_halign(metricLabel, GTK_ALIGN_START);
-        gtk_grid_attach(GTK_GRID(m_resultsTable), metricLabel, 0, i+1, 1, 1);
-        
-        GtkWidget* valueLabel = gtk_label_new("--");
-        gtk_widget_set_halign(valueLabel, GTK_ALIGN_END);
-        gtk_grid_attach(GTK_GRID(m_resultsTable), valueLabel, 1, i+1, 1, 1);
-    }
+    // 表头和指标行的初始化由onModeChanged控制
     
     // 导出按钮
     GtkWidget* exportButton = gtk_button_new_with_label("导出结果");
@@ -381,46 +374,67 @@ GtkWidget* EvaluationView::createView() {
     m_chartArea = gtk_drawing_area_new();
     gtk_container_add(GTK_CONTAINER(chartFrame), m_chartArea);
     
+    // 初始化时刷新表格（默认单平台）
+    onModeChanged(true);
+    
     return m_view;
 }
 
 // 更新评估结果表格
 void EvaluationView::updateResultsTable(const std::vector<std::pair<std::string, double>>& results) {
     if (!m_resultsTable) return;
-    
-    // 确保表格行数与结果数量匹配
-    int numRows = 0;
-    GList* children = gtk_container_get_children(GTK_CONTAINER(m_resultsTable));
-    if (children) {
-        numRows = g_list_length(children) / 2; // 每行有两个单元格（指标名和值）
-        g_list_free(children);
-    }
-    
-    // 结果从1行开始（跳过表头）
-    for (size_t i = 0; i < results.size() && i < 4; i++) {
-        // 获取值单元格（位于第二列）
-        GtkWidget* valueLabel = gtk_grid_get_child_at(GTK_GRID(m_resultsTable), 1, i+1);
-        if (valueLabel && GTK_IS_LABEL(valueLabel)) {
-            // 根据指标类型格式化显示
-            const std::string& metricName = results[i].first;
-            double value = results[i].second;
-            
-            char valueStr[64];
-            if (metricName == "最远定位距离") {
-                snprintf(valueStr, sizeof(valueStr), "%.2f m", value);
-            } else if (metricName == "定位时间") {
-                snprintf(valueStr, sizeof(valueStr), "%.2f s", value);
-            } else if (metricName == "定位精度") {
-                snprintf(valueStr, sizeof(valueStr), "%.6f m", value);
-            } else if (metricName == "测向精度") {
-                snprintf(valueStr, sizeof(valueStr), "%.6f°", value);
-            } else {
-                snprintf(valueStr, sizeof(valueStr), "%.2f", value);
-            }
-            
-            gtk_label_set_text(GTK_LABEL(valueLabel), valueStr);
+
+    // 判断是否为多平台（没有"测向精度"项即为多平台）
+    bool isMultiPlatform = true;
+    for (const auto& item : results) {
+        if (item.first == "测向精度") {
+            isMultiPlatform = false;
+            break;
         }
     }
+
+    // 1. 清空表格所有子控件
+    GList* children = gtk_container_get_children(GTK_CONTAINER(m_resultsTable));
+    for (GList* iter = children; iter != NULL; iter = g_list_next(iter)) {
+        gtk_widget_destroy(GTK_WIDGET(iter->data));
+    }
+    g_list_free(children);
+
+    // 2. 添加表头
+    GtkWidget* headerLabel1 = gtk_label_new("指标");
+    gtk_widget_set_halign(headerLabel1, GTK_ALIGN_START);
+    gtk_grid_attach(GTK_GRID(m_resultsTable), headerLabel1, 0, 0, 1, 1);
+    GtkWidget* headerLabel2 = gtk_label_new("数值");
+    gtk_widget_set_halign(headerLabel2, GTK_ALIGN_END);
+    gtk_grid_attach(GTK_GRID(m_resultsTable), headerLabel2, 1, 0, 1, 1);
+
+    // 3. 动态添加每一项结果
+    for (size_t i = 0; i < results.size(); ++i) {
+        // 多平台时跳过"测向精度"
+        if (isMultiPlatform && results[i].first == "测向精度") continue;
+        GtkWidget* metricLabel = gtk_label_new(results[i].first.c_str());
+        gtk_widget_set_halign(metricLabel, GTK_ALIGN_START);
+        gtk_grid_attach(GTK_GRID(m_resultsTable), metricLabel, 0, i+1, 1, 1);
+
+        char valueStr[64];
+        if (results[i].first == "最远定位距离") {
+            snprintf(valueStr, sizeof(valueStr), "%.2f m", results[i].second);
+        } else if (results[i].first == "定位时间") {
+            snprintf(valueStr, sizeof(valueStr), "%.2f s", results[i].second);
+        } else if (results[i].first == "定位精度") {
+            snprintf(valueStr, sizeof(valueStr), "%.6f m", results[i].second);
+        } else if (results[i].first == "测向精度") {
+            snprintf(valueStr, sizeof(valueStr), "%.6f°", results[i].second);
+        } else {
+            snprintf(valueStr, sizeof(valueStr), "%.2f", results[i].second);
+        }
+        GtkWidget* valueLabel = gtk_label_new(valueStr);
+        gtk_widget_set_halign(valueLabel, GTK_ALIGN_END);
+        gtk_grid_attach(GTK_GRID(m_resultsTable), valueLabel, 1, i+1, 1, 1);
+    }
+
+    // 4. 刷新表格显示
+    gtk_widget_show_all(m_resultsTable);
 }
 
 // 显示定位精度图表
@@ -555,12 +569,15 @@ void EvaluationView::startEvaluation() {
         // 更新结果表格
         updateResultsTable(results);
         
-        // 更新图表
-        std::map<double, double> chartData = 
-            EvaluationController::getInstance().getAccuracyTimeData(sourceId, isSinglePlatform);
-        showAccuracyChart(chartData);
-        
-        g_print("评估已完成，共获取 %zu 个结果项和 %zu 个时间数据点\n", results.size(), chartData.size());
+        // 仅单平台时展示定位精度图表
+        if (isSinglePlatform) {
+            std::map<double, double> chartData = 
+                EvaluationController::getInstance().getAccuracyTimeData(sourceId, isSinglePlatform);
+            showAccuracyChart(chartData);
+            g_print("评估已完成，共获取 %zu 个结果项和 %zu 个时间数据点\n", results.size(), chartData.size());
+        } else {
+            g_print("评估已完成，共获取 %zu 个结果项（多平台不展示定位精度图表）\n", results.size());
+        }
     } else {
         g_print("未选择有效的辐射源\n");
     }
@@ -598,4 +615,16 @@ void EvaluationView::loadRadiationSources() {
         gtk_combo_box_set_active(GTK_COMBO_BOX(m_targetCombo), 0);
         gtk_widget_set_sensitive(m_targetCombo, FALSE);
     }
+}
+
+// 添加onModeChanged方法
+void EvaluationView::onModeChanged(bool isSinglePlatform) {
+    std::vector<std::pair<std::string, double>> defaultResults;
+    defaultResults.push_back({"最远定位距离", 0.0});
+    defaultResults.push_back({"定位时间", 0.0});
+    defaultResults.push_back({"定位精度", 0.0});
+    if (isSinglePlatform) {
+        defaultResults.push_back({"测向精度", 0.0});
+    }
+    updateResultsTable(defaultResults);
 } 
