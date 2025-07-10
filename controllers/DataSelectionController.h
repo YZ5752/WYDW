@@ -16,7 +16,7 @@ public:
     void deleteSelectedItems(DataSelectionView* view);
     // 向数据库录入数据
     bool importData(DataSelectionView* view, bool isSingle, const std::vector<std::string>& values,
-                   int deviceId, int radiationId, const std::string& techSystem);
+                   const std::vector<int>& deviceIds, int radiationId, const std::string& techSystem);
     // 显示任务详情
     std::map<std::string, std::string> showTaskDetails(int taskId, const std::string& taskType);
 

@@ -612,7 +612,7 @@ LocationResult SinglePlatformTDOA::runSimulation(const ReconnaissanceDevice& dev
     task.azimuth = result.azimuth;
     task.elevation = result.elevation;
     task.angleError = std::abs(incidentAngle * RAD2DEG - std::asin(sinTheta) * RAD2DEG);
-    task.maxPositioningDistance = static_cast<float>(estimatedDistance);
+    task.positioningDistance = static_cast<float>(estimatedDistance);
     task.positioningTime = static_cast<float>(simulationTime); // 假设定位时间等于仿真时间
     
     // 限制定位精度在数据库字段范围内 (DECIMAL(8,6) 意味着最大值为 99.999999)

@@ -12,7 +12,7 @@
 // 添加refreshTechCombo声明，确保后续能正常调用
 void refreshTechCombo(GtkComboBoxText* techCombo, bool isSingle);
 // 添加refreshDeviceCombo声明
-void refreshDeviceCombo(GtkComboBoxText* deviceCombo, const std::vector<ReconnaissanceDevice>& allDevices, const std::vector<ReconnaissanceDevice>& fixedDevices, bool isSingle, const std::string& tech);
+void refreshDeviceCombo(GtkComboBoxText* deviceCombo, const std::vector<ReconnaissanceDevice>& allDevices, const std::vector<ReconnaissanceDevice>& fixedDevices, const std::vector<ReconnaissanceDevice>& mobileDevices, bool isSingle, const std::string& tech);
 struct ImportDialogContext {
     GtkWidget* radioSingle;
     GtkWidget* deviceLabel;
@@ -80,17 +80,18 @@ static void on_multi_tech_changed(GtkComboBox* combo, gpointer user_data) {
     gchar* tech = gtk_combo_box_text_get_active_text(GTK_COMBO_BOX_TEXT(ctx->techCombo));
     if (tech) {
         if (std::string(tech) == "频差定位") {
-            refreshDeviceCombo(GTK_COMBO_BOX_TEXT(ctx->multiDeviceCombo), *(ctx->allDevices), *(ctx->allDevices), false, tech);
+            refreshDeviceCombo(GTK_COMBO_BOX_TEXT(ctx->multiDeviceCombo), *(ctx->allDevices), *(ctx->allDevices), *(ctx->allDevices), false, tech);
         } else {
             // 只显示固定设备
-            std::vector<ReconnaissanceDevice> fixedDevices;
+            std::vector<ReconnaissanceDevice> fixedDevices,mobileDevices;
             for (const auto& dev : *(ctx->allDevices)) {
                 if (dev.getIsStationary()) fixedDevices.push_back(dev);
+                else mobileDevices.push_back(dev);
             }
-            refreshDeviceCombo(GTK_COMBO_BOX_TEXT(ctx->multiDeviceCombo), *(ctx->allDevices), fixedDevices, false, tech);
+            refreshDeviceCombo(GTK_COMBO_BOX_TEXT(ctx->multiDeviceCombo), *(ctx->allDevices), fixedDevices, mobileDevices, false, tech);
         }
     } else {
-        refreshDeviceCombo(GTK_COMBO_BOX_TEXT(ctx->multiDeviceCombo), *(ctx->allDevices), *(ctx->allDevices), false, "");
+        refreshDeviceCombo(GTK_COMBO_BOX_TEXT(ctx->multiDeviceCombo), *(ctx->allDevices), *(ctx->allDevices), *(ctx->allDevices), false, "");
     }
     // 保持原有多平台下拉框显示/隐藏逻辑
     std::vector<ReconnaissanceDevice> devicesToShow;
@@ -108,11 +109,11 @@ static void on_multi_tech_changed(GtkComboBox* combo, gpointer user_data) {
     if (tech) g_free(tech);
 }
 // 刷新侦察设备下拉框
-void refreshDeviceCombo(GtkComboBoxText* deviceCombo, const std::vector<ReconnaissanceDevice>& allDevices, const std::vector<ReconnaissanceDevice>& fixedDevices, bool isSingle, const std::string& tech) {
+void refreshDeviceCombo(GtkComboBoxText* deviceCombo, const std::vector<ReconnaissanceDevice>& allDevices, const std::vector<ReconnaissanceDevice>& fixedDevices, const std::vector<ReconnaissanceDevice>& mobileDevices, bool isSingle, const std::string& tech) {
     gtk_combo_box_text_remove_all(deviceCombo);
     const std::vector<ReconnaissanceDevice>* showList = nullptr;
     if (isSingle) {
-        showList = &fixedDevices;
+        showList = &mobileDevices;
     } else {
         if (tech == "频差定位") showList = &allDevices;
         else showList = &fixedDevices;
@@ -398,10 +399,11 @@ static void on_tech_changed(GtkComboBox* combo, gpointer user_data) {
     // 设备列表准备
     auto* allDevices = reinterpret_cast<std::vector<ReconnaissanceDevice>*>(g_object_get_data(G_OBJECT(combo), "allDevices"));
     auto* fixedDevices = reinterpret_cast<std::vector<ReconnaissanceDevice>*>(g_object_get_data(G_OBJECT(combo), "fixedDevices"));
+    auto* mobileDevices = reinterpret_cast<std::vector<ReconnaissanceDevice>*>(g_object_get_data(G_OBJECT(combo), "mobileDevices"));
     gchar* techText = gtk_combo_box_text_get_active_text(GTK_COMBO_BOX_TEXT(combo));
     std::string tech = techText ? techText : "";
     if (techText) g_free(techText);
-    refreshDeviceCombo(GTK_COMBO_BOX_TEXT(ctx->deviceCombo), *allDevices, *fixedDevices, isSingle, tech);
+    refreshDeviceCombo(GTK_COMBO_BOX_TEXT(ctx->deviceCombo), *allDevices, *fixedDevices, *mobileDevices, isSingle, tech);
     // 多平台设备下拉框动态控制
     if (!isSingle && ctx->multiDeviceLabels && ctx->multiDeviceCombos) {
         int needCount = 0;
@@ -445,10 +447,11 @@ static void on_radio_type_toggled(GtkToggleButton* btn, gpointer user_data) {
     // 设备列表准备
     auto* allDevices = reinterpret_cast<std::vector<ReconnaissanceDevice>*>(g_object_get_data(G_OBJECT(ctx->techCombo), "allDevices"));
     auto* fixedDevices = reinterpret_cast<std::vector<ReconnaissanceDevice>*>(g_object_get_data(G_OBJECT(ctx->techCombo), "fixedDevices"));
+    auto* mobileDevices = reinterpret_cast<std::vector<ReconnaissanceDevice>*>(g_object_get_data(G_OBJECT(ctx->techCombo), "mobileDevices"));
     gchar* techText = gtk_combo_box_text_get_active_text(GTK_COMBO_BOX_TEXT(ctx->techCombo));
     std::string tech = techText ? techText : "";
     if (techText) g_free(techText);
-    refreshDeviceCombo(GTK_COMBO_BOX_TEXT(ctx->deviceCombo), *allDevices, *fixedDevices, isSingle, tech);
+    refreshDeviceCombo(GTK_COMBO_BOX_TEXT(ctx->deviceCombo), *allDevices, *fixedDevices, *mobileDevices, isSingle, tech);
     // 字段显示
     if (isSingle) {
         gtk_widget_show(ctx->deviceLabel);
@@ -474,59 +477,44 @@ void DataSelectionView::onImportButtonClicked(GtkWidget* widget, gpointer user_d
     // 目标坐标（经度/纬度/高度）
     GtkWidget* posLabel = gtk_label_new("目标坐标");
     gtk_widget_set_halign(posLabel, GTK_ALIGN_START);
-    // 执行时间 定位时间
+    // 执行时间/定位时间（公共字段）
     GtkWidget* execTimeEntry = gtk_entry_new();//执行时间
     GtkWidget* posTimeEntry = gtk_entry_new();//定位时间
-    GtkWidget* timeBox = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 5);
-    gtk_box_pack_start(GTK_BOX(timeBox), gtk_label_new("执行时间(s)"), FALSE, FALSE, 0);
-    gtk_box_pack_start(GTK_BOX(timeBox), execTimeEntry, TRUE, TRUE, 0);
-    gtk_box_pack_start(GTK_BOX(timeBox), gtk_label_new("定位时间(s)"), FALSE, FALSE, 0);
-    gtk_box_pack_start(GTK_BOX(timeBox), posTimeEntry, TRUE, TRUE, 0);
-    // 定位距离 定位精度合并一行
+    // 方位角/俯仰角（公共字段）
+    GtkWidget* azimuthLabel = gtk_label_new("方位角(°)");
+    gtk_widget_set_halign(azimuthLabel, GTK_ALIGN_START);
+    GtkWidget* azimuthEntry = gtk_entry_new();
+    GtkWidget* elevationLabel = gtk_label_new("俯仰角(°)");
+    gtk_widget_set_halign(elevationLabel, GTK_ALIGN_START);
+    GtkWidget* elevationEntry = gtk_entry_new();
+    // 定位距离/定位精度（公共字段）
+    GtkWidget* posDistLabel = gtk_label_new("定位距离(m)");
+    gtk_widget_set_halign(posDistLabel, GTK_ALIGN_START);
     GtkWidget* posDistEntry = gtk_entry_new();//定位距离
+    GtkWidget* posAccLabel = gtk_label_new("定位精度(m)");
+    gtk_widget_set_halign(posAccLabel, GTK_ALIGN_START);
     GtkWidget* posAccEntry = gtk_entry_new();//定位精度
-    GtkWidget* distBox = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 5);
-    gtk_box_pack_start(GTK_BOX(distBox), gtk_label_new("定位距离(m)"), FALSE, FALSE, 0);
-    gtk_box_pack_start(GTK_BOX(distBox), posDistEntry, TRUE, TRUE, 0);
-    gtk_box_pack_start(GTK_BOX(distBox), gtk_label_new("定位精度(m)"), FALSE, FALSE, 0);
-    gtk_box_pack_start(GTK_BOX(distBox), posAccEntry, TRUE, TRUE, 0);
-    // 单平台特有字段合并一行
+    // 测向误差/测向精度（单平台）
+    GtkWidget* angleErrorLabel = gtk_label_new("测向误差(°)");
+    gtk_widget_set_halign(angleErrorLabel, GTK_ALIGN_START);
     GtkWidget* angleErrorEntry = gtk_entry_new(); // 测向误差
+    GtkWidget* directionAccLabel = gtk_label_new("测向精度(°)");
+    gtk_widget_set_halign(directionAccLabel, GTK_ALIGN_START);
     GtkWidget* directionAccEntry = gtk_entry_new(); // 测向精度
-    GtkWidget* singleExtraBox = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 5);
-    gtk_box_pack_start(GTK_BOX(singleExtraBox), gtk_label_new("测向误差(°)"), FALSE, FALSE, 0);
-    gtk_box_pack_start(GTK_BOX(singleExtraBox), angleErrorEntry, TRUE, TRUE, 0);
-    gtk_box_pack_start(GTK_BOX(singleExtraBox), gtk_label_new("测向精度(°)"), FALSE, FALSE, 0);
-    gtk_box_pack_start(GTK_BOX(singleExtraBox), directionAccEntry, TRUE, TRUE, 0);
-    // 多平台特有字段合并一行
+    // 运动速度/运动方位角/运动俯仰角（多平台）
+    GtkWidget* moveParamLabel = gtk_label_new("运动参数");
+    gtk_widget_set_halign(moveParamLabel, GTK_ALIGN_START);
     GtkWidget* moveSpeedEntry = gtk_entry_new(); // 运动速度
     GtkWidget* moveAzEntry = gtk_entry_new();    // 运动方位角
     GtkWidget* moveElEntry = gtk_entry_new();    // 运动俯仰角
-    GtkWidget* multiExtraBox = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 5);
-    gtk_box_pack_start(GTK_BOX(multiExtraBox), gtk_label_new("运动速度(m/s)"), FALSE, FALSE, 0);
-    gtk_box_pack_start(GTK_BOX(multiExtraBox), moveSpeedEntry, TRUE, TRUE, 0);
-    gtk_box_pack_start(GTK_BOX(multiExtraBox), gtk_label_new("运动方位角(°)"), FALSE, FALSE, 0);
-    gtk_box_pack_start(GTK_BOX(multiExtraBox), moveAzEntry, TRUE, TRUE, 0);
-    gtk_box_pack_start(GTK_BOX(multiExtraBox), gtk_label_new("运动俯仰角(°)"), FALSE, FALSE, 0);
-    gtk_box_pack_start(GTK_BOX(multiExtraBox), moveElEntry, TRUE, TRUE, 0);
-    
-    // 方位角和俯仰角（公共字段）
-    GtkWidget* azElBox = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 5);
-    GtkWidget* azimuthLabel = gtk_label_new("方位角(°)");
-    GtkWidget* azimuthEntry = gtk_entry_new();
-    GtkWidget* elevationLabel = gtk_label_new("俯仰角(°)");
-    GtkWidget* elevationEntry = gtk_entry_new();
-    gtk_box_pack_start(GTK_BOX(azElBox), azimuthLabel, FALSE, FALSE, 0);
-    gtk_box_pack_start(GTK_BOX(azElBox), azimuthEntry, TRUE, TRUE, 0);
-    gtk_box_pack_start(GTK_BOX(azElBox), elevationLabel, FALSE, FALSE, 0);
-    gtk_box_pack_start(GTK_BOX(azElBox), elevationEntry, TRUE, TRUE, 0);
-    
     // 设备列表准备
     auto& deviceDao = ReconnaissanceDeviceDAO::getInstance();
     std::vector<ReconnaissanceDevice> allDevices = deviceDao.getAllReconnaissanceDevices();
     std::vector<ReconnaissanceDevice> fixedDevices;
+    std::vector<ReconnaissanceDevice> mobileDevices;
     for (const auto& dev : allDevices) {
         if (dev.getIsStationary()) fixedDevices.push_back(dev);
+        else mobileDevices.push_back(dev);
     }
     // 当前辐射源ID
     int radiationId = -1;
@@ -548,30 +536,32 @@ void DataSelectionView::onImportButtonClicked(GtkWidget* widget, gpointer user_d
         "确定", GTK_RESPONSE_OK,
         nullptr
     );
-    gtk_window_set_default_size(GTK_WINDOW(dialog), 400, 500);
-    GtkWidget* contentArea = gtk_dialog_get_content_area(GTK_DIALOG(dialog));
-    gtk_container_set_border_width(GTK_CONTAINER(contentArea), 10);
-    GtkWidget* grid = gtk_grid_new();
-    gtk_grid_set_column_spacing(GTK_GRID(grid), 15);
-    gtk_grid_set_row_spacing(GTK_GRID(grid), 8);
-    gtk_container_add(GTK_CONTAINER(contentArea), grid);
-    int row = 0;
+    gtk_window_set_default_size(GTK_WINDOW(dialog), 400, 500);//设置对话框大小
+    GtkWidget* contentArea = gtk_dialog_get_content_area(GTK_DIALOG(dialog));//获取对话框内容区域
+    gtk_container_set_border_width(GTK_CONTAINER(contentArea), 10);//设置内容区域边框宽度
+    GtkWidget* grid = gtk_grid_new();//创建网格布局
+    gtk_grid_set_column_spacing(GTK_GRID(grid), 15);//设置列间距
+    gtk_grid_set_row_spacing(GTK_GRID(grid), 8);//设置行间距
+    gtk_container_add(GTK_CONTAINER(contentArea), grid);//将网格布局添加到内容区域
+    int row = 0;//行索引
+    // 单平台和多平台字段容器
+    std::vector<GtkWidget*> singleRowWidgets, multiRowWidgets;
     // 任务类型
-    GtkWidget* typeLabel = gtk_label_new("任务类型");
+    GtkWidget* typeLabel = gtk_label_new("任务类型");//任务类型标签
     gtk_widget_set_halign(typeLabel, GTK_ALIGN_START);
-    gtk_grid_attach(GTK_GRID(grid), typeLabel, 0, row, 1, 1);
     GtkWidget* typeBox = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 10);
     GtkWidget* radioSingle = gtk_radio_button_new_with_label(NULL, "单平台");
     GtkWidget* radioMulti = gtk_radio_button_new_with_label_from_widget(GTK_RADIO_BUTTON(radioSingle), "多平台");
     gtk_box_pack_start(GTK_BOX(typeBox), radioSingle, FALSE, FALSE, 0);
     gtk_box_pack_start(GTK_BOX(typeBox), radioMulti, FALSE, FALSE, 0);
-    gtk_grid_attach(GTK_GRID(grid), typeBox, 1, row, 1, 1);
+    gtk_grid_attach(GTK_GRID(grid), typeLabel, 0, row, 1, 1);
+    gtk_grid_attach(GTK_GRID(grid), typeBox, 1, row, 3, 1);
     row++;
     // 技术体制
     GtkWidget* techLabel = gtk_label_new("技术体制");
     gtk_widget_set_halign(techLabel, GTK_ALIGN_START);
-    gtk_grid_attach(GTK_GRID(grid), techLabel, 0, row, 1, 1);
     GtkWidget* techCombo = gtk_combo_box_text_new();
+    gtk_grid_attach(GTK_GRID(grid), techLabel, 0, row, 1, 1);
     gtk_grid_attach(GTK_GRID(grid), techCombo, 1, row, 3, 1);
     row++;
     // 侦察设备（单平台）
@@ -581,42 +571,76 @@ void DataSelectionView::onImportButtonClicked(GtkWidget* widget, gpointer user_d
     row++;
     // 目标经度/纬度/高度
     gtk_grid_attach(GTK_GRID(grid), posLabel, 0, row, 1, 1);
-    GtkWidget* posBox = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 5);
     GtkWidget* longitudeEntry = gtk_entry_new();
     GtkWidget* latitudeEntry = gtk_entry_new();
     GtkWidget* altitudeEntry = gtk_entry_new();
-    gtk_box_pack_start(GTK_BOX(posBox), longitudeEntry, TRUE, TRUE, 0);
-    gtk_box_pack_start(GTK_BOX(posBox), latitudeEntry, TRUE, TRUE, 0);
-    gtk_box_pack_start(GTK_BOX(posBox), altitudeEntry, TRUE, TRUE, 0);
-    gtk_grid_attach(GTK_GRID(grid), posBox, 1, row, 3, 1);
+    gtk_widget_set_hexpand(longitudeEntry, TRUE);
+    gtk_widget_set_hexpand(latitudeEntry, TRUE);
+    gtk_widget_set_hexpand(altitudeEntry, TRUE);
+    gtk_grid_attach(GTK_GRID(grid), longitudeEntry, 1, row, 1, 1);
+    gtk_grid_attach(GTK_GRID(grid), latitudeEntry, 2, row, 1, 1);
+    gtk_grid_attach(GTK_GRID(grid), altitudeEntry, 3, row, 1, 1);
     row++;
-    // 公共字段
-    gtk_grid_attach(GTK_GRID(grid), timeBox, 0, row, 4, 1);
-    row++;
-    // 定位距离/定位精度
-    gtk_grid_attach(GTK_GRID(grid), distBox, 0, row, 4, 1);
+    // 运动速度/运动方位角/运动俯仰角（多平台）
+    gtk_grid_attach(GTK_GRID(grid), moveParamLabel, 0, row, 1, 1);
+    gtk_widget_set_hexpand(moveSpeedEntry, TRUE);
+    gtk_widget_set_hexpand(moveAzEntry, TRUE);
+    gtk_widget_set_hexpand(moveElEntry, TRUE);
+    gtk_grid_attach(GTK_GRID(grid), moveSpeedEntry, 1, row, 1, 1);
+    gtk_grid_attach(GTK_GRID(grid), moveAzEntry, 2, row, 1, 1);
+    gtk_grid_attach(GTK_GRID(grid), moveElEntry, 3, row, 1, 1);
+    multiRowWidgets.push_back(moveParamLabel);
+    multiRowWidgets.push_back(moveSpeedEntry);
+    multiRowWidgets.push_back(moveAzEntry);
+    multiRowWidgets.push_back(moveElEntry);
     row++;
     // 方位角/俯仰角
-    gtk_grid_attach(GTK_GRID(grid), azElBox, 0, row, 4, 1);
+    gtk_grid_attach(GTK_GRID(grid), azimuthLabel, 0, row, 1, 1);
+    gtk_widget_set_hexpand(azimuthEntry, TRUE);
+    gtk_widget_set_hexpand(elevationEntry, TRUE);
+    gtk_grid_attach(GTK_GRID(grid), azimuthEntry, 1, row, 1, 1);
+    gtk_grid_attach(GTK_GRID(grid), elevationLabel, 2, row, 1, 1);
+    gtk_grid_attach(GTK_GRID(grid), elevationEntry, 3, row, 1, 1);
     row++;
-    // 单平台
-    std::vector<GtkWidget*> singleRowWidgets, multiRowWidgets;
-    // 添加单平台特有字段
-    gtk_grid_attach(GTK_GRID(grid), singleExtraBox, 0, row, 4, 1);
-    singleRowWidgets.push_back(singleExtraBox);
+    // 执行时间/定位时间
+    GtkWidget* execTimeLabel = gtk_label_new("执行时间(s)");
+    gtk_widget_set_halign(execTimeLabel, GTK_ALIGN_START);
+    GtkWidget* posTimeLabel = gtk_label_new("定位时间(s)");
+    gtk_widget_set_halign(posTimeLabel, GTK_ALIGN_START);
+    gtk_widget_set_hexpand(execTimeEntry, TRUE);
+    gtk_widget_set_hexpand(posTimeEntry, TRUE);
+    gtk_grid_attach(GTK_GRID(grid), execTimeLabel, 0, row, 1, 1);
+    gtk_grid_attach(GTK_GRID(grid), execTimeEntry, 1, row, 1, 1);
+    gtk_grid_attach(GTK_GRID(grid), posTimeLabel, 2, row, 1, 1);
+    gtk_grid_attach(GTK_GRID(grid), posTimeEntry, 3, row, 1, 1);
     row++;
-    // 多平台
-    int multiRow = row;
-    // 添加多平台特有字段
-    gtk_grid_attach(GTK_GRID(grid), multiExtraBox, 0, multiRow, 4, 1);
-    multiRowWidgets.push_back(multiExtraBox);
-    multiRow++;
+    // 定位距离/定位精度
+    gtk_grid_attach(GTK_GRID(grid), posDistLabel, 0, row, 1, 1);
+    gtk_widget_set_hexpand(posDistEntry, TRUE);
+    gtk_widget_set_hexpand(posAccEntry, TRUE);
+    gtk_grid_attach(GTK_GRID(grid), posDistEntry, 1, row, 1, 1);
+    gtk_grid_attach(GTK_GRID(grid), posAccLabel, 2, row, 1, 1);
+    gtk_grid_attach(GTK_GRID(grid), posAccEntry, 3, row, 1, 1);
+    row++;
+    // 测向误差/测向精度（单平台）
+    gtk_grid_attach(GTK_GRID(grid), angleErrorLabel, 0, row, 1, 1);
+    gtk_widget_set_hexpand(angleErrorEntry, TRUE);
+    gtk_widget_set_hexpand(directionAccEntry, TRUE);
+    gtk_grid_attach(GTK_GRID(grid), angleErrorEntry, 1, row, 1, 1);
+    gtk_grid_attach(GTK_GRID(grid), directionAccLabel, 2, row, 1, 1);
+    gtk_grid_attach(GTK_GRID(grid), directionAccEntry, 3, row, 1, 1);
+    singleRowWidgets.push_back(angleErrorLabel);
+    singleRowWidgets.push_back(angleErrorEntry);
+    singleRowWidgets.push_back(directionAccLabel);
+    singleRowWidgets.push_back(directionAccEntry);
+    row++;
+    // 多平台设备下拉框
+    int multiRow = row + 1;
     GtkWidget* multiDeviceLabels[4];
     GtkWidget* multiDeviceCombos[4];
-    // 设备下拉框放在multiFields之后，2*2布局，保证宽度一致
     for (int i = 0; i < 4; ++i) {
         char labelTxt[16];
-        snprintf(labelTxt, sizeof(labelTxt), "设备%d", i+1);
+        snprintf(labelTxt, sizeof(labelTxt), "侦察设备%d", i+1);
         multiDeviceLabels[i] = gtk_label_new(labelTxt);
         gtk_widget_set_halign(multiDeviceLabels[i], GTK_ALIGN_START);
         gtk_widget_set_hexpand(multiDeviceLabels[i], TRUE);
@@ -632,8 +656,9 @@ void DataSelectionView::onImportButtonClicked(GtkWidget* widget, gpointer user_d
     // 绑定设备列表到 techCombo，便于回调使用
     g_object_set_data(G_OBJECT(techCombo), "allDevices", &allDevices);
     g_object_set_data(G_OBJECT(techCombo), "fixedDevices", &fixedDevices);
+    g_object_set_data(G_OBJECT(techCombo), "mobileDevices", &mobileDevices);
     // 绑定设备列表到 ctx，增加azElBox
-    ImportDialogContext* ctx = new ImportDialogContext{radioSingle, deviceLabel, deviceCombo, nullptr, nullptr, &singleRowWidgets, &multiRowWidgets, techCombo, multiDeviceLabels, multiDeviceCombos, azElBox};
+    ImportDialogContext* ctx = new ImportDialogContext{radioSingle, deviceLabel, deviceCombo, nullptr, nullptr, &singleRowWidgets, &multiRowWidgets, techCombo, multiDeviceLabels, multiDeviceCombos, nullptr};
     g_object_set_data(G_OBJECT(techCombo), "ctx", ctx);
     // 信号连接
     g_signal_connect(radioSingle, "toggled", G_CALLBACK(on_radio_type_toggled), ctx);
@@ -641,7 +666,7 @@ void DataSelectionView::onImportButtonClicked(GtkWidget* widget, gpointer user_d
     g_signal_connect(techCombo, "changed", G_CALLBACK(on_tech_changed), ctx);
     // 初始化下拉框
     refreshTechCombo(GTK_COMBO_BOX_TEXT(techCombo), true);
-    refreshDeviceCombo(GTK_COMBO_BOX_TEXT(deviceCombo), allDevices, fixedDevices, true, "时差定位");
+    refreshDeviceCombo(GTK_COMBO_BOX_TEXT(deviceCombo), allDevices, fixedDevices, mobileDevices, true, "时差定位");
     // 显示对话框
     gtk_widget_show_all(dialog);
     // 确保初始时为单平台则隐藏所有多平台设备下拉框
@@ -665,15 +690,16 @@ void DataSelectionView::onImportButtonClicked(GtkWidget* widget, gpointer user_d
         std::string errMsg;
         std::vector<std::string> values;
         std::string techSystem;
-        int deviceId = -1;
+        std::vector<int> deviceIds;
         gchar* techText = gtk_combo_box_text_get_active_text(GTK_COMBO_BOX_TEXT(techCombo));
         std::string tech = techText ? techText : "";
         if (techText) g_free(techText);
         int devIdx = gtk_combo_box_get_active(GTK_COMBO_BOX(deviceCombo));
         // 设备列表
         const std::vector<ReconnaissanceDevice>* showList = nullptr;
+        //处理技术体制
         if (isSingle) {
-            showList = &fixedDevices;
+            showList = &mobileDevices;
             techSystem = (tech == "时差定位") ? "TDOA" : "INTERFEROMETER";
         } else {
             if (tech == "频差定位") {
@@ -687,34 +713,75 @@ void DataSelectionView::onImportButtonClicked(GtkWidget* widget, gpointer user_d
                 techSystem = "FD";
             }
         }
+        //处理目标坐标
+        const char* longitudeTxt = gtk_entry_get_text(GTK_ENTRY(longitudeEntry));
+        const char* latitudeTxt = gtk_entry_get_text(GTK_ENTRY(latitudeEntry));
+        const char* altitudeTxt = gtk_entry_get_text(GTK_ENTRY(altitudeEntry));
+        if (!longitudeTxt) { valid = false; errMsg = "目标经度不能为空！"; }
+        values.push_back(longitudeTxt ? longitudeTxt : "");
+        if (!latitudeTxt) { valid = false; errMsg = "目标纬度不能为空！"; }
+        values.push_back(latitudeTxt ? latitudeTxt : "");
+        if (!altitudeTxt) { valid = false; errMsg = "目标高度不能为空！"; }
+        values.push_back(altitudeTxt ? altitudeTxt : "");   
+        //处理方位角和俯仰角
+        const char* azimuthTxt = gtk_entry_get_text(GTK_ENTRY(azimuthEntry));
+        const char* elevationTxt = gtk_entry_get_text(GTK_ENTRY(elevationEntry));
+        if (!azimuthTxt) { valid = false; errMsg = "方位角不能为空！"; }
+        values.push_back(azimuthTxt ? azimuthTxt : "");
+        if (!elevationTxt) { valid = false; errMsg = "俯仰角不能为空！"; }
+        values.push_back(elevationTxt ? elevationTxt : "");
+        //处理执行时间和定位时间
+        const char* execTimeTxt = gtk_entry_get_text(GTK_ENTRY(execTimeEntry));
+        const char* posTimeTxt = gtk_entry_get_text(GTK_ENTRY(posTimeEntry));
+        //执行时间和定位时间不能为空且不能为负数
+        if (!execTimeTxt) { valid = false; errMsg = "执行时间不能为空！"; }
+        if (execTimeTxt && atof(execTimeTxt) < 0) { valid = false; errMsg = "执行时间不能为负数！"; }
+        values.push_back(execTimeTxt ? execTimeTxt : "");
+        if (!posTimeTxt) { valid = false; errMsg = "定位时间不能为空！"; }
+        if (posTimeTxt && atof(posTimeTxt) < 0) { valid = false; errMsg = "定位时间不能为负数！"; }
+        values.push_back(posTimeTxt ? posTimeTxt : "");
+        //处理定位距离和定位精度
+        const char* posDistTxt = gtk_entry_get_text(GTK_ENTRY(posDistEntry));
+        if (!posDistTxt) { valid = false; errMsg = "定位距离不能为空！"; }
+        if (posDistTxt && atof(posDistTxt) < 0) { valid = false; errMsg = "定位距离不能为负数！"; }
+        values.push_back(posDistTxt ? posDistTxt : "");
+        //处理定位精度
+        const char* posAccTxt = gtk_entry_get_text(GTK_ENTRY(posAccEntry));
+        if (!posAccTxt) { valid = false; errMsg = "定位精度不能为空！"; }
+        if (posAccTxt && atof(posAccTxt) < 0) { valid = false; errMsg = "定位精度不能为负数！"; }
+        values.push_back(posAccTxt ? posAccTxt : "");
         // showList 非空且 devIdx 有效才允许取值
         if (showList && devIdx >= 0 && devIdx < (int)showList->size()) {
-            deviceId = (*showList)[devIdx].getDeviceId();
-        } else {
-            valid = false;
-            errMsg = "请选择有效的侦察设备！";
-        }
+            deviceIds.push_back((*showList)[devIdx].getDeviceId());
+        } 
         if (isSingle) {
-            // 校验单平台特有字段
+            //处理测向误差和测向精度
             const char* angleErrorTxt = gtk_entry_get_text(GTK_ENTRY(angleErrorEntry));
-            if (!angleErrorTxt || strlen(angleErrorTxt) == 0) { valid = false; errMsg = "测向误差不能为空！"; }
+            if (!angleErrorTxt) { valid = false; errMsg = "测向误差不能为空！"; }
+            if (angleErrorTxt && atof(angleErrorTxt) < 0) { valid = false; errMsg = "测向误差不能为负数！"; }
             values.push_back(angleErrorTxt ? angleErrorTxt : "");
-
             const char* directionAccTxt = gtk_entry_get_text(GTK_ENTRY(directionAccEntry));
-            if (!directionAccTxt || strlen(directionAccTxt) == 0) { valid = false; errMsg = "测向精度不能为空！"; }
+            if (!directionAccTxt) { valid = false; errMsg = "测向精度不能为空！"; }
+            if (directionAccTxt && atof(directionAccTxt) < 0) { valid = false; errMsg = "测向精度不能为负数！"; }
             values.push_back(directionAccTxt ? directionAccTxt : "");
         } else { // 多平台
-            const char* moveSpeedTxt = gtk_entry_get_text(GTK_ENTRY(moveSpeedEntry));
-            if (!moveSpeedTxt || strlen(moveSpeedTxt) == 0) { valid = false; errMsg = "运动速度不能为空！"; }
-            values.push_back(moveSpeedTxt ? moveSpeedTxt : "");
-
-            const char* moveAzTxt = gtk_entry_get_text(GTK_ENTRY(moveAzEntry));
-            if (!moveAzTxt || strlen(moveAzTxt) == 0) { valid = false; errMsg = "运动方位角不能为空！"; }
-            values.push_back(moveAzTxt ? moveAzTxt : "");
-
-            const char* moveElTxt = gtk_entry_get_text(GTK_ENTRY(moveElEntry));
-            if (!moveElTxt || strlen(moveElTxt) == 0) { valid = false; errMsg = "运动俯仰角不能为空！"; }
-            values.push_back(moveElTxt ? moveElTxt : "");
+            for (int i = 0; i < 4; ++i) {
+                int idx = gtk_combo_box_get_active(GTK_COMBO_BOX(multiDeviceCombos[i]));
+                if (gtk_widget_get_visible(multiDeviceCombos[i]) && showList && idx >= 0 && idx < (int)showList->size()) {
+                    deviceIds.push_back((*showList)[idx].getDeviceId());
+                }
+            }
+            //处理运动参数
+            const char* movementSpeedTxt = gtk_entry_get_text(GTK_ENTRY(moveSpeedEntry));
+            if (!movementSpeedTxt) { valid = false; errMsg = "运动速度不能为空！"; }
+            if (movementSpeedTxt && atof(movementSpeedTxt) < 0) { valid = false; errMsg = "运动速度不能为负数！"; }
+            values.push_back(movementSpeedTxt ? movementSpeedTxt : "");
+            const char* movementAzimuthTxt = gtk_entry_get_text(GTK_ENTRY(moveAzEntry));
+            if (!movementAzimuthTxt) { valid = false; errMsg = "运动方位角不能为空！"; }
+            values.push_back(movementAzimuthTxt ? movementAzimuthTxt : "");
+            const char* movementElevationTxt = gtk_entry_get_text(GTK_ENTRY(moveElEntry));
+            if (!movementElevationTxt) { valid = false; errMsg = "运动俯仰角不能为空！"; }
+            values.push_back(movementElevationTxt ? movementElevationTxt : "");
         }
         if (!valid) {
             GtkWidget* err = gtk_message_dialog_new(GTK_WINDOW(dialog), GTK_DIALOG_MODAL, GTK_MESSAGE_ERROR, GTK_BUTTONS_OK, "%s", errMsg.c_str());
@@ -723,7 +790,7 @@ void DataSelectionView::onImportButtonClicked(GtkWidget* widget, gpointer user_d
             continue;
         }
         // 使用Controller进行数据库操作
-        if (DataSelectionController::getInstance().importData(view, isSingle, values, deviceId, radiationId, techSystem)) {
+        if (DataSelectionController::getInstance().importData(view, isSingle, values, deviceIds, radiationId, techSystem)) {
             gtk_widget_destroy(dialog);
             break;
         } else {

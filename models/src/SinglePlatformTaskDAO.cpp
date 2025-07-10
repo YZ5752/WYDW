@@ -31,7 +31,7 @@ bool SinglePlatformTaskDAO::addSinglePlatformTask(const SinglePlatformTask& task
         task.azimuth,
         task.elevation,
         task.angleError,
-        task.maxPositioningDistance,
+        task.positioningDistance,
         task.positioningTime,
         task.positioningAccuracy,
         task.directionFindingAccuracy
@@ -211,7 +211,7 @@ bool SinglePlatformTaskDAO::updateSinglePlatformTask(const SinglePlatformTask& t
         task.azimuth,
         task.elevation,
         task.angleError,
-        task.maxPositioningDistance,
+        task.positioningDistance,
         task.positioningTime,
         task.positioningAccuracy,
         task.directionFindingAccuracy,
@@ -260,7 +260,7 @@ SinglePlatformTask SinglePlatformTaskDAO::createTaskFromRow(MYSQL_ROW row) {
     task.azimuth = row[8] ? atof(row[8]) : 0.0;
     task.elevation = row[9] ? atof(row[9]) : 0.0;
     task.angleError = row[10] ? atof(row[10]) : 0.0;
-    task.maxPositioningDistance = row[11] ? atof(row[11]) : 0.0f;
+    task.positioningDistance = row[11] ? atof(row[11]) : 0.0f;
     task.positioningTime = row[12] ? atof(row[12]) : 0.0f;
     task.positioningAccuracy = row[13] ? atof(row[13]) : 0.0;
     task.directionFindingAccuracy = row[14] ? atof(row[14]) : 0.0;
@@ -332,7 +332,7 @@ std::vector<SinglePlatformTask> SinglePlatformTaskDAO::getTasksBySourceId(int so
         task.azimuth = row[idx] ? atof(row[idx]) : 0.0; idx++;
         task.elevation = row[idx] ? atof(row[idx]) : 0.0; idx++;
         task.angleError = row[idx] ? atof(row[idx]) : 0.0; idx++;
-        task.maxPositioningDistance = row[idx] ? atof(row[idx]) : 0.0f; idx++;
+        task.positioningDistance = row[idx] ? atof(row[idx]) : 0.0f; idx++;
         task.positioningTime = row[idx] ? atof(row[idx]) : 0.0f; idx++;
         task.positioningAccuracy = row[idx] ? atof(row[idx]) : 0.0; idx++;
         task.directionFindingAccuracy = row[idx] ? atof(row[idx]) : 0.0; idx++;

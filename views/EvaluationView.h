@@ -35,6 +35,7 @@ public:
     // 新增方法
     void onRadiationSourceSelected();
     void startEvaluation();
+    void onModeChanged(bool isSinglePlatform);
 
 private:
     // 加载辐射源数据的辅助方法
