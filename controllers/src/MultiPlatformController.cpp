@@ -10,12 +10,14 @@
 #include "../../models/TDOAalgorithm.h"
 #include "../../models/DirectionFinding.h"
 #include "../../utils/DirectionErrorLines.h"
+#include "../../utils/CoordinateTransform.h"
 
 #include <iostream>
 #include <sstream>
 #include <iomanip>
 #include <cmath>
 #include <random>
+#include <ctime>
 
 // // 声明外部函数
 // extern TDOAResult calculateTDOAErrorCircle(
@@ -258,10 +260,10 @@ void MultiPlatformController::startSimulation(const std::vector<std::string>& de
             ss << std::fixed << std::setprecision(6);
 
             // 辐射源位置
-            ss << "<span weight='bold'>辐射源位置</span>\n";
             ss << "经度：" << result.longitude << "°\n";
             ss << "纬度：" << result.latitude << "°\n";
-            ss << "高度：" << result.altitude << " 米\n\n";
+            ss << "高度：" << result.altitude << " 米\n";
+            ss << std::setprecision(2) << "定位误差：" << result.accuracy << " 米\n";
 
             // 更新界面显示
             if (m_view) {
@@ -283,28 +285,6 @@ void MultiPlatformController::startSimulation(const std::vector<std::string>& de
                 double dist_i = calculateDistance(stationPositions_xyz[i], sourcePos_xyz);
                 double dist_0 = calculateDistance(stationPositions_xyz[0], sourcePos_xyz);
                 tdoas[i] = (dist_i - dist_0) / Constants::c;
-                
-                // 添加详细调试信息
-                std::cout << "==== TDOA " << i << " 详细信息 ====" << std::endl;
-                std::cout << "站点 0 (" << selectedDevices[0].getDeviceName() << ") 坐标: " 
-                         << "(" << stationPositions_xyz[0].p1 << ", " 
-                         << stationPositions_xyz[0].p2 << ", " 
-                         << stationPositions_xyz[0].p3 << ")" << std::endl;
-                
-                std::cout << "站点 " << i << " (" << selectedDevices[i].getDeviceName() << ") 坐标: " 
-                         << "(" << stationPositions_xyz[i].p1 << ", " 
-                         << stationPositions_xyz[i].p2 << ", " 
-                         << stationPositions_xyz[i].p3 << ")" << std::endl;
-                
-                std::cout << "辐射源坐标: " 
-                         << "(" << sourcePos_xyz.p1 << ", " 
-                         << sourcePos_xyz.p2 << ", " 
-                         << sourcePos_xyz.p3 << ")" << std::endl;
-                
-                std::cout << "dist_0 = " << dist_0 << " 米" << std::endl;
-                std::cout << "dist_" << i << " = " << dist_i << " 米" << std::endl;
-                std::cout << "距离差 = " << (dist_i - dist_0) << " 米" << std::endl;
-                std::cout << "TDOA = " << tdoas[i] << " 秒 (" << tdoas[i] * 1e9 << " ns)" << std::endl;
                 
                 // 检查是否可以构造双曲线
                 double focusDistance = calculateDistance(stationPositions_xyz[0], stationPositions_xyz[i]);
@@ -349,21 +329,32 @@ void MultiPlatformController::startSimulation(const std::vector<std::string>& de
             
             // 添加辐射源标记
             mapView->addMarker(
-                selectedSource.getLongitude(),
-                selectedSource.getLatitude(),
+                result.longitude,
+                result.latitude,
                 selectedSource.getRadiationName(),
                 "",
                 "blue"
             );
             
-            // 添加计算结果标记
-            mapView->addMarker(
-                result.longitude,
-                result.latitude,
-                "计算结果",
-                "",
-                "green"
+            // 生成TDOA误差点和误差圆
+            // 创建一个结构体存储定位结果的大地坐标
+            COORD3 resultLBH;
+            resultLBH.p1 = result.longitude;
+            resultLBH.p2 = result.latitude;
+            resultLBH.p3 = result.altitude;
+            
+            // 使用calculateTDOAErrorCircle函数生成误差点和误差圆
+            TDOAResult tdoaResult = calculateTDOAErrorCircle(
+                deviceNames,
+                sourceName,
+                m_tdoaRmsError,
+                m_esmToaError,
+                0  // 随机种子,0表示系统当前时间
             );
+            
+            // 显示误差点和误差圆
+            showErrorPointsOnMap(mapView, tdoaResult.estimatedPoints);
+            showErrorCircleOnMap(mapView, resultLBH, tdoaResult.cepRadius);
             
             // 尝试使用JavaScript直接检查Cesium是否加载
             std::string checkScript = "if (typeof viewer !== 'undefined') { console.log('Cesium已加载'); } else { console.log('Cesium未加载'); }";
@@ -381,63 +372,6 @@ void MultiPlatformController::startSimulation(const std::vector<std::string>& de
                                    "}\n";
             mapView->executeScript(testScript);
             
-            // 添加特殊测试代码，测试计算双曲线点的函数
-            std::cout << "\n========= 直接测试双曲线点计算函数 =========" << std::endl;
-            // 简化测试：使用前两个侦察站创建一个简单的双曲线
-            if (stationPositions_xyz.size() >= 2) {
-                COORD3 testFocus1 = stationPositions_xyz[0];
-                COORD3 testFocus2 = stationPositions_xyz[1];
-                
-                // 测试1：使用小TDOA值
-                double testTdoa1 = 0.00001; // 10微秒，对应距离差约3米
-                std::cout << "测试1 - 小TDOA值:" << std::endl;
-                std::cout << "TDOA = " << testTdoa1 << " 秒" << std::endl;
-                
-                std::vector<COORD3> testPoints1 = HyperbolaLines::calculateHyperbolaPoints(
-                    testFocus1, testFocus2, testTdoa1, 0.0, 100, 100000.0);
-                
-                if (!testPoints1.empty()) {
-                    bool drawTestSuccess1 = HyperbolaLines::drawHyperbolaLine(
-                        mapView, testPoints1, "#FF00FF", 3.0);
-                    std::cout << "测试1绘制结果: " << (drawTestSuccess1 ? "成功" : "失败") << std::endl;
-                }
-                
-                // 测试2：使用临界TDOA值（接近焦距对应的时间差）
-                double focusDistance = calculateDistance(testFocus1, testFocus2);
-                double criticalTdoa = focusDistance / Constants::c * 0.95; // 设为焦距95%对应的时间差
-                
-                std::cout << "测试2 - 临界TDOA值:" << std::endl;
-                std::cout << "焦距 = " << focusDistance << " 米" << std::endl;
-                std::cout << "临界TDOA = " << criticalTdoa << " 秒" << std::endl;
-                
-                std::vector<COORD3> testPoints2 = HyperbolaLines::calculateHyperbolaPoints(
-                    testFocus1, testFocus2, criticalTdoa, 0.0, 100, 100000.0);
-                
-                if (!testPoints2.empty()) {
-                    bool drawTestSuccess2 = HyperbolaLines::drawHyperbolaLine(
-                        mapView, testPoints2, "#00FFFF", 3.0);
-                    std::cout << "测试2绘制结果: " << (drawTestSuccess2 ? "成功" : "失败") << std::endl;
-                }
-                
-                // 测试3：使用超过临界值的TDOA，测试自动调整功能
-                double overCriticalTdoa = focusDistance / Constants::c * 1.2; // 设为焦距120%对应的时间差
-                
-                std::cout << "测试3 - 超临界TDOA值:" << std::endl;
-                std::cout << "超临界TDOA = " << overCriticalTdoa << " 秒" << std::endl;
-                
-                std::vector<COORD3> testPoints3 = HyperbolaLines::calculateHyperbolaPoints(
-                    testFocus1, testFocus2, overCriticalTdoa, 0.0, 100, 100000.0);
-                
-                if (!testPoints3.empty()) {
-                    bool drawTestSuccess3 = HyperbolaLines::drawHyperbolaLine(
-                        mapView, testPoints3, "#FFFF00", 3.0);
-                    std::cout << "测试3绘制结果: " << (drawTestSuccess3 ? "成功" : "失败") << std::endl;
-                }
-            } else {
-                std::cout << "侦察站数量不足，无法测试双曲线计算" << std::endl;
-            }
-            std::cout << "========= 测试结束 =========" << std::endl;
-            
             bool drawSuccess = HyperbolaLines::drawTDOAHyperbolas(
                 mapView,
                 stationPositions_xyz,
@@ -447,28 +381,6 @@ void MultiPlatformController::startSimulation(const std::vector<std::string>& de
                 m_tdoaRmsError * 1e9,  // 转换为纳秒
                 m_esmToaError * 1e9    // 转换为纳秒
             );
-            
-            // 添加双曲线绘制后的调试信息
-            std::cout << "双曲线绘制结果: " << (drawSuccess ? "成功" : "失败") << std::endl;
-            std::cout << "========= 结束绘制双曲线 =========" << std::endl;
-            
-            if (!drawSuccess) {
-                std::cerr << "绘制TDOA双曲线失败" << std::endl;
-            } else {
-                std::cout << "成功绘制TDOA双曲线" << std::endl;
-            }
-            
-            // 添加误差信息到结果显示
-            std::stringstream errorInfo;
-            errorInfo << std::fixed << std::setprecision(3);
-            errorInfo << "\n<span weight='bold'>误差参数</span>\n";
-            errorInfo << "TDOA均方根误差: " << m_tdoaRmsError * 1e9 << " ns\n";
-            errorInfo << "ESM TOA误差: " << m_esmToaError * 1e9 << " ns\n";
-            errorInfo << "定位误差: " << result.accuracy << " 米\n";
-            
-            if (m_view) {
-                m_view->updateError(errorInfo.str());
-            }
             
             // 保存多平台仿真任务信息到数据库
             MultiPlatformTask task;

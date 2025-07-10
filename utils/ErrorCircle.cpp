@@ -178,6 +178,119 @@ DFResult calculateDFErrorCircle(
     return {estimatedPoints, cepRadius};
 }
 
+// 计算TDOA误差圆
+TDOAResult calculateTDOAErrorCircle(
+    const std::vector<std::string>& deviceNames,
+    const std::string& sourceName,
+    double tdoaRmsError,
+    double esmToaError,
+    unsigned int seed
+) {
+    std::vector<ReconnaissanceDevice> selectedDevices;
+    RadiationSource source;
+    
+    // 查询设备信息
+    if (!loadDeviceInfo(deviceNames, selectedDevices)) {
+        return TDOAResult();
+    }
+    
+    // 查询辐射源信息
+    if (!loadSourceInfo(sourceName, source)) {
+        return TDOAResult();
+    }
+    
+    // 将设备和辐射源的经纬度转换为直角坐标
+    std::vector<COORD3> stationPos_xyz;
+    for (const auto& device : selectedDevices) {
+        stationPos_xyz.push_back(lbh2xyz(device.getLongitude(), device.getLatitude(), device.getAltitude()));
+    }
+    
+    COORD3 targetCart = lbh2xyz(source.getLongitude(), source.getLatitude(), source.getAltitude());
+    
+    // 生成随机误差
+    std::mt19937 gen(seed ? seed : static_cast<unsigned int>(std::time(nullptr)));
+    std::normal_distribution<double> normalDist(0.0, 1.0);
+    
+    // 计算TDOA值（用于生成误差）
+    std::vector<double> true_tdoas(selectedDevices.size(), 0.0);
+    for (size_t i = 1; i < selectedDevices.size(); ++i) {
+        double dist_i = std::sqrt(
+            std::pow(stationPos_xyz[i].p1 - targetCart.p1, 2) +
+            std::pow(stationPos_xyz[i].p2 - targetCart.p2, 2) +
+            std::pow(stationPos_xyz[i].p3 - targetCart.p3, 2)
+        );
+        double dist_0 = std::sqrt(
+            std::pow(stationPos_xyz[0].p1 - targetCart.p1, 2) +
+            std::pow(stationPos_xyz[0].p2 - targetCart.p2, 2) +
+            std::pow(stationPos_xyz[0].p3 - targetCart.p3, 2)
+        );
+        true_tdoas[i] = (dist_i - dist_0) / Constants::c;
+    }
+    
+    // 计算基线方向（用于确定误差椭圆主轴方向）
+    double baselineX = stationPos_xyz[1].p1 - stationPos_xyz[0].p1;
+    double baselineY = stationPos_xyz[1].p2 - stationPos_xyz[0].p2;
+    double baselineAngle = std::atan2(baselineY, baselineX);
+    
+    // 生成100个误差点
+    std::vector<COORD3> deviations;
+    deviations.reserve(100);
+    
+    // 设置误差椭圆参数
+    // TDOA误差特性：误差椭圆而非圆形，沿着基线垂直方向误差较大
+    double tdoaErrorMeters = tdoaRmsError * Constants::c; // 将时间误差转换为距离误差
+    double majorAxisStdDev = tdoaErrorMeters * 3.0; // 主轴标准差
+    double minorAxisStdDev = tdoaErrorMeters * 1.5; // 次轴标准差
+    
+    for (int i = 0; i < 100; i++) {
+        // 生成标准正态分布的随机数
+        double u1 = normalDist(gen);
+        double u2 = normalDist(gen);
+        
+        // 在椭圆坐标系中生成点
+        double r = majorAxisStdDev * u1;
+        double s = minorAxisStdDev * u2;
+        
+        // 旋转到基线垂直方向（TDOA误差椭圆主轴垂直于基线方向）
+        double perpendicularAngle = baselineAngle + Constants::PI / 2.0;
+        double dx = r * std::cos(perpendicularAngle) - s * std::sin(perpendicularAngle);
+        double dy = r * std::sin(perpendicularAngle) + s * std::cos(perpendicularAngle);
+        
+        deviations.push_back(COORD3(dx, dy, 0.0));
+    }
+    
+    // 计算协方差矩阵
+    double cov00, cov01, cov11;
+    computeCovariance2x2(deviations, cov00, cov01, cov11);
+    
+    // 计算特征值(误差椭圆参数)
+    double eig1, eig2;
+    eigenDecomposition2x2(cov00, cov01, cov11, eig1, eig2);
+    double majorAxis = std::sqrt(std::max(eig1, eig2));
+    double minorAxis = std::sqrt(std::min(eig1, eig2));
+    double cepRadius = 0.59 * (majorAxis + minorAxis);
+    
+    // 先得到目标点的大地高
+    COORD3 targetLBH = xyz2lbh(targetCart.p1, targetCart.p2, targetCart.p3);
+    double targetHeight = targetLBH.p3;
+    
+    // 将误差点转换为COORD3
+    std::vector<COORD3> estimatedPoints;
+    estimatedPoints.reserve(100);
+    for (const auto& dev : deviations) {
+        double estX = targetCart.p1 + dev.p1;
+        double estY = targetCart.p2 + dev.p2;
+        double estZ = targetCart.p3; // 保持高度一致
+        COORD3 estLBH = xyz2lbh(estX, estY, estZ);
+        double estLon = estLBH.p1;
+        double estLat = estLBH.p2;
+        COORD3 estXYZ = lbh2xyz(estLon, estLat, targetHeight);
+        estimatedPoints.push_back(estXYZ);
+    }
+    
+    return TDOAResult(estimatedPoints, cepRadius);
+}
+
 
 
 

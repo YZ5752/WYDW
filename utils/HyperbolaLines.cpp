@@ -55,7 +55,6 @@ bool HyperbolaLines::drawTDOAHyperbolas(
     std::cout << "辐射源空间直角坐标: (" << sourcePos.p1 << ", " << sourcePos.p2 << ", " << sourcePos.p3 << ") m" << std::endl;
     std::cout << "辐射源大地坐标: (" << sourcePos_lbh.p1 << "°, " << sourcePos_lbh.p2 << "°, " << sourcePos_lbh.p3 << " m)" << std::endl;
     
-    // 使用与图片中相似的颜色（黄色、青色、洋红色）
     std::vector<std::string> defaultColors = {
         "#FFFF00", // 黄色
         "#00FFFF", // 青色
@@ -79,6 +78,10 @@ bool HyperbolaLines::drawTDOAHyperbolas(
         std::cout << "站点原始坐标: (" << station_lbh.p1 << "°, " << station_lbh.p2 << "°, " << station_lbh.p3 << " m)" << std::endl;
         std::cout << "站点投影坐标: (" << station_lbh.p1 << "°, " << station_lbh.p2 << "°, " << planeHeight << " m)" << std::endl;
     }
+    
+    // 同样将辐射源投影到同一平面
+    COORD3 sourcePos_plane = lbh2xyz(sourcePos_lbh.p1, sourcePos_lbh.p2, planeHeight);
+    std::cout << "辐射源投影坐标: (" << sourcePos_lbh.p1 << "°, " << sourcePos_lbh.p2 << "°, " << planeHeight << " m)" << std::endl;
     
     // 对每个非参考站与参考站绘制一条双曲线
     for (size_t i = 1; i < stationsOnPlane.size(); ++i) {
@@ -117,10 +120,7 @@ bool HyperbolaLines::drawTDOAHyperbolas(
         // 使用较粗的线宽，增强可见性
         double lineWidth = 3.0;
         
-        // 考虑随机误差的影响 - TDOA RMS误差
-        // 创建多个双曲线来表示误差范围
-        
-        // 绘制中心双曲线 - 系统误差已考虑
+        // 计算中心双曲线点 
         std::vector<COORD3> centerPoints = calculateHyperbolaPoints(
             refStation, otherStation, tdoa_with_system_error, 0.0, 300, 100000.0);
         
@@ -135,10 +135,9 @@ bool HyperbolaLines::drawTDOAHyperbolas(
             std::vector<COORD3> lowerPoints = calculateHyperbolaPoints(
                 refStation, otherStation, tdoa_with_system_error - tdoaRmsError, 0.0, 300, 100000.0);
             
-            // 使用相同颜色绘制误差带
-            std::string errorColor = color; // 与中心线完全相同的颜色
-            // 将线宽设置为中心线的80%，以便区分但保持一致性
-            double errorLineWidth = lineWidth * 0.8;
+            // 使用双曲线颜色绘制误差带边界线
+            std::string errorColor = color;
+            double errorLineWidth = lineWidth;
             
             // 绘制误差带的上边界线
             drawHyperbolaLine(mapView, upperPoints, errorColor, errorLineWidth, planeHeight);
@@ -197,13 +196,13 @@ bool HyperbolaLines::drawTDOAHyperbolas(
             }
             
             std::cout << "已绘制第 " << i << " 条双曲线的误差带 (±" << tdoaRmsError * 1e9 << " ns)" << std::endl;
-        }
-        
-        // 绘制中心双曲线 - 最后绘制，确保可见性
-        bool success = drawHyperbolaLine(mapView, centerPoints, color, lineWidth, planeHeight);
-        if (!success) {
-            std::cerr << "绘制第 " << i << " 条中心双曲线失败" << std::endl;
-            return false;
+        } else {
+            // 如果没有设置误差带，则只绘制中心线
+            bool success = drawHyperbolaLine(mapView, centerPoints, color, lineWidth, planeHeight);
+            if (!success) {
+                std::cerr << "绘制第 " << i << " 条中心双曲线失败" << std::endl;
+                return false;
+            }
         }
     }
     
@@ -221,16 +220,6 @@ bool HyperbolaLines::drawTDOAHyperbolas(
     script += "    outlineColor: Cesium.Color.WHITE,\n";
     script += "    outlineWidth: 2\n";
     script += "  },\n";
-    script += "  label: {\n";
-    script += "    text: '目标辐射源',\n";
-    script += "    font: '14pt sans-serif',\n";
-    script += "    horizontalOrigin: Cesium.HorizontalOrigin.CENTER,\n";
-    script += "    verticalOrigin: Cesium.VerticalOrigin.BOTTOM,\n";
-    script += "    pixelOffset: new Cesium.Cartesian2(0, -10),\n";
-    script += "    fillColor: Cesium.Color.WHITE,\n";
-    script += "    outlineWidth: 2,\n";
-    script += "    style: Cesium.LabelStyle.FILL_AND_OUTLINE\n";
-    script += "  }\n";
     script += "});\n";
     
     mapView->executeScript(script);
@@ -359,29 +348,19 @@ std::vector<COORD3> HyperbolaLines::calculateHyperbolaPoints(
     // TDOA < 0 表示信号先到达焦点2，双曲线应该更接近焦点2
     bool closerToFocus1 = (tdoa > 0);
     
-    // 调整双曲线方向，保证其朝向参考站
-    // 注意：因为参考站总是作为焦点1，所以我们要确保双曲线朝向焦点1弯曲
-    // 对于TDOA > 0的情况，双曲线自然朝向焦点1
-    // 对于TDOA < 0的情况，我们需要翻转方向使其朝向焦点1
-    
     std::cout << "TDOA: " << tdoa << " 秒，双曲线" << (closerToFocus1 ? "更接近焦点1(参考站)" : "更接近焦点2") << std::endl;
     
     // 计算双曲线上的点
     points.reserve(numPoints);
     
-    // 均匀分布的角度参数
-    std::vector<double> angles;
-    angles.reserve(numPoints);
+    // 2D平面内双曲线参数方程绘制方法
+    // 使用更宽的角度范围，确保双曲线足够完整
+    double angleRange = M_PI * 0.9; // 接近180度范围
+    double angleStep = angleRange / (numPoints - 1);
     
-    // 生成从-π/2到π/2的角度范围，以覆盖双曲线的一个分支
-    double angleStep = M_PI / (numPoints - 1);
     for (int i = 0; i < numPoints; ++i) {
-        double angle = -M_PI/2 + i * angleStep;
-        angles.push_back(angle);
-    }
-    
-    // 使用参数方程生成双曲线上的点
-    for (double angle : angles) {
+        double angle = -angleRange/2 + i * angleStep;
+        
         // 参数方程: x = a*sec(θ), y = b*tan(θ)
         double paramX = a / std::cos(angle);
         double paramY = b * std::tan(angle);
@@ -393,12 +372,12 @@ std::vector<COORD3> HyperbolaLines::calculateHyperbolaPoints(
             // 双曲线靠近焦点1，标准方向
             point.p1 = midPoint.p1 - paramX * dirX + paramY * perpX;
             point.p2 = midPoint.p2 - paramX * dirY + paramY * perpY;
-            point.p3 = midPoint.p3 - paramX * dirZ + paramY * perpZ;
+            point.p3 = midPoint.p3; // 保持在同一平面内
         } else {
             // 双曲线靠近焦点2，但我们要使其朝向焦点1，所以翻转x方向
             point.p1 = midPoint.p1 + paramX * dirX + paramY * perpX;
             point.p2 = midPoint.p2 + paramX * dirY + paramY * perpY;
-            point.p3 = midPoint.p3 + paramX * dirZ + paramY * perpZ;
+            point.p3 = midPoint.p3; // 保持在同一平面内
         }
         
         points.push_back(point);
@@ -489,32 +468,6 @@ bool HyperbolaLines::drawHyperbolaLine(
            << "  }\n"
            << "});\n";
     
-    // 添加调试日志
-    script << "console.log('绘制双曲线，颜色: " << color << "，点数: " << lbhPoints.size() / skipFactor << "');\n";
-    
-    // 输出JavaScript代码用于调试
-    std::cout << "\n========= 双曲线绘制JavaScript代码 =========" << std::endl;
-    std::cout << script.str() << std::endl;
-    std::cout << "=======================================" << std::endl;
-    
-    // 添加详细调试信息
-    std::cout << "双曲线点数量: " << points.size() << std::endl;
-    std::cout << "转换后点数量: " << lbhPoints.size() << std::endl;
-    std::cout << "实际绘制点数: " << lbhPoints.size() / skipFactor << std::endl;
-    std::cout << "高度范围: " << minHeight << " 至 " << maxHeight << " 米" << std::endl;
-    std::cout << "使用的平面高度: " << planeHeight << " 米" << std::endl;
-    std::cout << "颜色: " << color << std::endl;
-    std::cout << "线宽: " << lineWidth << std::endl;
-    
-    // 输出前10个点的坐标（如果有）
-    int maxPoints = std::min(10, static_cast<int>(lbhPoints.size()));
-    std::cout << "双曲线前" << maxPoints << "个点坐标:" << std::endl;
-    for (int i = 0; i < maxPoints; ++i) {
-        std::cout << "  点" << i << ": (" 
-                 << lbhPoints[i].p1 << ", " 
-                 << lbhPoints[i].p2 << ", " 
-                 << planeHeight << ")" << std::endl; // 使用传入的平面高度
-    }
     
     // 执行JavaScript代码
     mapView->executeScript(script.str());

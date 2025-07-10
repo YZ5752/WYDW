@@ -26,10 +26,10 @@ public:
     // 设置控制器
     void setController(MultiPlatformController* controller);
     
-    // 更新仿真结果显示
+    // 更新仿真结果显示（经度、纬度、高度和定位误差）
     void updateResult(const std::string& result);
     
-    // 更新误差显示
+    // 保留接口以兼容现有代码，但功能已合并到updateResult
     void updateError(const std::string& error);
     
     // 获取地图视图
@@ -64,8 +64,7 @@ private:
     GtkWidget* m_radarCombo[4]; // 4个侦察设备下拉框
     GtkWidget* m_radarFrame[4]; // 4个侦察设备Frame
     GtkWidget* m_sourceCombo;   // 辐射源下拉框
-    GtkWidget* m_resultLabel;//仿真结果
-    GtkWidget* m_errorLabel;//误差结果
+    GtkWidget* m_resultLabel;//仿真结果标签，显示经度、纬度、高度和定位误差
     GtkWidget* m_timeEntry;    // 仿真时间输入框
     
     // 测向定位误差参数
