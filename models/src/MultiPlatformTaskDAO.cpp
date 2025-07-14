@@ -63,11 +63,11 @@ MultiPlatformTask MultiPlatformTaskDAO::getMultiPlatformTaskById(int taskId) {
     MYSQL* conn = db.getConnection();
     if (!conn) return MultiPlatformTask{};
     
-    char sql[512];
+    char sql[1024];
     snprintf(sql, sizeof(sql),
         "SELECT task_id, tech_system, radiation_id, execution_time, "
         "target_longitude, target_latitude, target_altitude, movement_speed, "
-        "movement_azimuth, movement_elevation, positioning_distance, positioning_time, "
+        "movement_azimuth, movement_elevation, azimuth, elevation, positioning_distance, positioning_time, "
         "positioning_accuracy, created_at FROM multi_platform_task WHERE task_id = %d",
         taskId
     );
@@ -138,12 +138,13 @@ std::vector<MultiPlatformTask> MultiPlatformTaskDAO::getMultiPlatformTasksByRadi
     MYSQL* conn = db.getConnection();
     if (!conn) return std::vector<MultiPlatformTask>{};
     
-    char sql[512];
+    char sql[1024];
     snprintf(sql, sizeof(sql),
         "SELECT task_id, tech_system, radiation_id, execution_time, "
-        "target_longitude, target_latitude, target_altitude, movement_speed, "
-        "movement_azimuth, movement_elevation, positioning_distance, positioning_time, "
-        "positioning_accuracy, created_at FROM multi_platform_task WHERE radiation_id = %d "
+        "target_longitude, target_latitude, target_altitude, "
+        "positioning_distance, positioning_time, positioning_accuracy, "
+        "movement_speed, movement_azimuth, movement_elevation, "
+        "azimuth, elevation, created_at FROM multi_platform_task WHERE radiation_id = %d "
         "ORDER BY task_id DESC",
         radiationId
     );
@@ -219,7 +220,7 @@ bool MultiPlatformTaskDAO::deleteMultiPlatformTask(int taskId) {
     MYSQL* conn = db.getConnection();
     if (!conn) return false;
     
-    char sql[128];
+    char sql[1024];
     snprintf(sql, sizeof(sql), "DELETE FROM multi_platform_task WHERE task_id = %d", taskId);
     
     if (!db.executeSQL(sql)) {
@@ -234,7 +235,6 @@ bool MultiPlatformTaskDAO::deleteMultiPlatformTask(int taskId) {
 // 从数据库结果集创建任务对象
 MultiPlatformTask MultiPlatformTaskDAO::createTaskFromRow(MYSQL_ROW row) {
     MultiPlatformTask task;
-    
     int idx = 0;
     task.taskId = row[idx] ? atoi(row[idx]) : 0; idx++;
     task.techSystem = row[idx] ? row[idx] : ""; idx++;
@@ -243,16 +243,15 @@ MultiPlatformTask MultiPlatformTaskDAO::createTaskFromRow(MYSQL_ROW row) {
     task.targetLongitude = row[idx] ? atof(row[idx]) : 0.0; idx++;
     task.targetLatitude = row[idx] ? atof(row[idx]) : 0.0; idx++;
     task.targetAltitude = row[idx] ? atof(row[idx]) : 0.0; idx++;
+    task.positioningDistance = row[idx] ? atof(row[idx]) : 0.0f; idx++;
+    task.positioningTime = row[idx] ? atof(row[idx]) : 0.0f; idx++;
+    task.positioningAccuracy = row[idx] ? atof(row[idx]) : 0.0; idx++;
     task.movementSpeed = row[idx] ? atof(row[idx]) : 0.0f; idx++;
     task.movementAzimuth = row[idx] ? atof(row[idx]) : 0.0; idx++;
     task.movementElevation = row[idx] ? atof(row[idx]) : 0.0; idx++;
     task.azimuth = row[idx] ? atof(row[idx]) : 0.0; idx++;
     task.elevation = row[idx] ? atof(row[idx]) : 0.0; idx++;
-    task.positioningDistance = row[idx] ? atof(row[idx]) : 0.0f; idx++;
-    task.positioningTime = row[idx] ? atof(row[idx]) : 0.0f; idx++;
-    task.positioningAccuracy = row[idx] ? atof(row[idx]) : 0.0; idx++;
     task.createdAt = row[idx] ? row[idx] : ""; idx++;
-    
     return task;
 }
 
@@ -264,7 +263,7 @@ std::vector<int> MultiPlatformTaskDAO::getDeviceIdsByTaskId(int taskId) {
     MYSQL* conn = db.getConnection();
     if (!conn) return deviceIds;
     
-    char sql[256];
+    char sql[1024];
     snprintf(sql, sizeof(sql),
         "SELECT device_id FROM platform_task_relation WHERE simulation_id = %d ORDER BY device_id",
         taskId
@@ -297,7 +296,7 @@ bool MultiPlatformTaskDAO::saveTaskDeviceRelations(int taskId, const std::vector
     if (!conn) return false;
     
     // 先删除原有关联关系
-    char deleteSql[128];
+    char deleteSql[1024];
     snprintf(deleteSql, sizeof(deleteSql),
         "DELETE FROM platform_task_relation WHERE simulation_id = %d",
         taskId
@@ -310,7 +309,7 @@ bool MultiPlatformTaskDAO::saveTaskDeviceRelations(int taskId, const std::vector
     
     // 插入新的关联关系
     for (int deviceId : deviceIds) {
-        char insertSql[256];
+        char insertSql[1024];
         snprintf(insertSql, sizeof(insertSql),
             "INSERT INTO platform_task_relation (simulation_id, device_id) VALUES (%d, %d)",
             taskId, deviceId

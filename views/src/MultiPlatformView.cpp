@@ -135,7 +135,6 @@ GtkWidget* MultiPlatformView::createView() {
     if (m_tdoaParamsFrame) {
         gtk_widget_set_no_show_all(m_tdoaParamsFrame, TRUE);
         gtk_widget_hide(m_tdoaParamsFrame);
-        g_print("创建后立即隐藏TDOA参数UI\n");
     }
     
     // 开始按钮
