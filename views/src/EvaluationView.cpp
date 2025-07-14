@@ -277,12 +277,6 @@ GtkWidget* EvaluationView::createView() {
     
     gtk_box_pack_start(GTK_BOX(targetBox), m_targetCombo, TRUE, TRUE, 5);
     
-    // 添加选择变化回调
-    g_signal_connect(m_targetCombo, "changed", G_CALLBACK(+[](GtkComboBox* combo, gpointer data) {
-        EvaluationView* view = static_cast<EvaluationView*>(data);
-        view->onRadiationSourceSelected();
-    }), this);
-    
     // 评估类型选择
     GtkWidget* typeBox = gtk_box_new(GTK_ORIENTATION_VERTICAL, 5);
     gtk_box_pack_start(GTK_BOX(paramBox), typeBox, TRUE, TRUE, 0);
@@ -360,12 +354,6 @@ GtkWidget* EvaluationView::createView() {
     gtk_grid_set_column_spacing(GTK_GRID(m_resultsTable), 15);
     gtk_box_pack_start(GTK_BOX(tableBox), m_resultsTable, TRUE, TRUE, 0);
     
-    // 表头和指标行的初始化由onModeChanged控制
-    
-    // 导出按钮
-    GtkWidget* exportButton = gtk_button_new_with_label("导出结果");
-    gtk_box_pack_start(GTK_BOX(tableBox), exportButton, FALSE, FALSE, 5);
-    
     // 图表区域
     GtkWidget* chartFrame = gtk_frame_new("定位精度随时间变化");
     gtk_box_pack_start(GTK_BOX(resultsBox), chartFrame, TRUE, TRUE, 0);
@@ -384,7 +372,7 @@ GtkWidget* EvaluationView::createView() {
 void EvaluationView::updateResultsTable(const std::vector<std::pair<std::string, double>>& results) {
     if (!m_resultsTable) return;
 
-    // 判断是否为多平台（没有"测向精度"项即为多平台）
+    // 判断是否为多平台
     bool isMultiPlatform = true;
     for (const auto& item : results) {
         if (item.first == "测向精度") {
@@ -400,13 +388,6 @@ void EvaluationView::updateResultsTable(const std::vector<std::pair<std::string,
     }
     g_list_free(children);
 
-    // 2. 添加表头
-    GtkWidget* headerLabel1 = gtk_label_new("指标");
-    gtk_widget_set_halign(headerLabel1, GTK_ALIGN_START);
-    gtk_grid_attach(GTK_GRID(m_resultsTable), headerLabel1, 0, 0, 1, 1);
-    GtkWidget* headerLabel2 = gtk_label_new("数值");
-    gtk_widget_set_halign(headerLabel2, GTK_ALIGN_END);
-    gtk_grid_attach(GTK_GRID(m_resultsTable), headerLabel2, 1, 0, 1, 1);
 
     // 3. 动态添加每一项结果
     for (size_t i = 0; i < results.size(); ++i) {
@@ -518,31 +499,10 @@ std::string EvaluationView::getSelectedMode() const {
     return "multi_platform";
 }
 
-// 获取选择的评估指标
-std::vector<std::string> EvaluationView::getSelectedMetrics() const {
-    // 实现获取选择的评估指标的逻辑
-    return std::vector<std::string>();
-}
 
 // 获取视图控件
 GtkWidget* EvaluationView::getView() const {
     return m_view;
-}
-
-// 在EvaluationView.cpp中添加回调处理方法
-void EvaluationView::onRadiationSourceSelected() {
-    int activeIndex = gtk_combo_box_get_active(GTK_COMBO_BOX(m_targetCombo));
-    if (activeIndex >= 0 && activeIndex < m_radiationSources.size()) {
-        RadiationSource selectedSource = m_radiationSources[activeIndex];
-        
-        // 处理选中的辐射源，可以更新界面其他部分
-        g_print("选中辐射源: %s, ID: %d\n", 
-                selectedSource.getRadiationName().c_str(),
-                selectedSource.getRadiationId());
-                
-        // 例如，可以调用控制器进行仿真计算
-        // EvaluationController::getInstance().runSimulation(selectedSource);
-    }
 }
 
 // 在EvaluationView类中添加
@@ -552,15 +512,10 @@ void EvaluationView::startEvaluation() {
         RadiationSource selectedSource = m_radiationSources[activeIndex];
         int sourceId = selectedSource.getRadiationId();
         
-        g_print("EvaluationView: 开始评估辐射源 ID=%d, 名称=%s\n", 
-                sourceId, selectedSource.getRadiationName().c_str());
-        
         // 执行评估
         // 获取评估类型（单平台/多平台）
         std::string mode = getSelectedMode();
         bool isSinglePlatform = (mode == "single_platform");
-        
-        g_print("EvaluationView: 评估模式: %s\n", isSinglePlatform ? "单平台" : "多平台");
         
         // 调用控制器进行评估
         std::vector<std::pair<std::string, double>> results = 
@@ -574,12 +529,7 @@ void EvaluationView::startEvaluation() {
             std::map<double, double> chartData = 
                 EvaluationController::getInstance().getAccuracyTimeData(sourceId, isSinglePlatform);
             showAccuracyChart(chartData);
-            g_print("评估已完成，共获取 %zu 个结果项和 %zu 个时间数据点\n", results.size(), chartData.size());
-        } else {
-            g_print("评估已完成，共获取 %zu 个结果项（多平台不展示定位精度图表）\n", results.size());
-        }
-    } else {
-        g_print("未选择有效的辐射源\n");
+        } 
     }
 }
 

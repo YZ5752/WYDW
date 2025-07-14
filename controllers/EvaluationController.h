@@ -33,8 +33,6 @@ public:
     // 导出评估结果
     void exportResults(const std::string& filePath);
     
-    // 加载评估数据
-    void loadEvaluationData();
     
     // 模式变化处理
     void handleModeChange(const std::string& mode);
