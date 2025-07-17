@@ -478,6 +478,20 @@ void MultiPlatformView::onStartSimulation() {
         double tdoaRmsError = getTDOARmsError();
         double esmToaError = getESMToaError();
         
+        // 检查TDOA均方根误差是否为负数
+        if (tdoaRmsError < 0) {
+            GtkWidget* dialog = gtk_message_dialog_new(
+                GTK_WINDOW(gtk_widget_get_toplevel(m_view)),
+                GTK_DIALOG_MODAL,
+                GTK_MESSAGE_WARNING,
+                GTK_BUTTONS_OK,
+                "均方根误差不能为负值，请重新输入"
+            );
+            gtk_dialog_run(GTK_DIALOG(dialog));
+            gtk_widget_destroy(dialog);
+            return; // 阻止仿真继续进行
+        }
+        
         // 将误差参数传递给控制器
         MultiPlatformController::getInstance().startSimulation(
             deviceNames,
@@ -797,14 +811,14 @@ void MultiPlatformView::createTDOAParamsUI(GtkWidget* parent) {
     
     m_tdoaRmsError = gtk_entry_new();
     gtk_entry_set_width_chars(GTK_ENTRY(m_tdoaRmsError), 10);
-    gtk_entry_set_text(GTK_ENTRY(m_tdoaRmsError), "0.01");  
+    gtk_entry_set_text(GTK_ENTRY(m_tdoaRmsError), "0");  
     
     GtkWidget* esmToaLabel = gtk_label_new("TOA误差(us):");
     gtk_label_set_xalign(GTK_LABEL(esmToaLabel), 0.0);  // 左对齐
     
     m_esmToaError = gtk_entry_new();
     gtk_entry_set_width_chars(GTK_ENTRY(m_esmToaError), 10);
-    gtk_entry_set_text(GTK_ENTRY(m_esmToaError), "0.01"); 
+    gtk_entry_set_text(GTK_ENTRY(m_esmToaError), "0"); 
     // 将控件添加到网格
     gtk_grid_attach(GTK_GRID(grid), tdoaRmsLabel, 0, 0, 1, 1);
     gtk_grid_attach(GTK_GRID(grid), m_tdoaRmsError, 1, 0, 1, 1);

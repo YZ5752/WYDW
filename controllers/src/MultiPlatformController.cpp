@@ -35,7 +35,7 @@ MultiPlatformController& MultiPlatformController::getInstance() {
 }
 
 // 构造函数
-MultiPlatformController::MultiPlatformController() : m_view(nullptr), m_tdoaRmsError(2.0e-9), m_esmToaError(-0.33e-9) {
+MultiPlatformController::MultiPlatformController() : m_view(nullptr), m_tdoaRmsError(0), m_esmToaError(0) {
 }
 
 // 析构函数
@@ -279,24 +279,54 @@ void MultiPlatformController::startSimulation(const std::vector<std::string>& de
             
             COORD3 sourcePos_xyz = lbh2xyz(selectedSource.getLongitude(), selectedSource.getLatitude(), selectedSource.getAltitude());
             
-            // 计算TDOA值（用于绘制双曲线）
-            std::vector<double> tdoas(selectedDevices.size(), 0.0);
+            // 计算TDOA值（用于绘制双曲线）- 与定位算法保持一致
+            // 首先计算所有站点的TOA值
+            std::vector<double> true_toas(selectedDevices.size());
+            for (size_t i = 0; i < selectedDevices.size(); ++i) {
+                true_toas[i] = calculateDistance(stationPositions_xyz[i], sourcePos_xyz) / Constants::c;
+            }
+
+            // 使用第一个侦察站作为参考站（与定位算法一致）
+            int ref_idx = 0;
+            std::cout << "\n[双曲线绘制] 使用侦察站 " << ref_idx << " (" << selectedDevices[ref_idx].getDeviceName() << ") 作为参考站。" << std::endl;
+
+            // 应用ESM TOA误差到参考站TOA值 - 与定位算法保持一致
+            std::vector<double> measured_toas = true_toas;
+            if (m_esmToaError != 0.0) {
+                measured_toas[ref_idx] += m_esmToaError;
+                std::cout << "[双曲线绘制] 应用ESM TOA误差 " << m_esmToaError * 1e6 << " μs 到参考站" << std::endl;
+                std::cout << "[双曲线绘制] 参考站TOA值变化: " << true_toas[ref_idx] * 1e6 << " μs -> " 
+                          << measured_toas[ref_idx] * 1e6 << " μs" << std::endl;
+            }
+
+            // 计算相对于参考站的TDOA值，与定位算法完全一致
+            // 创建正确大小的TDOA数组：站点数量-1
+            std::vector<double> tdoas(selectedDevices.size() - 1);
             for (size_t i = 1; i < selectedDevices.size(); ++i) {
-                double dist_i = calculateDistance(stationPositions_xyz[i], sourcePos_xyz);
-                double dist_0 = calculateDistance(stationPositions_xyz[0], sourcePos_xyz);
-                tdoas[i] = (dist_i - dist_0) / Constants::c;
-                
+                // 使用与定位算法相同的计算方式: tdoa = toa_i - toa_ref
+                // 注意：TDOA数组索引从0开始，对应站点索引从1开始
+                tdoas[i-1] = true_toas[i] - measured_toas[ref_idx]; // 使用已应用误差的参考站TOA
+
+                // 使用与TDOA算法相同的精度输出
+                std::cout << std::scientific << std::setprecision(6);
+                std::cout << "站点 " << i << " (" << selectedDevices[i].getDeviceName() << ") 相对于参考站的TDOA: "
+                         << tdoas[i-1] << " 秒 (" << tdoas[i-1] * 1e6 << " μs)" << std::endl;
+
                 // 检查是否可以构造双曲线
                 double focusDistance = calculateDistance(stationPositions_xyz[0], stationPositions_xyz[i]);
-                std::cout << "焦距 = " << focusDistance << " 米" << std::endl;
+                double distanceDiff = std::abs(tdoas[i-1]) * Constants::c;
                 
-                if (std::abs(dist_i - dist_0) >= focusDistance) {
-                    std::cout << "警告: TDOA距离差(" << (dist_i - dist_0) << " 米)大于等于焦距(" 
+                // 恢复固定精度输出
+                std::cout << std::fixed << std::setprecision(3);
+                std::cout << "焦距 = " << focusDistance << " 米，距离差 = " << distanceDiff << " 米" << std::endl;
+
+                if (distanceDiff >= focusDistance) {
+                    std::cout << "警告: TDOA距离差(" << distanceDiff << " 米)大于等于焦距("
                              << focusDistance << " 米)，无法构造双曲线" << std::endl;
                 } else {
-                    std::cout << "距离差/焦距比率 = " << std::abs(dist_i - dist_0) / focusDistance << std::endl;
+                    std::cout << "距离差/焦距比率 = " << distanceDiff / focusDistance << std::endl;
                 }
-                
+
                 std::cout << "========================" << std::endl;
             }
             
@@ -307,8 +337,11 @@ void MultiPlatformController::startSimulation(const std::vector<std::string>& de
             std::cout << "\n========= 开始绘制双曲线 =========" << std::endl;
             std::cout << "侦察站数量: " << stationPositions_xyz.size() << std::endl;
             std::cout << "TDOA值数量: " << tdoas.size() << std::endl;
-            for (size_t i = 1; i < tdoas.size(); ++i) {
-                std::cout << "TDOA[" << i << "] = " << tdoas[i] << " 秒" << std::endl;
+            
+            // 使用与TDOA算法相同的精度输出TDOA值
+            std::cout << std::scientific << std::setprecision(6);
+            for (size_t i = 0; i < tdoas.size(); ++i) {
+                std::cout << "TDOA[" << i+1 << "] = " << tdoas[i] << " 秒" << std::endl;
             }
             std::cout << "TDOA RMS误差: " << m_tdoaRmsError << " 秒 (" << m_tdoaRmsError * 1e9 << " ns)" << std::endl;
             std::cout << "ESM TOA误差: " << m_esmToaError << " 秒 (" << m_esmToaError * 1e9 << " ns)" << std::endl;
