@@ -663,21 +663,23 @@ LocationResult SinglePlatformTDOA::runSimulation(const ReconnaissanceDevice& dev
     task.positioningDistance = static_cast<float>(estimatedDistance);
     task.positioningTime = static_cast<float>(simulationTime); // 假设定位时间等于仿真时间
     
-    // 限制定位精度在数据库字段范围内 (DECIMAL(8,6) 意味着最大值为 99.999999)
-    double limitedAccuracy = result.accuracy;
-    if (limitedAccuracy > 99.999999) {
-        g_print("警告：定位精度 %.6f 超出数据库字段范围，已截断为 99.999999\n", limitedAccuracy);
-        limitedAccuracy = 99.999999;
-    }
-    task.positioningAccuracy = limitedAccuracy;
+    // 设置任务结果 - 使用正确的字段名
+    task.targetLongitude = result.longitude;
+    task.targetLatitude = result.latitude;
+    task.targetAltitude = result.altitude;
+    task.azimuth = result.azimuth;
+    task.elevation = result.elevation;
+    task.executionTime = simulationTime;
     
-    // 限制测向精度在数据库字段范围内
-    double limitedDirectionAccuracy = result.errorFactors.size() > 5 ? result.errorFactors[5] : 0.0;
-    if (limitedDirectionAccuracy > 99.999999) {
-        g_print("警告：测向精度 %.6f 超出数据库字段范围，已截断为 99.999999\n", limitedDirectionAccuracy);
-        limitedDirectionAccuracy = 99.999999;
-    }
-    task.directionFindingAccuracy = limitedDirectionAccuracy;
+    // 直接使用计算的定位精度，不截断
+    task.positioningAccuracy = result.accuracy;
+    
+    // 直接使用计算的测向精度，不截断
+    double directionAccuracy = result.errorFactors.size() > 4 ? result.errorFactors[4] : 0.0;
+    task.directionFindingAccuracy = directionAccuracy;
+    
+    g_print("最终结果 - 定位精度: %.6f 米, 测向精度: %.6f 度\n", 
+            task.positioningAccuracy, task.directionFindingAccuracy);
     
     // 获取DAO实例并保存任务
     int taskId = -1;

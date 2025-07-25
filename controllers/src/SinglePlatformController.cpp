@@ -341,31 +341,19 @@ void SinglePlatformController::startSimulation() {
         g_list_free(children);
 
         // 更新精度分析标签的文本
-        // 测向误差：使用errorFactors中的最后一个值（通常是测向误差）
-        if (errorLabels[0] && errorFactors.size() > 0) {
+        // 测向误差：使用errorFactors中的测向误差
+        if (errorLabels[0]) {
             char errorBuffer[50];
-            double directionError = errorFactors.back(); // 最后一个值通常是测向误差
+            double directionError = errorFactors.size() > 4 ? errorFactors[4] : 0.0;
             sprintf(errorBuffer, "%.4f°", directionError);
             gtk_label_set_text(GTK_LABEL(errorLabels[0]), errorBuffer);
         }
 
-        // 定位误差：计算定位精度（可以使用距离误差或综合误差）
+        // 定位误差：直接使用result中的accuracy字段
         if (errorLabels[1]) {
             char errorBuffer[50];
-            // 使用result中的accuracy字段作为定位误差，如果没有则计算综合误差
-            double locationError = 0.0;
-            if (result.accuracy > 0) {
-                locationError = result.accuracy; // 使用定位精度
-                sprintf(errorBuffer, "%.2fm", locationError);
-            } else {
-                // 如果没有accuracy字段，使用errorFactors的平均值作为综合误差
-                double sum = 0.0;
-                for (double factor : errorFactors) {
-                    sum += factor * factor; // 平方和
-                }
-                locationError = sqrt(sum / errorFactors.size()); // 均方根误差
-                sprintf(errorBuffer, "%.4f°", locationError);
-            }
+            double locationError = result.accuracy;
+            sprintf(errorBuffer, "%.2fm", locationError);
             gtk_label_set_text(GTK_LABEL(errorLabels[1]), errorBuffer);
         }
 

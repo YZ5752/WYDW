@@ -53,3 +53,5 @@ ADD COLUMN positioning_accuracy DECIMAL(8,6) COMMENT '定位精度（米）' AFT
 ALTER TABLE multi_platform_task
 ADD COLUMN azimuth decimal(5, 2) COMMENT '方位角' AFTER movement_elevation,
 ADD COLUMN elevation decimal(4, 2) COMMENT '俯仰角' AFTER azimuth;
+ALTER TABLE passive_location.multi_platform_task MODIFY COLUMN tech_system enum('FDOA','TDOA'.'FD') CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL COMMENT '技术体制：频差\时差\测向体制';
+
