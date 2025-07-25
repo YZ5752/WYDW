@@ -194,11 +194,26 @@ bool RadiationSourceDAO::updateRadiationSource(const RadiationSource& source) {
 
 bool RadiationSourceDAO::deleteRadiationSource(int sourceId) {
     std::cout << "RadiationSourceDAO: Deleting radiation source with ID " << sourceId << std::endl;
-    
     DBConnector& db = DBConnector::getInstance();
-    
-    char sql[128];
-    snprintf(sql, sizeof(sql), "DELETE FROM radiation_source_models WHERE radiation_id=%d", sourceId);
-    
-    return db.executeSQL(sql);
+
+    // 先删除multi_platform_intelligence表中的相关记录
+    char sql1[128];
+    snprintf(sql1, sizeof(sql1), "DELETE FROM multi_platform_intelligence WHERE radiation_id=%d", sourceId);
+    if (!db.executeSQL(sql1)) {
+        std::cerr << "Failed to delete from multi_platform_intelligence for radiation_id=" << sourceId << std::endl;
+        return false;
+    }
+
+    // 再删除single_platform_intelligence表中的相关记录
+    char sql2[128];
+    snprintf(sql2, sizeof(sql2), "DELETE FROM single_platform_intelligence WHERE radiation_id=%d", sourceId);
+    if (!db.executeSQL(sql2)) {
+        std::cerr << "Failed to delete from single_platform_intelligence for radiation_id=" << sourceId << std::endl;
+        return false;
+    }
+
+    // 最后删除辐射源
+    char sql3[128];
+    snprintf(sql3, sizeof(sql3), "DELETE FROM radiation_source_models WHERE radiation_id=%d", sourceId);
+    return db.executeSQL(sql3);
 }

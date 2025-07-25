@@ -74,32 +74,45 @@ std::vector<std::pair<std::string, double>> EvaluationController::evaluateRadiat
     return results;
 }
 
-// 获取性能随时间变化的数据
+// 获取性能随时间变化的数据 - 从数据库获取真实数据
 std::map<double, double> EvaluationController::getAccuracyTimeData(int sourceId, bool isSinglePlatform) {
     std::map<double, double> timeData;
-    // 生成模拟数据：初始阶段精度大，中期逐渐减小，后期趋于稳定
-    // 时间单位：秒，精度单位：米
-    // 例如：0~100s，初始30米，逐步减小到5米，最后趋于3米
-    const int totalPoints = 30;
-    double startTime = 0.0;
-    double endTime = 100.0;
-    double stableAccuracy = 3.0;
-    double initialAccuracy = 30.0;
-    double midAccuracy = 5.0;
-    for (int i = 0; i < totalPoints; ++i) {
-        double t = startTime + (endTime - startTime) * i / (totalPoints - 1);
-        double accuracy;
-        if (t < 20) {
-            // 初始阶段，精度较大
-            accuracy = initialAccuracy - (initialAccuracy - midAccuracy) * (t / 20.0) * 0.7; // 逐步下降
-        } else if (t < 60) {
-            // 中期，精度快速减小
-            accuracy = midAccuracy - (midAccuracy - stableAccuracy) * ((t - 20) / 40.0) * 0.8;
+    
+    try {
+        if (isSinglePlatform) {
+            // 单平台：从 single_platform_task 表获取数据
+            std::vector<SinglePlatformTask> tasks = SinglePlatformTaskDAO::getInstance().getSinglePlatformTasksByRadiationId(sourceId);
+            
+            for (const auto& task : tasks) {
+                // 使用定位时间作为X轴，定位精度作为Y轴
+                if (task.positioningTime > 0 && task.positioningAccuracy > 0) {
+                    timeData[task.positioningTime] = task.positioningAccuracy;
+                }
+            }
         } else {
-            // 稳定阶段，趋于稳定值
-            accuracy = stableAccuracy + 0.2 * ::sin(t / 10.0); // 稳定值附近小幅波动
+            // 多平台：从 multi_platform_task 表获取数据
+            std::vector<MultiPlatformTask> tasks = MultiPlatformTaskDAO::getInstance().getMultiPlatformTasksByRadiationId(sourceId);
+            
+            for (const auto& task : tasks) {
+                // 使用定位时间作为X轴，定位精度作为Y轴
+                if (task.positioningTime > 0 && task.positioningAccuracy > 0) {
+                    timeData[task.positioningTime] = task.positioningAccuracy;
+                }
+            }
         }
-        timeData[t] = accuracy;
+        
+        // 如果没有数据，返回空的map
+        if (timeData.empty()) {
+            std::cout << "警告：未找到辐射源ID " << sourceId << " 的历史数据" << std::endl;
+        }
+        
+    } catch (const std::exception& e) {
+        std::cerr << "获取精度时间数据时出错: " << e.what() << std::endl;
     }
+    
     return timeData;
 }
+
+
+
+

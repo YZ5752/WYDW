@@ -8,7 +8,15 @@
 // 添加绘图回调函数
 static gboolean on_chart_draw(GtkWidget* widget, cairo_t* cr, gpointer data) {
     auto* timeData = static_cast<const std::map<double, double>*>(data);
-    if (!timeData || timeData->empty()) return FALSE;
+    if (!timeData || timeData->empty()) {
+        // 绘制空图表提示
+        cairo_set_source_rgb(cr, 0.5, 0.5, 0.5);
+        cairo_select_font_face(cr, "Arial", CAIRO_FONT_SLANT_NORMAL, CAIRO_FONT_WEIGHT_NORMAL);
+        cairo_set_font_size(cr, 16);
+        cairo_move_to(cr, 100, 100);
+        cairo_show_text(cr, "暂无数据");
+        return FALSE;
+    }
     
     // 获取绘图区域尺寸
     GtkAllocation allocation;
@@ -17,10 +25,10 @@ static gboolean on_chart_draw(GtkWidget* widget, cairo_t* cr, gpointer data) {
     int height = allocation.height;
     
     // 设置边距
-    int marginLeft = 50;
-    int marginRight = 20;
-    int marginTop = 20;
-    int marginBottom = 50;
+    int marginLeft = 80;   // 增加左边距以容纳Y轴标签
+    int marginRight = 30;
+    int marginTop = 30;
+    int marginBottom = 80; // 增加底边距以容纳X轴标签
     
     int graphWidth = width - marginLeft - marginRight;
     int graphHeight = height - marginTop - marginBottom;
@@ -31,63 +39,35 @@ static gboolean on_chart_draw(GtkWidget* widget, cairo_t* cr, gpointer data) {
     
     double minAccuracy = std::numeric_limits<double>::max();
     double maxAccuracy = std::numeric_limits<double>::lowest();
-    
     for (const auto& pair : *timeData) {
         minAccuracy = std::min(minAccuracy, pair.second);
         maxAccuracy = std::max(maxAccuracy, pair.second);
     }
     
-    // 确保Y轴范围非零，并且设置合理的范围
-    if (maxAccuracy - minAccuracy < 1e-6) {
-        // 如果范围太小，扩大范围以确保可视化
-        double avgAccuracy = (minAccuracy + maxAccuracy) / 2.0;
-        minAccuracy = avgAccuracy - 0.5; // 向下扩展0.5单位
-        maxAccuracy = avgAccuracy + 0.5; // 向上扩展0.5单位
+    // 优化X轴范围（时间轴）
+    if (maxTime - minTime < 1e-6) {
+        // 如果时间范围太小，设置默认范围
+        double avgTime = (minTime + maxTime) / 2.0;
+        minTime = std::max(0.0, avgTime - 30.0); // 最小不小于0
+        maxTime = avgTime + 30.0;
     } else {
-        // 计算平均值和标准差，用于确定合理的Y轴范围
-        double sum = 0.0;
-        for (const auto& pair : *timeData) {
-            sum += pair.second;
-        }
-        double mean = sum / timeData->size();
-        
-        double sumSquaredDiff = 0.0;
-        for (const auto& pair : *timeData) {
-            double diff = pair.second - mean;
-            sumSquaredDiff += diff * diff;
-        }
-        double stdDev = sqrt(sumSquaredDiff / timeData->size());
-        
-        // 设置Y轴范围为平均值周围的合理范围（平均值±3个标准差）
-        // 但不小于最小值和不大于最大值
-        double lowerBound = std::max(minAccuracy, mean - 3 * stdDev);
-        double upperBound = std::min(maxAccuracy, mean + 3 * stdDev);
-        
-        // 确保范围至少包含所有数据点的±10%
-        double range = maxAccuracy - minAccuracy;
-        if (range > 0) {
-            minAccuracy = std::max(lowerBound, minAccuracy - range * 0.1);
-            maxAccuracy = std::min(upperBound, maxAccuracy + range * 0.1);
-        }
-        
-        // 确保范围足够大以便于可视化
-        if (maxAccuracy - minAccuracy < 0.1) {
-            double avgAccuracy = (minAccuracy + maxAccuracy) / 2.0;
-            minAccuracy = avgAccuracy - 0.05;
-            maxAccuracy = avgAccuracy + 0.05;
-        }
+        // 扩展时间范围，增加5%的边距
+        double timeRange = maxTime - minTime;
+        minTime = std::max(0.0, minTime - timeRange * 0.05);
+        maxTime += timeRange * 0.05;
     }
     
-    // 确保X轴范围非零
-    if (maxTime - minTime < 1e-6) {
-        double avgTime = (minTime + maxTime) / 2.0;
-        minTime = avgTime - 50.0; // 向左扩展50秒
-        maxTime = avgTime + 50.0; // 向右扩展50秒
+    // 优化Y轴范围（精度轴）
+    if (maxAccuracy - minAccuracy < 1e-6) {
+        // 如果精度范围太小，设置默认范围
+        double avgAccuracy = (minAccuracy + maxAccuracy) / 2.0;
+        minAccuracy = std::max(0.0, avgAccuracy - 1.0);
+        maxAccuracy = avgAccuracy + 1.0;
     } else {
-        // 扩展X轴范围，增加10%的边距
-        double timeRange = maxTime - minTime;
-        minTime -= timeRange * 0.1;
-        maxTime += timeRange * 0.1;
+        // 扩展精度范围，增加10%的边距
+        double accuracyRange = maxAccuracy - minAccuracy;
+        minAccuracy = std::max(0.0, minAccuracy - accuracyRange * 0.1);
+        maxAccuracy += accuracyRange * 0.1;
     }
     
     // 绘制背景
@@ -95,19 +75,18 @@ static gboolean on_chart_draw(GtkWidget* widget, cairo_t* cr, gpointer data) {
     cairo_paint(cr);
     
     // 绘制网格线
-    cairo_set_source_rgba(cr, 0.8, 0.8, 0.8, 0.5); // 浅灰色半透明
+    cairo_set_source_rgba(cr, 0.9, 0.9, 0.9, 0.8);
     cairo_set_line_width(cr, 0.5);
     
-    // 水平网格线
-    int numYGrids = 10;
+    // 水平网格线（精度）
+    int numYGrids = 8;
     for (int i = 0; i <= numYGrids; i++) {
         double y = marginTop + graphHeight * i / numYGrids;
         cairo_move_to(cr, marginLeft, y);
         cairo_line_to(cr, width - marginRight, y);
     }
-    cairo_stroke(cr);
     
-    // 垂直网格线
+    // 垂直网格线（时间）
     int numXGrids = 10;
     for (int i = 0; i <= numXGrids; i++) {
         double x = marginLeft + graphWidth * i / numXGrids;
@@ -118,29 +97,26 @@ static gboolean on_chart_draw(GtkWidget* widget, cairo_t* cr, gpointer data) {
     
     // 绘制坐标轴
     cairo_set_source_rgb(cr, 0, 0, 0);
-    cairo_set_line_width(cr, 1);
+    cairo_set_line_width(cr, 2);
     
     // X轴
     cairo_move_to(cr, marginLeft, height - marginBottom);
     cairo_line_to(cr, width - marginRight, height - marginBottom);
-    cairo_stroke(cr);
     
     // Y轴
-    cairo_move_to(cr, marginLeft, height - marginBottom);
-    cairo_line_to(cr, marginLeft, marginTop);
+    cairo_move_to(cr, marginLeft, marginTop);
+    cairo_line_to(cr, marginLeft, height - marginBottom);
     cairo_stroke(cr);
     
-    // 绘制标签
-    cairo_select_font_face(cr, "Sans", CAIRO_FONT_SLANT_NORMAL, CAIRO_FONT_WEIGHT_NORMAL);
+    // 设置字体，优先使用支持中文的字体
+    cairo_select_font_face(cr, "WenQuanYi Micro Hei", CAIRO_FONT_SLANT_NORMAL, CAIRO_FONT_WEIGHT_NORMAL);
     cairo_set_font_size(cr, 12);
-    
-    // X轴标签
     cairo_text_extents_t extents;
+    // X轴标签
     const char* xLabel = "时间 (s)";
     cairo_text_extents(cr, xLabel, &extents);
     cairo_move_to(cr, width / 2 - extents.width / 2, height - marginBottom / 2);
     cairo_show_text(cr, xLabel);
-    
     // Y轴标签
     const char* yLabel = "定位精度 (m)";
     cairo_text_extents(cr, yLabel, &extents);
@@ -150,11 +126,11 @@ static gboolean on_chart_draw(GtkWidget* widget, cairo_t* cr, gpointer data) {
     cairo_show_text(cr, yLabel);
     cairo_restore(cr);
     
-    // 绘制刻度
-    int numXTicks = 5;
-    int numYTicks = 5;
+    // 绘制刻度和刻度值
+    int numXTicks = 8;
+    int numYTicks = 6;
     
-    // X轴刻度
+    // X轴刻度（时间）
     for (int i = 0; i <= numXTicks; i++) {
         double t = minTime + (maxTime - minTime) * i / numXTicks;
         double x = marginLeft + graphWidth * i / numXTicks;
@@ -164,15 +140,21 @@ static gboolean on_chart_draw(GtkWidget* widget, cairo_t* cr, gpointer data) {
         cairo_line_to(cr, x, height - marginBottom + 5);
         cairo_stroke(cr);
         
-        // 刻度值
+        // 刻度值 - 根据时间范围选择合适格式
         char tickLabel[32];
-        snprintf(tickLabel, sizeof(tickLabel), "%.1f", t);
+        if (maxTime - minTime < 60) {
+            snprintf(tickLabel, sizeof(tickLabel), "%.1f", t);
+        } else if (maxTime - minTime < 3600) {
+            snprintf(tickLabel, sizeof(tickLabel), "%.0f", t);
+        } else {
+            snprintf(tickLabel, sizeof(tickLabel), "%.0f", t / 60); // 转换为分钟
+        }
         cairo_text_extents(cr, tickLabel, &extents);
         cairo_move_to(cr, x - extents.width / 2, height - marginBottom + 20);
         cairo_show_text(cr, tickLabel);
     }
     
-    // Y轴刻度
+    // Y轴刻度（精度）
     for (int i = 0; i <= numYTicks; i++) {
         double a = minAccuracy + (maxAccuracy - minAccuracy) * (numYTicks - i) / numYTicks;
         double y = marginTop + graphHeight * i / numYTicks;
@@ -182,16 +164,14 @@ static gboolean on_chart_draw(GtkWidget* widget, cairo_t* cr, gpointer data) {
         cairo_line_to(cr, marginLeft - 5, y);
         cairo_stroke(cr);
         
-        // 刻度值 - 根据数值大小选择合适的格式
+        // 刻度值 - 根据精度范围选择合适格式
         char tickLabel[32];
-        if (fabs(a) < 0.001) {
-            snprintf(tickLabel, sizeof(tickLabel), "%.6f", a);
-        } else if (fabs(a) < 1.0) {
-            snprintf(tickLabel, sizeof(tickLabel), "%.4f", a);
-        } else if (fabs(a) < 10.0) {
+        if (maxAccuracy - minAccuracy < 1.0) {
             snprintf(tickLabel, sizeof(tickLabel), "%.3f", a);
-        } else {
+        } else if (maxAccuracy - minAccuracy < 10.0) {
             snprintf(tickLabel, sizeof(tickLabel), "%.2f", a);
+        } else {
+            snprintf(tickLabel, sizeof(tickLabel), "%.1f", a);
         }
         cairo_text_extents(cr, tickLabel, &extents);
         cairo_move_to(cr, marginLeft - 10 - extents.width, y + extents.height / 2);
@@ -199,29 +179,31 @@ static gboolean on_chart_draw(GtkWidget* widget, cairo_t* cr, gpointer data) {
     }
     
     // 绘制数据点和连线
-    cairo_set_source_rgb(cr, 0, 0.5, 1);
-    cairo_set_line_width(cr, 2);
-    
-    // 先绘制连线
-    bool first = true;
-    for (const auto& pair : *timeData) {
-        double t = pair.first;
-        double a = pair.second;
+    if (timeData->size() > 1) {
+        // 绘制连线
+        cairo_set_source_rgb(cr, 0.2, 0.6, 1.0); // 蓝色线条
+        cairo_set_line_width(cr, 2);
         
-        double x = marginLeft + graphWidth * (t - minTime) / (maxTime - minTime);
-        double y = marginTop + graphHeight * (1 - (a - minAccuracy) / (maxAccuracy - minAccuracy));
-        
-        if (first) {
-            cairo_move_to(cr, x, y);
-            first = false;
-        } else {
-            cairo_line_to(cr, x, y);
+        bool first = true;
+        for (const auto& pair : *timeData) {
+            double t = pair.first;
+            double a = pair.second;
+            
+            double x = marginLeft + graphWidth * (t - minTime) / (maxTime - minTime);
+            double y = marginTop + graphHeight * (1 - (a - minAccuracy) / (maxAccuracy - minAccuracy));
+            
+            if (first) {
+                cairo_move_to(cr, x, y);
+                first = false;
+            } else {
+                cairo_line_to(cr, x, y);
+            }
         }
+        cairo_stroke(cr);
     }
-    cairo_stroke(cr);
     
-    // 再绘制数据点
-    cairo_set_source_rgb(cr, 1, 0, 0); // 红色点
+    // 绘制数据点
+    cairo_set_source_rgb(cr, 1, 0.3, 0.3); // 红色点
     for (const auto& pair : *timeData) {
         double t = pair.first;
         double a = pair.second;
@@ -421,7 +403,7 @@ void EvaluationView::updateResultsTable(const std::vector<std::pair<std::string,
 // 显示定位精度图表
 void EvaluationView::showAccuracyChart(const std::map<double, double>& data) {
     // 实现显示定位精度图表的逻辑
-    if (data.empty() || !m_chartArea) return;
+    if (!m_chartArea) return;
     
     // 保存数据到成员变量
     m_chartData = data;
@@ -430,6 +412,12 @@ void EvaluationView::showAccuracyChart(const std::map<double, double>& data) {
     g_signal_handlers_disconnect_matched(m_chartArea, G_SIGNAL_MATCH_FUNC, 0, 0, NULL, NULL, NULL);
     
     // 连接绘图事件，使用独立的回调函数
+    if (data.empty()) {
+        // 触发重绘，显示暂无数据
+        g_signal_connect(m_chartArea, "draw", G_CALLBACK(on_chart_draw), &m_chartData);
+        gtk_widget_queue_draw(m_chartArea);
+        return;
+    }
     g_signal_connect(m_chartArea, "draw", G_CALLBACK(on_chart_draw), &m_chartData);
     
     // 触发重绘
@@ -524,12 +512,10 @@ void EvaluationView::startEvaluation() {
         // 更新结果表格
         updateResultsTable(results);
         
-        // 仅单平台时展示定位精度图表
-        if (isSinglePlatform) {
-            std::map<double, double> chartData = 
-                EvaluationController::getInstance().getAccuracyTimeData(sourceId, isSinglePlatform);
-            showAccuracyChart(chartData);
-        } 
+        // 无论单/多平台都刷新折线图
+        std::map<double, double> chartData = 
+            EvaluationController::getInstance().getAccuracyTimeData(sourceId, isSinglePlatform);
+        showAccuracyChart(chartData);
     }
 }
 

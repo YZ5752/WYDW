@@ -36,9 +36,22 @@ public:
      * @param simulationTime 仿真时间（秒）
      * @return 定位结果
      */
-    LocationResult runSimulation(const ReconnaissanceDevice& device, 
+    LocationResult runSimulation(const ReconnaissanceDevice& device,
                                const RadiationSource& source,
                                int simulationTime);
+
+    /**
+     * @brief 干涉仪体制定位算法（可控制是否添加测向误差）
+     * @param device 侦察设备
+     * @param source 辐射源
+     * @param simulationTime 仿真时间（秒）
+     * @param addDirectionError 是否添加测向误差
+     * @return 定位结果
+     */
+    LocationResult runSimulation(const ReconnaissanceDevice& device,
+                               const RadiationSource& source,
+                               int simulationTime,
+                               bool addDirectionError);
     
     /**
      * @brief 计算测向数据 - 干涉仪体制

@@ -216,25 +216,25 @@ GtkWidget* SinglePlatformView::createView() {
     gtk_widget_set_halign(m_resultEl, GTK_ALIGN_END);
     gtk_grid_attach(GTK_GRID(grid), m_resultEl, 1, 4, 1, 1);
     
-    // 误差结果区域
-    GtkWidget* errorFrame = gtk_frame_new("误差分析");
+    // 精度分析结果区域
+    GtkWidget* errorFrame = gtk_frame_new("精度分析");
     gtk_box_pack_start(GTK_BOX(rightBox), errorFrame, TRUE, TRUE, 0);
-    
+
     GtkWidget* errorBox = gtk_box_new(GTK_ORIENTATION_VERTICAL, 5);
     gtk_container_add(GTK_CONTAINER(errorFrame), errorBox);
     gtk_container_set_border_width(GTK_CONTAINER(errorBox), 10);
-    
-    // 创建误差表格
+
+    // 创建精度分析表格
     GtkWidget* errorTable = gtk_grid_new();
     gtk_grid_set_row_spacing(GTK_GRID(errorTable), 5);
     gtk_grid_set_column_spacing(GTK_GRID(errorTable), 10);
     gtk_box_pack_start(GTK_BOX(errorBox), errorTable, TRUE, TRUE, 0);
-    
-    // 保存误差表格引用
+
+    // 保存精度分析表格引用
     m_errorTable = errorTable;
-    
-    // 初始化误差表格 - 默认显示干涉仪体制的误差项
-    updateErrorTable("干涉仪体制");
+
+    // 初始化精度分析表格 - 统一显示测向误差和定位误差
+    updateErrorTable("");
     
     // 加载数据并填充下拉框
     m_devices = ReconnaissanceDeviceDAO::getInstance().getAllReconnaissanceDevices();
@@ -257,47 +257,29 @@ void SinglePlatformView::updateErrorTable(const std::string& techSystem) {
     if (!m_errorTable) {
         return;
     }
-    
+
     // 清空表格中的所有子控件
     GList* children = gtk_container_get_children(GTK_CONTAINER(m_errorTable));
     for (GList* iter = children; iter != NULL; iter = g_list_next(iter)) {
         gtk_widget_destroy(GTK_WIDGET(iter->data));
     }
     g_list_free(children);
-    
-    // 根据技术体制添加不同的误差项
-    if (techSystem == "时差体制" || techSystem.find("时差") != std::string::npos) {
-        // 时差体制误差项：时延误差、通道热噪声误差、时间测量误差、时差测量误差、测向误差
-        const char* errorItems[] = {
-            "时延误差", "通道热噪声误差", "时间测量误差", "时差测量误差", "测向误差"
-        };
-        
-        for (int i = 0; i < 5; i++) {
-            GtkWidget* errorLabel = gtk_label_new(errorItems[i]);
-            gtk_widget_set_halign(errorLabel, GTK_ALIGN_START);
-            gtk_grid_attach(GTK_GRID(m_errorTable), errorLabel, 0, i, 1, 1);
-            
-            GtkWidget* errorValue = gtk_label_new("--");
-            gtk_widget_set_halign(errorValue, GTK_ALIGN_END);
-            gtk_grid_attach(GTK_GRID(m_errorTable), errorValue, 1, i, 1, 1);
-        }
-    } else if (techSystem == "干涉仪体制" || techSystem.find("干涉") != std::string::npos) {
-        // 干涉仪体制误差项：对中误差、姿态测量误差、圆锥效应误差、天线阵测向误差、测向误差
-        const char* errorItems[] = {
-            "对中误差", "姿态测量误差", "圆锥效应误差", "天线阵测向误差", "测向误差"
-        };
-        
-        for (int i = 0; i < 5; i++) {
-            GtkWidget* errorLabel = gtk_label_new(errorItems[i]);
-            gtk_widget_set_halign(errorLabel, GTK_ALIGN_START);
-            gtk_grid_attach(GTK_GRID(m_errorTable), errorLabel, 0, i, 1, 1);
-            
-            GtkWidget* errorValue = gtk_label_new("--");
-            gtk_widget_set_halign(errorValue, GTK_ALIGN_END);
-            gtk_grid_attach(GTK_GRID(m_errorTable), errorValue, 1, i, 1, 1);
-        }
-    } 
-    
+
+    // 统一显示测向误差和定位误差，不区分技术体制
+    const char* errorItems[] = {
+        "测向误差", "定位误差"
+    };
+
+    for (int i = 0; i < 2; i++) {
+        GtkWidget* errorLabel = gtk_label_new(errorItems[i]);
+        gtk_widget_set_halign(errorLabel, GTK_ALIGN_START);
+        gtk_grid_attach(GTK_GRID(m_errorTable), errorLabel, 0, i, 1, 1);
+
+        GtkWidget* errorValue = gtk_label_new("--");
+        gtk_widget_set_halign(errorValue, GTK_ALIGN_END);
+        gtk_grid_attach(GTK_GRID(m_errorTable), errorValue, 1, i, 1, 1);
+    }
+
     // 显示所有控件
     gtk_widget_show_all(m_errorTable);
 }
@@ -536,8 +518,8 @@ void SinglePlatformView::onTechSystemChanged(GtkWidget* widget, gpointer data) {
     std::string techSystem(text ? text : "");
     g_free(text);
     
-    // 更新误差表格
-    view->updateErrorTable(techSystem);
+    // 更新精度分析表格（不再依赖技术体制）
+    view->updateErrorTable("");
     
     // 更新设备和辐射源下拉框
     view->updateDeviceCombo();
@@ -834,13 +816,10 @@ void SinglePlatformView::clearSimulationResult() {
     gtk_label_set_text(GTK_LABEL(m_resultAz), "--");
     gtk_label_set_text(GTK_LABEL(m_resultEl), "--");
     
-    // 清空误差分析表格中的结果值
+    // 清空精度分析表格中的结果值
     if (m_errorTable) {
-        // 获取当前技术体制
-        std::string techSystem = getSelectedTechSystem();
-        
-        // 重新初始化误差表格 - 仅显示标签，不显示数值
-        updateErrorTable(techSystem);
+        // 重新初始化精度分析表格 - 仅显示标签，不显示数值
+        updateErrorTable("");
     }
 }
 
