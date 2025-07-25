@@ -1,11 +1,13 @@
 #include "../constants/PhysicsConstants.h"
 #include "DirectionFinding.h"
+#include "../utils/SimulationValidator.h"
 #include <iostream>
 #include <cmath>
 #include <random>
 #include <algorithm>
 #include <numeric>
 #include <string>
+#include <gtk/gtk.h>
 #include "ReconnaissanceDeviceDAO.h"
 #include "RadiationSourceDAO.h"
 
@@ -76,9 +78,33 @@ std::vector<int> DirectionFinding::getDeviceIds() const {
 int DirectionFinding::getSourceId() const { return m_source.getRadiationId(); }
 
 // 移除无参数的calculate方法，只保留带参数的版本
-bool DirectionFinding::calculate(double dev1MeanError, double dev1StdDev, 
+bool DirectionFinding::calculate(double dev1MeanError, double dev1StdDev,
                              double dev2MeanError, double dev2StdDev) {
     if (!loadDeviceInfo() || !loadSourceInfo()) return false;
+
+    // 仿真前验证
+    SimulationValidator validator;
+    std::vector<int> deviceIds;
+    for (const auto& device : m_devices) {
+        deviceIds.push_back(device.getDeviceId());
+    }
+    std::string failMessage;
+
+    if (!validator.validateAll(deviceIds, m_source.getRadiationId(), failMessage)) {
+        // 验证失败，显示错误对话框
+        GtkWidget* dialog = gtk_message_dialog_new(
+            nullptr,
+            GTK_DIALOG_MODAL,
+            GTK_MESSAGE_ERROR,
+            GTK_BUTTONS_OK,
+            "仿真验证失败：%s", failMessage.c_str()
+        );
+        gtk_window_set_title(GTK_WINDOW(dialog), "测向定位仿真验证失败");
+        gtk_dialog_run(GTK_DIALOG(dialog));
+        gtk_widget_destroy(dialog);
+
+        return false;
+    }
     
     // 清除之前的测向线信息
     m_directionLines.clear();

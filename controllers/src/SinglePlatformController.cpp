@@ -315,68 +315,60 @@ void SinglePlatformController::startSimulation() {
 //         return G_SOURCE_REMOVE;
 //     }, this);
 
-    // 立即显示结果参数和误差分析，不等待动画结束
+    // 立即显示结果参数和精度分析，不等待动画结束
     // 显示仿真结果参数
     m_view->showSimulationResult(result.longitude, result.latitude, result.altitude, result.azimuth, result.elevation);
-    
-    // 更新误差表格
+
+    // 更新精度分析表格
     GtkWidget* errorTable = m_view->getErrorTable();
-    
-    if (errorTable) {
-        if (techSystem == "干涉仪体制" && errorFactors.size() >= 5) {
-            // 查找已存在的误差值标签
-            GList* children = gtk_container_get_children(GTK_CONTAINER(errorTable));
-            GtkWidget* errorLabels[5] = {nullptr}; // 存储找到的标签引用
-            
-            // 找出所有值标签的引用
-            for (GList* iter = children; iter != NULL; iter = g_list_next(iter)) {
-                GtkWidget* child = GTK_WIDGET(iter->data);
-                int row, col;
-                gtk_container_child_get(GTK_CONTAINER(errorTable), child, 
-                                       "top-attach", &row, 
-                                       "left-attach", &col, NULL);
-                if (col == 1 && row >= 0 && row < 5) {
-                    errorLabels[row] = child;
-                }
-            }
-            g_list_free(children);
-            
-            // 更新每个标签的文本，直接设置文本而不是添加新标签
-            for (int i = 0; i < 5; i++) {
-                if (errorLabels[i]) {
-                    char errorBuffer[50];
-                    sprintf(errorBuffer, "%.4f°", errorFactors[i]);
-                    gtk_label_set_text(GTK_LABEL(errorLabels[i]), errorBuffer);
-                }
-            }
-        } else if (techSystem == "时差体制" && errorFactors.size() >= 5) {
-            // 查找已存在的误差值标签
-            GList* children = gtk_container_get_children(GTK_CONTAINER(errorTable));
-            GtkWidget* errorLabels[5] = {nullptr}; // 存储找到的标签引用
-            
-            // 找出所有值标签的引用
-            for (GList* iter = children; iter != NULL; iter = g_list_next(iter)) {
-                GtkWidget* child = GTK_WIDGET(iter->data);
-                int row, col;
-                gtk_container_child_get(GTK_CONTAINER(errorTable), child, 
-                                       "top-attach", &row, 
-                                       "left-attach", &col, NULL);
-                if (col == 1 && row >= 0 && row < 5) {
-                    errorLabels[row] = child;
-                }
-            }
-            g_list_free(children);
-            
-            // 更新每个标签的文本，直接设置文本而不是添加新标签
-            for (int i = 0; i < 5; i++) {
-                if (errorLabels[i]) {
-                    char errorBuffer[50];
-                    sprintf(errorBuffer, "%.4f°", errorFactors[i]);
-                    gtk_label_set_text(GTK_LABEL(errorLabels[i]), errorBuffer);
-                }
+
+    if (errorTable && errorFactors.size() >= 2) {
+        // 查找已存在的精度分析值标签
+        GList* children = gtk_container_get_children(GTK_CONTAINER(errorTable));
+        GtkWidget* errorLabels[2] = {nullptr}; // 存储找到的标签引用：[0]测向误差, [1]定位误差
+
+        // 找出所有值标签的引用
+        for (GList* iter = children; iter != NULL; iter = g_list_next(iter)) {
+            GtkWidget* child = GTK_WIDGET(iter->data);
+            int row, col;
+            gtk_container_child_get(GTK_CONTAINER(errorTable), child,
+                                   "top-attach", &row,
+                                   "left-attach", &col, NULL);
+            if (col == 1 && row >= 0 && row < 2) {
+                errorLabels[row] = child;
             }
         }
-        
+        g_list_free(children);
+
+        // 更新精度分析标签的文本
+        // 测向误差：使用errorFactors中的最后一个值（通常是测向误差）
+        if (errorLabels[0] && errorFactors.size() > 0) {
+            char errorBuffer[50];
+            double directionError = errorFactors.back(); // 最后一个值通常是测向误差
+            sprintf(errorBuffer, "%.4f°", directionError);
+            gtk_label_set_text(GTK_LABEL(errorLabels[0]), errorBuffer);
+        }
+
+        // 定位误差：计算定位精度（可以使用距离误差或综合误差）
+        if (errorLabels[1]) {
+            char errorBuffer[50];
+            // 使用result中的accuracy字段作为定位误差，如果没有则计算综合误差
+            double locationError = 0.0;
+            if (result.accuracy > 0) {
+                locationError = result.accuracy; // 使用定位精度
+                sprintf(errorBuffer, "%.2fm", locationError);
+            } else {
+                // 如果没有accuracy字段，使用errorFactors的平均值作为综合误差
+                double sum = 0.0;
+                for (double factor : errorFactors) {
+                    sum += factor * factor; // 平方和
+                }
+                locationError = sqrt(sum / errorFactors.size()); // 均方根误差
+                sprintf(errorBuffer, "%.4f°", locationError);
+            }
+            gtk_label_set_text(GTK_LABEL(errorLabels[1]), errorBuffer);
+        }
+
         // 显示所有控件
         gtk_widget_show_all(errorTable);
     }
@@ -402,9 +394,9 @@ void SinglePlatformController::loadModelData() {
 // 技术体制变化处理
 void SinglePlatformController::handleTechSystemChange(const std::string& techSystem) {
     if (!m_view) return;
-    
-    // 更新误差表格
-    m_view->updateErrorTable(techSystem);
+
+    // 更新精度分析表格（不再依赖技术体制）
+    m_view->updateErrorTable("");
 }
 
 // 获取视图

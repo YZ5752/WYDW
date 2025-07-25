@@ -1,6 +1,7 @@
 #include "../FDOAalgorithm.h"
 #include "../../constants/PhysicsConstants.h"
 #include "../../utils/CoordinateTransform.h"
+#include "../../utils/SimulationValidator.h"
 #include "../../utils/SNRValidator.h"
 #include "../../utils/Vector3.h"
 #include <iostream>
@@ -9,6 +10,7 @@
 #include <vector>
 #include <cstdlib>
 #include <ctime>
+#include <gtk/gtk.h>
 #include <random>    
 
 // 算法参数常量定义
@@ -293,13 +295,13 @@ bool FDOAalgorithm::calculate() {
     for (const auto& device : m_devices) {
         deviceIds.push_back(device.getDeviceId());
     }
-//    // 3. 执行仿真验证
-//     SimulationValidator validator;
-//     std::string failMessage;
-//     if (!validator.validateAll(deviceIds, sourceId, failMessage)) {
-//         std::cerr << "仿真验证失败：" << failMessage << std::endl;
-//         return false;
-//     }
+   // 3. 执行仿真验证
+    SimulationValidator validator;
+    std::string failMessage;
+    if (!validator.validateAll(deviceIds, sourceId, failMessage)) {
+        std::cerr << "仿真验证失败：" << failMessage << std::endl;
+        return false;
+    }
     
 //     //4. 计算时间间隔
 //     double minInterval = calculateMinimumTimeInterval(deviceIds[0], sourceId);

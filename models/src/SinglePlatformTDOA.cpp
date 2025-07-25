@@ -1,6 +1,7 @@
 #include "../SinglePlatformTDOA.h"
 #include "../../constants/PhysicsConstants.h"
 #include "../../utils/CoordinateTransform.h"
+#include "../../utils/SimulationValidator.h"
 #include "../SinglePlatformTaskDAO.h" // 添加任务DAO头文件
 #include <cmath>
 #include <iostream>
@@ -13,6 +14,10 @@
 
 // 使用常量命名空间
 using namespace Constants;
+
+// 在文件顶部添加常量定义
+const double MAX_TYPICAL_ELEVATION = 85.0;  // 最大典型俯仰角
+const double MIN_TYPICAL_ELEVATION = -85.0; // 最小典型俯仰角
 
 // 单例实现
 SinglePlatformTDOA& SinglePlatformTDOA::getInstance() {
@@ -86,10 +91,38 @@ double SinglePlatformTDOA::calculateTimeDifferencePhase(
 }
 
 // 时差体制定位算法实现
-LocationResult SinglePlatformTDOA::runSimulation(const ReconnaissanceDevice& device, 
+LocationResult SinglePlatformTDOA::runSimulation(const ReconnaissanceDevice& device,
                                                const RadiationSource& source,
                                                int simulationTime) {
     LocationResult result;
+
+    // 仿真前验证
+    SimulationValidator validator;
+    std::vector<int> deviceIds = {device.getDeviceId()};
+    std::string failMessage;
+
+    if (!validator.validateAll(deviceIds, source.getRadiationId(), failMessage)) {
+        // 验证失败，显示错误对话框
+        GtkWidget* dialog = gtk_message_dialog_new(
+            nullptr,
+            GTK_DIALOG_MODAL,
+            GTK_MESSAGE_ERROR,
+            GTK_BUTTONS_OK,
+            "仿真验证失败：%s", failMessage.c_str()
+        );
+        gtk_window_set_title(GTK_WINDOW(dialog), "时差定位仿真验证失败");
+        gtk_dialog_run(GTK_DIALOG(dialog));
+        gtk_widget_destroy(dialog);
+
+        // 返回空结果
+        result.longitude = 0.0;
+        result.latitude = 0.0;
+        result.altitude = 0.0;
+        result.azimuth = 0.0;
+        result.elevation = 0.0;
+        result.accuracy = -1.0; // 表示验证失败
+        return result;
+    }
     
     // 获取设备初始位置
     double longitude1 = device.getLongitude();
@@ -293,10 +326,6 @@ LocationResult SinglePlatformTDOA::runSimulation(const ReconnaissanceDevice& dev
     elevation = std::max(std::min(elevation, 90.0), -90.0);
     
     g_print("原始计算的俯仰角: %.2f°\n", elevation);
-    
-    // 检查俯仰角是否合理（通常辐射源不会在极高或极低的位置）
-    const double MAX_TYPICAL_ELEVATION = 60.0;   // 60度
-    const double MIN_TYPICAL_ELEVATION = -30.0;  // -30度
     
     // 时差体制高度计算分析
     g_print("时差体制高度计算分析:\n");
@@ -587,11 +616,30 @@ LocationResult SinglePlatformTDOA::runSimulation(const ReconnaissanceDevice& dev
     result.altitude = estimatedLBH.p3;
     result.azimuth = azimuth;
     result.elevation = elevation;
-    
-    // 使用高度计算误差作为精度指标
-    double positionError = std::max({method1Error, method2Error, method3Error});
-    result.accuracy = positionError;
-    
+
+    // 修正定位精度计算 - 使用实际位置距离
+    // 将估计位置转换为笛卡尔坐标
+    COORD3 estimatedXYZ = lbh2xyz(result.longitude, result.latitude, result.altitude);
+    // 获取真实辐射源位置的笛卡尔坐标
+    COORD3 trueSourceXYZ = lbh2xyz(source.getLongitude(), source.getLatitude(), source.getAltitude());
+
+    // 计算真实的3D距离误差
+    double actualPositionError = sqrt(
+        pow(estimatedXYZ.p1 - trueSourceXYZ.p1, 2) +
+        pow(estimatedXYZ.p2 - trueSourceXYZ.p2, 2) +
+        pow(estimatedXYZ.p3 - trueSourceXYZ.p3, 2)
+    );
+
+    // 使用实际位置误差距离作为精度指标
+    result.accuracy = actualPositionError;
+
+    g_print("定位精度计算:\n");
+    g_print("  真实位置: (%.6f°, %.6f°, %.2fm)\n", 
+            source.getLongitude(), source.getLatitude(), source.getAltitude());
+    g_print("  估计位置: (%.6f°, %.6f°, %.2fm)\n", 
+            result.longitude, result.latitude, result.altitude);
+    g_print("  实际位置误差距离: %.2f 米\n", actualPositionError);
+
     // 计算误差因素 - 使用新的误差计算方法
     result.errorFactors = calculateTDOAErrors(baselineLength, timeDifference, estimatedDistance, incidentAngle);
     
@@ -642,57 +690,87 @@ LocationResult SinglePlatformTDOA::runSimulation(const ReconnaissanceDevice& dev
     return result;
 }
 
-// 计算时差体制误差因素 - 新的误差计算方法
+// 计算时差体制误差因素 - 按照理论公式重新实现
 std::vector<double> SinglePlatformTDOA::calculateTDOAErrors(double baselineLength, 
                                                          double timeDifference, 
                                                          double estimatedDistance,
                                                          double incidentAngle) {
     std::vector<double> errors;
     
-    // 1. 时间测量误差
-    // 假设采样率为10MHz
+    // 1. 时间测量误差 (纳秒级)
     double samplingRate = 10e6;
     double timeMeasurementError = 1.0 / (2 * samplingRate);
-    errors.push_back(timeMeasurementError * 1000); // 转换为毫秒单位
+    errors.push_back(timeMeasurementError * 1e9); // 转换为纳秒单位
     
-    // 2. 位置测量误差
-    // 考虑平台位置测量误差 (GNSS定位精度)
-    double positionMeasurementError = 5.0; // 假设5米GNSS精度
-    double angularPositionError = positionMeasurementError / estimatedDistance;
-    errors.push_back(angularPositionError * RAD2DEG); // 转换为角度单位
+    // 2. 位置测量误差 (角度，度)
+    double positionMeasurementError = 5.0; // 5米GNSS精度
+    double angularPositionError = std::atan(positionMeasurementError / estimatedDistance) * RAD2DEG;
+    errors.push_back(angularPositionError);
     
-    // 3. 相位不一致性误差
-    // 假设频率为2.4GHz
-    double frequency = 2.4e9;
-    double phaseError = 35.0 * DEG2RAD; // 相位不一致性误差 (35度转换为弧度)
+    // 3. 相位不一致性误差 (纳秒级)
+    double frequency = 100e6; // 100MHz
+    double phaseError = 1.0 * DEG2RAD;
     double timeErrorFromPhase = phaseError / (2 * PI * frequency);
-    errors.push_back(timeErrorFromPhase * 1000); // 转换为毫秒单位
+    errors.push_back(timeErrorFromPhase * 1e9);
     
     // 4. 多径传播误差
-    double multipathError = 0.15 * (1 + std::abs(std::sin(incidentAngle)));
+    double multipathError = 0.05 * (1 + 0.1 * std::abs(std::sin(incidentAngle)));
     errors.push_back(multipathError);
     
-    // 5. 综合时差测量误差 (σ_Δt = √(σ_Δtφ² + σ_Δtn² + σ_Δtd²))
-    double totalTimeError = std::sqrt(timeMeasurementError * timeMeasurementError + 
-                                    timeErrorFromPhase * timeErrorFromPhase +
-                                    (0.1e-9) * (0.1e-9)); // 假设有额外0.1ns系统延时误差
+    // 按照图片中的理论公式计算时差测量误差σ_τ
+    // σ_τ = √(σ_τφ² + σ_τn² + σ_τd²)
     
-    // 6. 测向误差 (σ_θ = c * σ_Δt / (d * cosθ))
+    // σ_τφ: 通道间相位延迟不一致性造成的时延不一致性
+    // σ_τφ = (1/(360° × f₀)) × σ_φ
+    double sigma_phi = 1.0; // 假设1度相位误差
+    double sigma_tau_phi = (sigma_phi / 360.0) / frequency; // 秒
+    
+    // σ_τn: 通道热噪声误差
+    // σ_τn = 0.175 / (Bv × √(2×SNR))
+    double bandwidth = 10e6; // 10MHz带宽
+    double snr_linear = 100.0; // 假设20dB SNR (10^(20/10) = 100)
+    double sigma_tau_n = 0.175 / (bandwidth * std::sqrt(2 * snr_linear));
+    
+    // σ_τd: 时间测量误差
+    // σ_τd = 2 / (2√3 × fs)
+    double sigma_tau_d = 2.0 / (2 * std::sqrt(3) * samplingRate);
+    
+    // 综合时差测量误差
+    double sigma_tau = std::sqrt(sigma_tau_phi * sigma_tau_phi + 
+                                sigma_tau_n * sigma_tau_n + 
+                                sigma_tau_d * sigma_tau_d);
+    
+    // 按照图片中的公式计算测向误差
+    // σ_θ = (c / (d × cos(θ))) × σ_τ
     double cosTheta = std::cos(incidentAngle);
-    // 避免除以零或接近零的值
     if (std::abs(cosTheta) < 1e-6) {
-        g_print("  警告：入射角接近90度(%.2f°)，cosθ接近零(%.9f)，已调整为最小值1e-6\n", 
-               incidentAngle * RAD2DEG, cosTheta);
-        cosTheta = 1e-6;
+        cosTheta = 1e-6; // 防止除零
     }
-    double angleError = (c * totalTimeError) / (baselineLength * cosTheta);
-    g_print("  测向误差分析：入射角=%.2f°, cosθ=%.6f, 基线长度=%.2fm\n", 
-           incidentAngle * RAD2DEG, cosTheta, baselineLength);
-    g_print("  计算角度误差：%.6f弧度 (%.4f°)\n", angleError, angleError * RAD2DEG);
     
-    // 7. 定位误差随距离增加
-    double positionError = estimatedDistance * angleError;
+    double sigma_theta = (c / (baselineLength * cosTheta)) * sigma_tau;
+    
+    // 转换为度并限制在合理范围内
+    sigma_theta = sigma_theta * RAD2DEG;
+    sigma_theta = std::min(sigma_theta, 10.0); // 最大10度
+    sigma_theta = std::max(sigma_theta, 0.1);  // 最小0.1度
+    
+    errors.push_back(sigma_theta); // 测向误差，单位：度
+    
+    // 7. 定位误差 - 基于测向误差计算
+    double positionError = estimatedDistance * std::sin(sigma_theta * DEG2RAD);
+    positionError = std::min(positionError, 1000.0); // 限制最大1000米
+    positionError = std::max(positionError, 5.0);    // 最小5米
+    
     errors.push_back(positionError); // 单位为米
+    
+    g_print("按理论公式计算的误差分析：\n");
+    g_print("  时间测量误差: %.2f ns\n", errors[0]);
+    g_print("  位置测量误差: %.6f°\n", errors[1]);
+    g_print("  相位误差: %.2f ns\n", errors[2]);
+    g_print("  多径误差: %.4f\n", errors[3]);
+    g_print("  综合时差误差: %.2f ns\n", sigma_tau * 1e9);
+    g_print("  测向误差σ_θ: %.4f°\n", errors[4]);
+    g_print("  定位误差: %.2f m\n", errors[5]);
     
     return errors;
 }

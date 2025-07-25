@@ -7,6 +7,8 @@
 #include "../models/RadiationSourceModel.h"
 #include "../models/RadiationSourceDAO.h"
 #include "../models/SinglePlatformTaskDAO.h"
+#include "../models/MultiPlatformTaskDAO.h"
+#include "../models/ReconnaissanceDeviceModel.h"
 
 // 前向声明
 class EvaluationView;

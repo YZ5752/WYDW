@@ -2,6 +2,7 @@
 #include "../../constants/PhysicsConstants.h"
 #include "../../utils/CoordinateTransform.h"
 #include "../../utils/SNRValidator.h"
+#include "../../utils/SimulationValidator.h"
 #include "../SinglePlatformTaskDAO.h"
 #include <cmath>
 #include <iostream>
@@ -16,11 +17,47 @@ InterferometerPositioning& InterferometerPositioning::getInstance() {
     return instance;
 }
 
-// 干涉仪体制定位算法实现
-LocationResult InterferometerPositioning::runSimulation(const ReconnaissanceDevice& device, 
+// 干涉仪体制定位算法实现（默认添加测向误差）
+LocationResult InterferometerPositioning::runSimulation(const ReconnaissanceDevice& device,
                                                       const RadiationSource& source,
                                                       int simulationTime) {
+    return runSimulation(device, source, simulationTime, true);
+}
+
+// 干涉仪体制定位算法实现（可控制是否添加测向误差）
+LocationResult InterferometerPositioning::runSimulation(const ReconnaissanceDevice& device,
+                                                      const RadiationSource& source,
+                                                      int simulationTime,
+                                                      bool addDirectionError) {
     LocationResult result;
+
+    // 仿真前验证
+    SimulationValidator validator;
+    std::vector<int> deviceIds = {device.getDeviceId()};
+    std::string failMessage;
+
+    if (!validator.validateAll(deviceIds, source.getRadiationId(), failMessage)) {
+        // 验证失败，显示错误对话框
+        GtkWidget* dialog = gtk_message_dialog_new(
+            nullptr,
+            GTK_DIALOG_MODAL,
+            GTK_MESSAGE_ERROR,
+            GTK_BUTTONS_OK,
+            "仿真验证失败：%s", failMessage.c_str()
+        );
+        gtk_window_set_title(GTK_WINDOW(dialog), "干涉仪定位仿真验证失败");
+        gtk_dialog_run(GTK_DIALOG(dialog));
+        gtk_widget_destroy(dialog);
+
+        // 返回空结果
+        result.longitude = 0.0;
+        result.latitude = 0.0;
+        result.altitude = 0.0;
+        result.azimuth = 0.0;
+        result.elevation = 0.0;
+        result.accuracy = -1.0; // 表示验证失败
+        return result;
+    }
     
     // 使用相位差变化率定位法
     
@@ -87,14 +124,53 @@ LocationResult InterferometerPositioning::runSimulation(const ReconnaissanceDevi
 //     double Z_0_moved =0;
 //         g_print("假设观测站运动后位置: %.6f, %.6f, %.2f\n", X_0_moved, Y_0_moved, Z_0_moved);
     
-    // 计算方位角 θ(t) = tg^(-1)((X_T - X_0_moved)/(Y_T - Y_0_moved)) (公式4.2.3修改版)
-    double theta_t = atan2(X_T - X_0_moved, Y_T - Y_0_moved);
-    g_print("方位角(运动后): %.1f°\n", theta_t * RAD2DEG);
-    
-    // 计算俯仰角 ε(t) = tg^(-1)((Z_T - Z_0_moved)/sqrt((X_T - X_0_moved)^2 + (Y_T - Y_0_moved)^2)) (公式4.2.4修改版)
+    // 计算理论方位角 θ(t) = tg^(-1)((X_T - X_0_moved)/(Y_T - Y_0_moved)) (公式4.2.3修改版)
+    double theta_t_ideal = atan2(X_T - X_0_moved, Y_T - Y_0_moved);
+    g_print("理论方位角(运动后): %.1f°\n", theta_t_ideal * RAD2DEG);
+
+    // 计算理论俯仰角 ε(t) = tg^(-1)((Z_T - Z_0_moved)/sqrt((X_T - X_0_moved)^2 + (Y_T - Y_0_moved)^2)) (公式4.2.4修改版)
     double r_pt = sqrt(pow(X_T - X_0_moved, 2) + pow(Y_T - Y_0_moved, 2));
-    double epsilon_t = atan2(Z_T - Z_0_moved, r_pt);
-    g_print("俯仰角(运动后): %.1f°\n", epsilon_t * RAD2DEG);
+    double epsilon_t_ideal = atan2(Z_T - Z_0_moved, r_pt);
+    g_print("理论俯仰角(运动后): %.1f°\n", epsilon_t_ideal * RAD2DEG);
+
+    // 预先计算误差因素（用于添加测向误差）
+    double r_t_temp = sqrt(pow(X_T - X_0_moved, 2) + pow(Y_T - Y_0_moved, 2) + pow(Z_T - Z_0_moved, 2));
+    std::vector<double> errorFactors = calculateErrors(device, source, r_t_temp);
+
+    // 根据参数决定是否添加测向误差
+    double theta_t, epsilon_t;
+    double theta_error = 0.0, epsilon_error = 0.0;
+
+    if (addDirectionError) {
+        // 添加测向误差到角度计算中
+        double direction_error = 0.0;
+        if (errorFactors.size() >= 5) {
+            direction_error = errorFactors[4]; // 综合测向误差（最后一个元素）
+        }
+
+        // 使用固定误差而不是随机误差
+        // 方位角误差固定为综合测向误差的一半
+        theta_error = 0.5 * direction_error * DEG2RAD; // 转换为弧度
+
+        // 俯仰角误差固定为综合测向误差的一半
+        epsilon_error = 0.5 * direction_error * DEG2RAD;
+
+        // 应用误差后的实际测量角度
+        theta_t = theta_t_ideal + theta_error;
+        epsilon_t = epsilon_t_ideal + epsilon_error;
+
+        g_print("添加测向误差后:\n");
+        g_print("  综合测向误差: %.4f°\n", direction_error);
+        g_print("  方位角固定误差: %.4f° (%.6f rad)\n", theta_error * RAD2DEG, theta_error);
+        g_print("  俯仰角固定误差: %.4f° (%.6f rad)\n", epsilon_error * RAD2DEG, epsilon_error);
+        g_print("  实际方位角: %.1f°\n", theta_t * RAD2DEG);
+        g_print("  实际俯仰角: %.1f°\n", epsilon_t * RAD2DEG);
+    } else {
+        // 不添加测向误差，使用理论值
+        theta_t = theta_t_ideal;
+        epsilon_t = epsilon_t_ideal;
+        g_print("未添加测向误差，使用理论角度值\n");
+    }
     
     // 计算方位角变化率 θ'(t) = (v_y*sin(θ(t)) - v_x*cos(θ(t)))/r_pt (公式4.2.5)
     double theta_dot_t = (v_y * sin(theta_t) - v_x * cos(theta_t)) / r_pt;
@@ -142,8 +218,19 @@ LocationResult InterferometerPositioning::runSimulation(const ReconnaissanceDevi
     if (result.azimuth < 0) result.azimuth += 360.0;
     result.elevation = epsilon_t * RAD2DEG;
     
-    // 计算误差因素
-    result.errorFactors = calculateErrors(device, source, r_hat);
+    // 使用之前计算的误差因素，并添加实际应用的测向误差
+    result.errorFactors = errorFactors;
+
+    // 如果添加了测向误差，将实际应用的误差值添加到结果中
+    if (addDirectionError) {
+        // 计算实际应用的综合测向误差（方位角和俯仰角误差的均方根）
+        double actual_direction_error = sqrt(pow(theta_error * RAD2DEG, 2) + pow(epsilon_error * RAD2DEG, 2));
+        // 替换理论测向误差为实际应用的测向误差
+        if (result.errorFactors.size() >= 5) {
+            result.errorFactors[4] = actual_direction_error;
+        }
+        g_print("实际应用的综合测向误差: %.4f°\n", actual_direction_error);
+    }
     
     // 计算最大定位距离
     double maxDetectionRange = calculateMaxDetectionRange(
@@ -153,27 +240,25 @@ LocationResult InterferometerPositioning::runSimulation(const ReconnaissanceDevi
         device.getFreqRangeMax() - device.getFreqRangeMin()  // 带宽（GHz）
     );
     
-    // 计算定位精度 - 使用计算位置与真实位置之间的距离差异百分比
+    // 计算定位精度 - 使用计算位置与真实位置之间的实际距离误差
     double positioningAccuracy = 0.0;
-    
-    // 计算真实位置和计算位置之间的欧氏距离
-    double calculated_distance = sqrt(
-        pow(X_T_calculated , 2) + 
-        pow(Y_T_calculated , 2) + 
-        pow(Z_T_calculated , 2)
+
+    // 计算真实位置和计算位置之间的实际距离误差（米）
+    double position_error_distance = sqrt(
+        pow(X_T_calculated - X_T, 2) +
+        pow(Y_T_calculated - Y_T, 2) +
+        pow(Z_T_calculated - Z_T, 2)
     );
-    
-    // 计算真实位置的长度（距离原点）
-    double true_position_length = sqrt(pow(X_T, 2) + pow(Y_T, 2) + pow(Z_T, 2));
-    
-    // 防止除以零
-    if (true_position_length > 1e-6) {
-        // 计算误差百分比
-        positioningAccuracy = (calculated_distance / true_position_length) * 100.0;
-    } else {
-        // 如果真实位置非常接近原点，使用绝对误差
-        positioningAccuracy = calculated_distance;
-    }
+
+    positioningAccuracy = position_error_distance;
+
+    g_print("定位精度计算:\n");
+    g_print("  真实位置: (%.6f, %.6f, %.2f)\n", X_T, Y_T, Z_T);
+    g_print("  计算位置: (%.6f, %.6f, %.2f)\n", X_T_calculated, Y_T_calculated, Z_T_calculated);
+    g_print("  位置误差距离: %.2f 米\n", position_error_distance);
+
+    // 将定位精度保存到result结构体中
+    result.accuracy = positioningAccuracy;
 
     
     // 计算测向精度（使用综合测向误差）

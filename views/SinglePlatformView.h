@@ -37,40 +37,40 @@ public:
     // 开始仿真回调
     static void onSinglePlatformSimulation(GtkWidget* widget, gpointer data);
     
-    // 更新误差表格
+    // 更新精度分析表格
     void updateErrorTable(const std::string& techSystem);
-    
+
     // 更新侦察设备下拉列表
     void updateDeviceList(const std::vector<ReconnaissanceDevice>& devices);
-    
+
     // 更新侦察设备下拉框内容
     void updateDeviceCombo();
-    
+
     // 更新辐射源下拉框内容
     void updateSourceCombo();
-    
+
     // 更新侦察设备地图标记
     void updateRadarMarker();
-    
+
     // 更新辐射源地图标记
     void updateSourceMarker();
-    
+
     // 获取技术体制选择
     std::string getSelectedTechSystem() const;
-    
+
     // 获取侦察设备选择
     std::string getSelectedDevice() const;
-    
+
     // 获取辐射源选择
     std::string getSelectedSource() const;
-    
+
     // 获取仿真时间
     int getSimulationTime() const;
-    
+
     // 获取视图控件
     GtkWidget* getView() const;
-    
-    // 获取误差表格控件
+
+    // 获取精度分析表格控件
     GtkWidget* getErrorTable() const;
     
     // 显示错误信息
