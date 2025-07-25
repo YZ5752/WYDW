@@ -138,3 +138,4 @@ ALTER TABLE single_platform_task
 DROP COLUMN target_angle,
 ADD COLUMN azimuth decimal(5, 2) COMMENT '方位角' AFTER target_altitude,
 ADD COLUMN elevation decimal(4, 2) COMMENT '俯仰角' AFTER azimuth;
+ALTER TABLE passive_location.single_platform_task MODIFY COLUMN positioning_accuracy float NULL COMMENT '定位精度（米）';

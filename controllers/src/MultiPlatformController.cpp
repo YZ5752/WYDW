@@ -496,7 +496,7 @@ void MultiPlatformController::startSimulation(const std::vector<std::string>& de
             
             // 保存多平台仿真任务信息到数据库
             MultiPlatformTask task;
-            task.techSystem = "TDOA"; // 使用数据库支持的值，将DF归入TDOA类别
+            task.techSystem = "FD"; // 修改为FD（测向定位）
             task.radiationId = selectedSource.getRadiationId();
             task.executionTime = simulationTime;
             task.targetLongitude = resultLBH.p1;
