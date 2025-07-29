@@ -630,15 +630,28 @@ LocationResult SinglePlatformTDOA::runSimulation(const ReconnaissanceDevice& dev
         pow(estimatedXYZ.p3 - trueSourceXYZ.p3, 2)
     );
 
-    // 使用实际位置误差距离作为精度指标
-    result.accuracy = actualPositionError;
-
+    // 使用理论精度公式计算定位精度
+    double sigma_tau = 1e-8; // 10ns时差测量精度
+    double sinIncidentAngle = std::abs(std::sin(incidentAngle));
+    
+    // 防止除零，当入射角接近0或180度时
+    if (sinIncidentAngle < 0.1) {
+        sinIncidentAngle = 0.1;
+    }
+    
+    // 基线长度越长，精度越高（几何稀释因子改善）
+    double geometricFactor = std::max(1.0, 1000.0 / baselineLength);
+    
+    double theoreticalPrecision = (c * sigma_tau * geometricFactor) / sinIncidentAngle;
+    
+    // 使用理论精度作为定位精度
+    result.accuracy = theoreticalPrecision;
+    
     g_print("定位精度计算:\n");
-    g_print("  真实位置: (%.6f°, %.6f°, %.2fm)\n", 
-            source.getLongitude(), source.getLatitude(), source.getAltitude());
-    g_print("  估计位置: (%.6f°, %.6f°, %.2fm)\n", 
-            result.longitude, result.latitude, result.altitude);
-    g_print("  实际位置误差距离: %.2f 米\n", actualPositionError);
+    g_print("  基线长度: %.2f m\n", baselineLength);
+    g_print("  入射角: %.2f°\n", incidentAngle * RAD2DEG);
+    g_print("  理论定位精度: %.2f m\n", theoreticalPrecision);
+    g_print("  实际位置误差: %.2f m (仅供参考)\n", actualPositionError);
 
     // 计算误差因素 - 使用新的误差计算方法
     result.errorFactors = calculateTDOAErrors(baselineLength, timeDifference, estimatedDistance, incidentAngle);
@@ -775,4 +788,27 @@ std::vector<double> SinglePlatformTDOA::calculateTDOAErrors(double baselineLengt
     g_print("  定位误差: %.2f m\n", errors[5]);
     
     return errors;
+}
+
+// 修改精度计算方法，使用理论TDOA精度公式
+double calculateTDOAPrecision(double baselineLength, double timeDifference, 
+                             double estimatedDistance, double incidentAngle) {
+    
+    // TDOA理论精度公式：σ_r = (c * σ_τ) / sin(θ)
+    // 其中σ_τ是时差测量精度，θ是入射角
+    
+    double sigma_tau = 1e-8; // 10ns时差测量精度
+    double sinIncidentAngle = std::abs(std::sin(incidentAngle));
+    
+    // 防止除零，当入射角接近0或180度时
+    if (sinIncidentAngle < 0.1) {
+        sinIncidentAngle = 0.1;
+    }
+    
+    // 基线长度越长，精度越高（几何稀释因子改善）
+    double geometricFactor = std::max(1.0, 1000.0 / baselineLength);
+    
+    double precision = (Constants::c * sigma_tau * geometricFactor) / sinIncidentAngle;
+    
+    return precision;
 }

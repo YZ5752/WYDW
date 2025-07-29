@@ -53,8 +53,8 @@ std::vector<std::pair<std::string, double>> EvaluationController::evaluateRadiat
         }
         results.push_back({"最远定位距离", count ? maxDistanceSum / count : 0.0});
         results.push_back({"定位时间", count ? positioningTimeSum / count : 0.0});
-        results.push_back({"定位精度", count ? positioningAccuracySum / count : 0.0});
-        results.push_back({"测向精度", count ? directionFindingAccuracySum / count : 0.0});
+        results.push_back({"定位误差", count ? positioningAccuracySum / count : 0.0});
+        results.push_back({"测向误差", count ? directionFindingAccuracySum / count : 0.0});
     } else {
         // 多平台：查询 multi_platform_task
         std::vector<MultiPlatformTask> tasks = MultiPlatformTaskDAO::getInstance().getMultiPlatformTasksByRadiationId(sourceId);
@@ -67,7 +67,7 @@ std::vector<std::pair<std::string, double>> EvaluationController::evaluateRadiat
         }
         results.push_back({"最远定位距离", count ? maxDistanceSum / count : 0.0});
         results.push_back({"定位时间", count ? positioningTimeSum / count : 0.0});
-        results.push_back({"定位精度", count ? positioningAccuracySum / count : 0.0});
+        results.push_back({"定位误差", count ? positioningAccuracySum / count : 0.0});
         // 多平台不添加"测向精度"
     }
     m_results = results;
