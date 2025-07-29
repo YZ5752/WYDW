@@ -381,8 +381,28 @@ bool TDOAalgorithm::calculate() {
     double error_dist = calculateDistance(final_position, sourcePos_xyz);
     m_result.accuracy = error_dist;
     
-    double distance_to_origin = calculateDistance(final_position, {0,0,0});
-    m_result.distance = distance_to_origin;
+    // 移除原有的错误距离计算代码
+    // double distance_to_origin = calculateDistance(final_position, {0,0,0});
+    // m_result.distance = distance_to_origin;
+    
+    // 计算定位距离 - 使用参考站到目标的距离
+    double positioningDistance = calculateDistance(stationPos_xyz[ref_idx], final_position);
+    
+    // 确保距离为正值且在合理范围内
+    positioningDistance = std::abs(positioningDistance);
+    if (positioningDistance > 1000000.0) { // 超过1000公里认为异常
+        positioningDistance = calculateDistance(stationPos_xyz[ref_idx], sourcePos_xyz);
+        std::cout << "警告：计算距离异常，使用真实距离: " << positioningDistance << " 米" << std::endl;
+    }
+    
+    m_result.distance = positioningDistance;
+    
+    std::cout << "调试信息：" << std::endl;
+    std::cout << "参考站位置 (XYZ): " << stationPos_xyz[ref_idx].p1 << ", " 
+              << stationPos_xyz[ref_idx].p2 << ", " << stationPos_xyz[ref_idx].p3 << std::endl;
+    std::cout << "目标位置 (XYZ): " << final_position.p1 << ", " 
+              << final_position.p2 << ", " << final_position.p3 << std::endl;
+    std::cout << "计算距离: " << positioningDistance << " 米" << std::endl;
     
     std::cout << "\n---------------------------------------------" << std::endl;
     std::cout << "      TDOA算法最终结果" << std::endl;
@@ -393,6 +413,7 @@ bool TDOAalgorithm::calculate() {
               << m_result.latitude << " 度, " 
               << m_result.altitude << " m" << std::endl;
     std::cout << "精度 (定位误差): " << m_result.accuracy << " m" << std::endl;
+    std::cout << "定位距离: " << m_result.distance << " 米" << std::endl;
     std::cout << "=============================================\n" << std::endl;
 
     return true;

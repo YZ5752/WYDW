@@ -118,7 +118,7 @@ static gboolean on_chart_draw(GtkWidget* widget, cairo_t* cr, gpointer data) {
     cairo_move_to(cr, width / 2 - extents.width / 2, height - marginBottom / 2);
     cairo_show_text(cr, xLabel);
     // Y轴标签
-    const char* yLabel = "定位精度 (m)";
+    const char* yLabel = "定位误差 (m)";
     cairo_text_extents(cr, yLabel, &extents);
     cairo_save(cr);
     cairo_move_to(cr, marginLeft / 3, height / 2 + extents.width / 2);
@@ -337,7 +337,7 @@ GtkWidget* EvaluationView::createView() {
     gtk_box_pack_start(GTK_BOX(tableBox), m_resultsTable, TRUE, TRUE, 0);
     
     // 图表区域
-    GtkWidget* chartFrame = gtk_frame_new("定位精度随时间变化");
+    GtkWidget* chartFrame = gtk_frame_new("定位误差随时间变化");
     gtk_box_pack_start(GTK_BOX(resultsBox), chartFrame, TRUE, TRUE, 0);
     
     // 绘图区域
@@ -384,9 +384,9 @@ void EvaluationView::updateResultsTable(const std::vector<std::pair<std::string,
             snprintf(valueStr, sizeof(valueStr), "%.2f m", results[i].second);
         } else if (results[i].first == "定位时间") {
             snprintf(valueStr, sizeof(valueStr), "%.2f s", results[i].second);
-        } else if (results[i].first == "定位精度") {
+        } else if (results[i].first == "定位误差") {
             snprintf(valueStr, sizeof(valueStr), "%.6f m", results[i].second);
-        } else if (results[i].first == "测向精度") {
+        } else if (results[i].first == "测向误差") {
             snprintf(valueStr, sizeof(valueStr), "%.6f°", results[i].second);
         } else {
             snprintf(valueStr, sizeof(valueStr), "%.2f", results[i].second);
@@ -558,9 +558,9 @@ void EvaluationView::onModeChanged(bool isSinglePlatform) {
     std::vector<std::pair<std::string, double>> defaultResults;
     defaultResults.push_back({"最远定位距离", 0.0});
     defaultResults.push_back({"定位时间", 0.0});
-    defaultResults.push_back({"定位精度", 0.0});
+    defaultResults.push_back({"定位误差", 0.0});
     if (isSinglePlatform) {
-        defaultResults.push_back({"测向精度", 0.0});
+        defaultResults.push_back({"测向误差", 0.0});
     }
     updateResultsTable(defaultResults);
 } 
