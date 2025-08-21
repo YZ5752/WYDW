@@ -170,7 +170,7 @@ GtkWidget* ApplicationController::createMainWindow() {
     gtk_window_set_position(GTK_WINDOW(window), GTK_WIN_POS_CENTER);
     
     // 设置窗口不可调整大小
-    gtk_window_set_resizable(GTK_WINDOW(window), FALSE);
+    gtk_window_set_resizable(GTK_WINDOW(window),TRUE);
     
     // 强制窗口使用精确的1280x800大小
     gtk_widget_set_size_request(window, 1280, 800);

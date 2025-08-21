@@ -269,7 +269,7 @@ LocationResult InterferometerPositioning::runSimulation(const ReconnaissanceDevi
     
     // 保存结果到数据库
     SinglePlatformTask task;
-    task.techSystem = "INTERFEROMETER";
+    task.positioningAlgorithm = "FAST"; // 使用快速定位算法
     task.deviceId = device.getDeviceId();
     task.radiationId = source.getRadiationId();
     task.executionTime = static_cast<float>(simulationTime);
