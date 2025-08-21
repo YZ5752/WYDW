@@ -88,8 +88,8 @@ private:
     
     void updateDeviceCombos(); // 刷新设备下拉框内容
     void updateSourceCombo();  // 刷新辐射源下拉框内容
-    static void onTechSystemChangedCallback(GtkWidget* widget, gpointer data); // 技术体制切换回调
-    void onTechSystemChanged(); // 技术体制切换处理
+    static void onAlgorithmChangedCallback(GtkWidget* widget, gpointer data); // 定位算法切换回调
+    void onAlgorithmChanged(); // 定位算法切换处理
     static void onDeviceComboChangedCallback(GtkComboBox* combo, gpointer user_data); // 侦察设备下拉框回调
     void onDeviceComboChanged(int idx); // 侦察设备下拉框处理
     static void onSourceComboChangedCallback(GtkComboBox* combo, gpointer user_data); // 辐射源下拉框回调

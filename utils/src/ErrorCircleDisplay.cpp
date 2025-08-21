@@ -1,5 +1,5 @@
-#include "ErrorCircleDisplay.h"
-#include "../views/components/MapView.h"
+#include "../ErrorCircleDisplay.h"
+#include "../../views/components/MapView.h"
 #include <string>
 #include <sstream>
 #include <iostream>

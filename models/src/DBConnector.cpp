@@ -42,7 +42,7 @@ bool DBConnector::staticInit(const std::string& host, const std::string& user, c
 
 //配置数据库信息
 bool DBConnector::initDefaultConnection() {
-    return DBConnector::staticInit("localhost", "root", "123456", "passive_location", 3306);
+    return DBConnector::staticInit("localhost", "root", "123456", "pl", 3306);
 }
 
 void DBConnector::close() {

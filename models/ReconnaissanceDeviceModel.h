@@ -21,6 +21,10 @@ public:
     void setIsStationary(bool s); 
     bool getIsStationary() const;
 
+    //技术体制
+    void setTechSystem(const std::string& techSystem); 
+    std::string getTechSystem() const;
+
     //基线长度
     void setBaselineLength(float v); 
     float getBaselineLength() const;
@@ -93,12 +97,14 @@ public:
     std::string getDeviceTypeString() const;
     std::string getFreqRangeString() const;
     std::string getAngleRangeString() const;
+    std::string getTechSystemString() const; 
 
 
 private:
     int m_deviceId;
     std::string m_deviceName;
     bool m_isStationary;
+    std::string m_techSystem; // 技术体制
     float m_baselineLength;
     float m_noisePsd;
     float m_sampleRate;

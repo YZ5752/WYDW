@@ -557,8 +557,8 @@ void DataSelectionView::onImportButtonClicked(GtkWidget* widget, gpointer user_d
     gtk_grid_attach(GTK_GRID(grid), typeLabel, 0, row, 1, 1);
     gtk_grid_attach(GTK_GRID(grid), typeBox, 1, row, 3, 1);
     row++;
-    // 技术体制
-    GtkWidget* techLabel = gtk_label_new("技术体制");
+    // 定位算法
+    GtkWidget* techLabel = gtk_label_new("定位算法");
     gtk_widget_set_halign(techLabel, GTK_ALIGN_START);
     GtkWidget* techCombo = gtk_combo_box_text_new();
     gtk_grid_attach(GTK_GRID(grid), techLabel, 0, row, 1, 1);
@@ -689,7 +689,7 @@ void DataSelectionView::onImportButtonClicked(GtkWidget* widget, gpointer user_d
         bool valid = true;
         std::string errMsg;
         std::vector<std::string> values;
-        std::string techSystem;
+        std::string positioningAlgorithm;
         std::vector<int> deviceIds;
         gchar* techText = gtk_combo_box_text_get_active_text(GTK_COMBO_BOX_TEXT(techCombo));
         std::string tech = techText ? techText : "";
@@ -700,17 +700,17 @@ void DataSelectionView::onImportButtonClicked(GtkWidget* widget, gpointer user_d
         //处理技术体制
         if (isSingle) {
             showList = &mobileDevices;
-            techSystem = (tech == "时差定位") ? "TDOA" : "INTERFEROMETER";
+            positioningAlgorithm = (tech == "时差定位") ? "BASELINE_LOCATION" : "FAST_LOCATION";
         } else {
             if (tech == "频差定位") {
                 showList = &allDevices;
-                techSystem = "FDOA";
+                positioningAlgorithm = "FREQUENCY_DIFFERENCE";
             } else if (tech == "时差定位") {
                 showList = &fixedDevices;
-                techSystem = "TDOA";
+                positioningAlgorithm = "TIME_DIFFERENCE";
             } else if (tech == "测向定位") {
                 showList = &fixedDevices;
-                techSystem = "FD";
+                positioningAlgorithm = "DIRECTION_FINDING";
             }
         }
         //处理目标坐标
@@ -790,7 +790,7 @@ void DataSelectionView::onImportButtonClicked(GtkWidget* widget, gpointer user_d
             continue;
         }
         // 使用Controller进行数据库操作
-        if (DataSelectionController::getInstance().importData(view, isSingle, values, deviceIds, radiationId, techSystem)) {
+        if (DataSelectionController::getInstance().importData(view, isSingle, values, deviceIds, radiationId, positioningAlgorithm)) {
             gtk_widget_destroy(dialog);
             break;
         } else {
@@ -891,7 +891,7 @@ void DataSelectionView::showTaskDetailsDialog(int taskId, const std::string& tas
 
     // 定义常用字段的显示名称和单位
     const FieldInfo fieldInfos[] = {
-        {"tech_system", "技术体制", ""},
+        {"tech_system", "定位算法", ""},
         {"execution_time", "执行时间", "s"},
         {"target_longitude", "目标经度", "°"},
         {"target_latitude", "目标纬度", "°"},

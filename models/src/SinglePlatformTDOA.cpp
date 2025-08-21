@@ -662,7 +662,7 @@ LocationResult SinglePlatformTDOA::runSimulation(const ReconnaissanceDevice& dev
     
     // 保存结果到数据库
     SinglePlatformTask task;
-    task.techSystem = "TDOA";
+    task.positioningAlgorithm = "BASELINE";
     task.deviceId = device.getDeviceId();
     task.radiationId = source.getRadiationId();
     task.executionTime = static_cast<float>(simulationTime);
