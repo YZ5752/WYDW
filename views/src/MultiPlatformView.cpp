@@ -52,8 +52,8 @@ GtkWidget* MultiPlatformView::createView() {
     GtkWidget* rightBox = gtk_box_new(GTK_ORIENTATION_VERTICAL, 10);
     gtk_container_add(GTK_CONTAINER(rightScrollWin), rightBox);
     
-    // 技术体制选择
-    GtkWidget* algoFrame = gtk_frame_new("技术体制");
+    // 定位算法选择
+    GtkWidget* algoFrame = gtk_frame_new("定位算法");
     gtk_box_pack_start(GTK_BOX(rightBox), algoFrame, FALSE, FALSE, 0);
     
     GtkWidget* algoBox = gtk_box_new(GTK_ORIENTATION_VERTICAL, 5);
@@ -61,12 +61,13 @@ GtkWidget* MultiPlatformView::createView() {
     gtk_container_set_border_width(GTK_CONTAINER(algoBox), 10);
     
     m_algoCombo = gtk_combo_box_text_new();
-    gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(m_algoCombo), "时差体制");
-    gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(m_algoCombo), "频差体制");
-    gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(m_algoCombo), "测向体制");
-    gtk_combo_box_set_active(GTK_COMBO_BOX(m_algoCombo), 1);  // 默认选择频差体制
+    // 修改为：测向定位、时差定位、频差定位（索引：0=测向，1=时差，2=频差）
+    gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(m_algoCombo), "测向定位");
+    gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(m_algoCombo), "时差定位");
+    gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(m_algoCombo), "频差定位");
+    gtk_combo_box_set_active(GTK_COMBO_BOX(m_algoCombo), 2);  // 默认选择频差定位
     gtk_box_pack_start(GTK_BOX(algoBox), m_algoCombo, TRUE, TRUE, 5);
-    g_signal_connect(m_algoCombo, "changed", G_CALLBACK(onTechSystemChangedCallback), this);
+    g_signal_connect(m_algoCombo, "changed", G_CALLBACK(onAlgorithmChangedCallback), this);
     
     // 侦察设备模型区美化：用GtkGrid 2x2布局4个Frame
     GtkWidget* radarGridFrame = gtk_frame_new("侦察设备模型");
@@ -219,37 +220,37 @@ GtkWidget* MultiPlatformView::getView() const {
 }
 
 // 技术体制切换回调
-void MultiPlatformView::onTechSystemChangedCallback(GtkWidget* widget, gpointer data) {
+void MultiPlatformView::onAlgorithmChangedCallback(GtkWidget* widget, gpointer data) {
     MultiPlatformView* self = static_cast<MultiPlatformView*>(data);
-    if (self) self->onTechSystemChanged();
+    if (self) self->onAlgorithmChanged();
 }
 
-void MultiPlatformView::onTechSystemChanged() {
+void MultiPlatformView::onAlgorithmChanged() {
     int idx = gtk_combo_box_get_active(GTK_COMBO_BOX(m_algoCombo));
-    // 0:时差体制，1:频差体制, 2:测向体制
-    if (idx == 0) {
-        // 时差体制：显示4个侦察设备
+    // 0:测向定位，1:时差定位，2:频差定位
+    if (idx == 1) {
+        // 时差定位：显示4个侦察设备
         for (int i = 0; i < 4; ++i) {
             gtk_widget_set_visible(m_radarFrame[i], true);
         }
         // 显示TDOA误差参数UI，隐藏测向误差参数UI
         toggleDFParamsUI(false);
         toggleTDOAParamsUI(true);
-    } else if (idx == 1) {
-        // 频差体制：显示3个侦察设备
+    } else if (idx == 2) {
+        // 频差定位：显示3个侦察设备
         for (int i = 0; i < 4; ++i) {
             gtk_widget_set_visible(m_radarFrame[i], i < 3);
         }
         // 隐藏TDOA误差参数UI和测向误差参数UI
         toggleDFParamsUI(false);
         toggleTDOAParamsUI(false);
-    } else if (idx == 2) {
-        // 测向体制：显示2个侦察设备
+    } else if (idx == 0) {
+        // 测向定位：显示2个侦察设备
         for (int i = 0; i < 4; ++i) {
             gtk_widget_set_visible(m_radarFrame[i], i < 2);
         }
         
-        // 切换到测向体制时，清除当前的选择，以确保仅显示固定设备
+        // 切换到测向定位时，清除当前的选择，以确保仅显示固定设备
         for (int i = 0; i < 2; ++i) {
             gtk_combo_box_set_active(GTK_COMBO_BOX(m_radarCombo[i]), -1);
         }
@@ -259,6 +260,7 @@ void MultiPlatformView::onTechSystemChanged() {
         toggleDFParamsUI(true);
         toggleTDOAParamsUI(false);
     }
+    
     updateDeviceCombos();
     updateSourceCombo();
 }
@@ -269,12 +271,12 @@ void MultiPlatformView::updateDeviceCombos() {
     for (int i = 0; i < 4; ++i) {
         gtk_combo_box_text_remove_all(GTK_COMBO_BOX_TEXT(m_radarCombo[i]));
         for (const auto& dev : m_devices) {
-            // 时差体制：全部只能选固定设备
-            if (idx == 0 && !dev.getIsStationary()) continue;
-            // 频差体制：1-3号可选全部，4号不显示
-            if (idx == 1 && i >= 3) continue;
-            // 测向体制：1-2号只能选固定设备，3-4号不显示
-            if (idx == 2) {
+            // 时差定位：全部只能选固定设备（索引1）
+            if (idx == 1 && !dev.getIsStationary()) continue;
+            // 频差定位：1-3号可选全部，4号不显示（索引2）
+            if (idx == 2 && i >= 3) continue;
+            // 测向定位：1-2号只能选固定设备，3-4号不显示（索引0）
+            if (idx == 0) {
                 if (i >= 2) continue;
                 if (!dev.getIsStationary()) continue;
             }
@@ -293,11 +295,11 @@ void MultiPlatformView::updateSourceCombo() {
     int idx = gtk_combo_box_get_active(GTK_COMBO_BOX(m_algoCombo));
     gtk_combo_box_text_remove_all(GTK_COMBO_BOX_TEXT(m_sourceCombo));
     for (const auto& src : m_sources) {
-        // 时差体制：只能选固定源
+        // 时差定位：只能选固定源（索引1）
+        if (idx == 1 && !src.getIsStationary()) continue;
+        // 频差定位：全部可选（索引2）
+        // 测向定位：只能选固定源（索引0）
         if (idx == 0 && !src.getIsStationary()) continue;
-        // 频差体制：全部可选
-        // 测向体制：只能选固定源
-        if (idx == 2 && !src.getIsStationary()) continue;
         gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(m_sourceCombo), src.getRadiationName().c_str());
     }
     if (gtk_combo_box_get_active(GTK_COMBO_BOX(m_sourceCombo)) < 0 && gtk_combo_box_get_active(GTK_COMBO_BOX(m_sourceCombo)) != 0) {
@@ -388,7 +390,10 @@ void MultiPlatformView::onStartSimulation() {
         return; // 如果检查不通过，直接返回
     }
     
-    // 获取选中的技术体制
+    // 获取当前定位算法：0-测向定位，1-时差定位，2-频差定位
+    int techSystem = gtk_combo_box_get_active(GTK_COMBO_BOX(m_algoCombo));
+    
+    // 获取选中的定位算法名称
     gchar* systemType = gtk_combo_box_text_get_active_text(GTK_COMBO_BOX_TEXT(m_algoCombo));
     if (!systemType) {
         GtkWidget* dialog = gtk_message_dialog_new(
@@ -396,7 +401,7 @@ void MultiPlatformView::onStartSimulation() {
             GTK_DIALOG_MODAL,
             GTK_MESSAGE_WARNING,
             GTK_BUTTONS_OK,
-            "请选择技术体制"
+            "请选择定位算法"
         );
         gtk_dialog_run(GTK_DIALOG(dialog));
         gtk_widget_destroy(dialog);
@@ -419,18 +424,19 @@ void MultiPlatformView::onStartSimulation() {
         return;
     }
     
-    // 获取选中的侦察设备
-    std::vector<std::string> deviceNames;
-    int requiredRadars = 4; // 默认为时差体制的4个雷达
+    // 需要检查的雷达数量
+    int requiredRadars = 4; // 默认给出一个值
     
-    if (strcmp(systemType, "时差体制") == 0) {
-        requiredRadars = 4;
-    } else if (strcmp(systemType, "频差体制") == 0) {
-        requiredRadars = 3;
-    } else if (strcmp(systemType, "测向体制") == 0) {
-        requiredRadars = 2;
+    if (techSystem == 1) {
+        requiredRadars = 4; // 时差定位需要4个雷达
+    } else if (techSystem == 2) {
+        requiredRadars = 3; // 频差定位需要3个雷达
+    } else if (techSystem == 0) {
+        requiredRadars = 2; // 测向定位需要2个雷达
     }
     
+    // 收集已选择的雷达模型名称
+    std::vector<std::string> deviceNames;
     for (int i = 0; i < requiredRadars; ++i) {
         gchar* deviceName = gtk_combo_box_text_get_active_text(GTK_COMBO_BOX_TEXT(m_radarCombo[i]));
         if (deviceName) {
@@ -473,7 +479,7 @@ void MultiPlatformView::onStartSimulation() {
         }
     }
     
-    if (strcmp(systemType, "时差体制") == 0) {
+    if (techSystem == 1) {
         // 获取TDOA误差参数
         double tdoaRmsError = getTDOARmsError();
         double esmToaError = getESMToaError();
@@ -519,25 +525,25 @@ void MultiPlatformView::onStartSimulation() {
 
 // 检查雷达侦察模型是否有效
 bool MultiPlatformView::checkRadarModels() {
-    // 获取当前技术体制：0-时差体制，1-频差体制, 2-测向体制
+    // 获取当前定位算法：0-测向定位，1-时差定位，2-频差定位
     int techSystem = gtk_combo_box_get_active(GTK_COMBO_BOX(m_algoCombo));
     
     // 需要检查的雷达数量
-    int requiredRadars = 4; // 默认为时差体制
+    int requiredRadars = 4; // 默认值
     
-    if (techSystem == 0) {
-        requiredRadars = 4; // 时差体制需要4个雷达
-    } else if (techSystem == 1) {
-        requiredRadars = 3; // 频差体制需要3个雷达
+    if (techSystem == 1) {
+        requiredRadars = 4; // 时差定位需要4个雷达
     } else if (techSystem == 2) {
-        requiredRadars = 2; // 测向体制需要2个雷达
+        requiredRadars = 3; // 频差定位需要3个雷达
+    } else if (techSystem == 0) {
+        requiredRadars = 2; // 测向定位需要2个雷达
     }
     
     // 收集已选择的雷达模型名称
-    std::vector<std::string> selectedRadars;
+    std::vector<std::string> deviceNames;
     for (int i = 0; i < requiredRadars; ++i) {
-        gchar* radarName = gtk_combo_box_text_get_active_text(GTK_COMBO_BOX_TEXT(m_radarCombo[i]));
-        if (!radarName) {
+        gchar* deviceName = gtk_combo_box_text_get_active_text(GTK_COMBO_BOX_TEXT(m_radarCombo[i]));
+        if (!deviceName) {
             GtkWidget* dialog = gtk_message_dialog_new(
                 GTK_WINDOW(gtk_widget_get_toplevel(m_view)),
                 GTK_DIALOG_MODAL,
@@ -550,15 +556,15 @@ bool MultiPlatformView::checkRadarModels() {
             return false;
         }
         
-        std::string name = radarName;
-        g_free(radarName);
-        selectedRadars.push_back(name);
+        std::string name = deviceName;
+        g_free(deviceName);
+        deviceNames.push_back(name);
     }
     
     // 检查是否有重复的雷达模型
-    std::sort(selectedRadars.begin(), selectedRadars.end());
-    auto it = std::unique(selectedRadars.begin(), selectedRadars.end());
-    int uniqueCount = std::distance(selectedRadars.begin(), it);
+    std::sort(deviceNames.begin(), deviceNames.end());
+    auto it = std::unique(deviceNames.begin(), deviceNames.end());
+    int uniqueCount = std::distance(deviceNames.begin(), it);
     
     if (uniqueCount < requiredRadars) {
         // 如果有重复或者数量不够，显示警告
@@ -690,6 +696,84 @@ void MultiPlatformView::showMultipleDeviceErrorLines(const std::vector<int>& dev
 void MultiPlatformView::clearDirectionErrorLines() {
     if (!m_mapView) return;
     m_directionErrorLines.clearDirectionErrorLines(m_mapView);
+    // 兼容性清理：确保多设备(df-*)与旧容器残留被移除
+    std::stringstream deepClear;
+    deepClear
+        << "try {\n"
+        << "  var list = viewer.entities.values;\n"
+        << "  for (var i = list.length - 1; i >= 0; i--) {\n"
+        << "    var e = list[i];\n"
+        << "    var id = e.id ? ('' + e.id) : '';\n"
+        << "    if (id.indexOf('df-') === 0) { viewer.entities.remove(e); }\n"
+        << "  }\n"
+        << "  list = viewer.entities.values;\n"
+        << "  for (var j = list.length - 1; j >= 0; j--) {\n"
+        << "    var e2 = list[j];\n"
+        << "    var pid = (e2.parent && e2.parent.id) ? ('' + e2.parent.id) : '';\n"
+        << "    var nm  = e2.name ? ('' + e2.name) : '';\n"
+        << "    var pnm = (e2.parent && e2.parent.name) ? ('' + e2.parent.name) : '';\n"
+        << "    if (pid.indexOf('df-') === 0 || nm.indexOf('测向误差线') !== -1 || pnm.indexOf('测向误差线') !== -1) {\n"
+        << "      viewer.entities.remove(e2);\n"
+        << "    }\n"
+        << "  }\n"
+        << "  var legacy = viewer.entities.getById('direction-error-lines');\n"
+        << "  if (legacy) viewer.entities.removeById('direction-error-lines');\n"
+        << "} catch (e) { console.warn('mp clear df lines failed', e); }";
+    m_mapView->executeScript(deepClear.str());
+   
+   // 清除误差点和误差圆：这些实体没有ID，需要特殊处理
+   std::stringstream clearErrorEntities;
+   clearErrorEntities
+       << "try {\n"
+       << "  console.log('开始强力清理误差实体...');\n"
+       << "  var list = viewer.entities.values;\n"
+       << "  var removedCount = 0;\n"
+       << "  \n"
+       << "  // 第一轮：清除所有红色小点（误差点）\n"
+       << "  for (var i = list.length - 1; i >= 0; i--) {\n"
+       << "    var e = list[i];\n"
+       << "    if (e.point && e.point.color && e.point.color.equals(Cesium.Color.RED)) {\n"
+       << "      viewer.entities.remove(e);\n"
+       << "      removedCount++;\n"
+       << "    }\n"
+       << "  }\n"
+       << "  console.log('第一轮清除红色点完成，移除数量: ' + removedCount);\n"
+       << "  \n"
+       << "  // 第二轮：清除所有椭圆实体（误差圆）\n"
+       << "  list = viewer.entities.values;\n"
+       << "  removedCount = 0;\n"
+       << "  for (var j = list.length - 1; j >= 0; j--) {\n"
+       << "    var e2 = list[j];\n"
+       << "    if (e2.ellipse) {\n"
+       << "      viewer.entities.remove(e2);\n"
+       << "      removedCount++;\n"
+       << "    }\n"
+       << "  }\n"
+       << "  console.log('第二轮清除椭圆完成，移除数量: ' + removedCount);\n"
+       << "  \n"
+       << "  // 第三轮：清除所有没有ID的实体（兜底清理）\n"
+       << "  list = viewer.entities.values;\n"
+       << "  removedCount = 0;\n"
+       << "  for (var k = list.length - 1; k >= 0; k--) {\n"
+       << "    var e3 = list[k];\n"
+       << "    if (!e3.id || e3.id === '') {\n"
+       << "      viewer.entities.remove(e3);\n"
+       << "      removedCount++;\n"
+       << "    }\n"
+       << "  }\n"
+       << "  console.log('第三轮清除无ID实体完成，移除数量: ' + removedCount);\n"
+       << "  console.log('误差实体强力清理完成！');\n"
+       << "} catch (e) { \n"
+       << "  console.error('误差实体清理失败:', e); \n"
+       << "  // 兜底方案：强制清除所有实体\n"
+       << "  try {\n"
+       << "    viewer.entities.removeAll();\n"
+       << "    console.log('兜底方案：已清除所有实体');\n"
+       << "  } catch (e2) {\n"
+       << "    console.error('兜底方案也失败了:', e2);\n"
+       << "  }\n"
+       << "}";
+   m_mapView->executeScript(clearErrorEntities.str());
 }
 
 // 创建测向误差参数UI
@@ -749,7 +833,7 @@ void MultiPlatformView::createDFParamsUI(GtkWidget* parent) {
 void MultiPlatformView::toggleDFParamsUI(bool show) {
     if (m_dfParamsFrame) {
         if (show) {
-            // 当选择测向体制时，设置默认值并显示
+            // 当选择测向定位时，设置默认值并显示
             if (m_dfMeanError[0]) gtk_entry_set_text(GTK_ENTRY(m_dfMeanError[0]), "0");
             if (m_dfMeanError[1]) gtk_entry_set_text(GTK_ENTRY(m_dfMeanError[1]), "0");
             if (m_dfStdDev[0]) gtk_entry_set_text(GTK_ENTRY(m_dfStdDev[0]), "0");

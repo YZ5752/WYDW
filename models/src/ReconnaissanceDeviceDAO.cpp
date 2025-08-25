@@ -3,6 +3,8 @@
 #include <stdexcept>
 #include <iostream>
 #include <mysql/mysql.h>
+#include <sstream>
+#include <iomanip>
 
 // 单例实现
 ReconnaissanceDeviceDAO& ReconnaissanceDeviceDAO::getInstance() {
@@ -25,7 +27,7 @@ std::vector<ReconnaissanceDevice> ReconnaissanceDeviceDAO::getAllReconnaissanceD
     std::vector<ReconnaissanceDevice> devices;
     DBConnector& db = DBConnector::getInstance();
     MYSQL* conn = db.getConnection();
-    const char* sql = "SELECT device_id, device_name, is_stationary, baseline_length, noise_psd, sample_rate, freq_range_min, freq_range_max, angle_azimuth_min, angle_azimuth_max, angle_elevation_min, angle_elevation_max, movement_speed, movement_azimuth, movement_elevation, longitude, latitude, altitude FROM reconnaissance_device_models";
+    const char* sql = "SELECT device_id, device_name, is_stationary, tech_system, baseline_length, noise_psd, sample_rate, freq_range_min, freq_range_max, angle_azimuth_min, angle_azimuth_max, angle_elevation_min, angle_elevation_max, movement_speed, movement_azimuth, movement_elevation, longitude, latitude, altitude FROM reconnaissance_device_models";
     if (mysql_query(conn, sql)) {
         std::cerr << "Failed to execute query for getAllReconnaissanceDevices: " << mysql_error(conn) << std::endl;
         return devices;
@@ -42,6 +44,7 @@ std::vector<ReconnaissanceDevice> ReconnaissanceDeviceDAO::getAllReconnaissanceD
         device.setDeviceId(row[idx] ? atoi(row[idx]) : 0); idx++;
         device.setDeviceName(row[idx] ? row[idx] : ""); idx++;
         device.setIsStationary(row[idx] ? atoi(row[idx]) != 0 : true); idx++;
+        device.setTechSystem(row[idx] ? row[idx] : "INTERFEROMETER"); idx++;
         device.setBaselineLength(row[idx] ? static_cast<float>(atof(row[idx])) : 0); idx++;
         device.setNoisePsd(row[idx] ? static_cast<float>(atof(row[idx])) : 0); idx++;
         device.setSampleRate(row[idx] ? static_cast<float>(atof(row[idx])) : 0); idx++;
@@ -70,7 +73,7 @@ ReconnaissanceDevice ReconnaissanceDeviceDAO::getReconnaissanceDeviceById(int de
     MYSQL* conn = db.getConnection();
     char sql[512];
     snprintf(sql, sizeof(sql),
-        "SELECT device_id, device_name, is_stationary, baseline_length, noise_psd, sample_rate, freq_range_min, freq_range_max, angle_azimuth_min, angle_azimuth_max, angle_elevation_min, angle_elevation_max, movement_speed, movement_azimuth, movement_elevation, longitude, latitude, altitude FROM reconnaissance_device_models WHERE device_id=%d",
+        "SELECT device_id, device_name, is_stationary, tech_system, baseline_length, noise_psd, sample_rate, freq_range_min, freq_range_max, angle_azimuth_min, angle_azimuth_max, angle_elevation_min, angle_elevation_max, movement_speed, movement_azimuth, movement_elevation, longitude, latitude, altitude FROM reconnaissance_device_models WHERE device_id=%d",
         deviceId);
     if (mysql_query(conn, sql)) {
         std::cerr << "Failed to execute query for getReconnaissanceDeviceById: " << mysql_error(conn) << std::endl;
@@ -87,6 +90,7 @@ ReconnaissanceDevice ReconnaissanceDeviceDAO::getReconnaissanceDeviceById(int de
         device.setDeviceId(row[idx] ? atoi(row[idx]) : 0); idx++;
         device.setDeviceName(row[idx] ? row[idx] : ""); idx++;
         device.setIsStationary(row[idx] ? atoi(row[idx]) != 0 : true); idx++;
+        device.setTechSystem(row[idx] ? row[idx] : "INTERFEROMETER"); idx++;
         device.setBaselineLength(row[idx] ? static_cast<float>(atof(row[idx])) : 0); idx++;
         device.setNoisePsd(row[idx] ? static_cast<float>(atof(row[idx])) : 0); idx++;
         device.setSampleRate(row[idx] ? static_cast<float>(atof(row[idx])) : 0); idx++;
@@ -114,32 +118,34 @@ bool ReconnaissanceDeviceDAO::addReconnaissanceDevice(const ReconnaissanceDevice
     if (!conn) return false;
     
     // 转义设备名称，避免SQL注入并处理特殊字符
-    char escaped_name[device.getDeviceName().length()*2+1];
-    mysql_real_escape_string(conn, escaped_name, device.getDeviceName().c_str(), device.getDeviceName().length());
+    std::string escaped;
+    escaped.resize(device.getDeviceName().length() * 2 + 1);
+    unsigned long outLen = mysql_real_escape_string(conn, &escaped[0], device.getDeviceName().c_str(), device.getDeviceName().length());
+    escaped.resize(outLen);
     
-    char sql[512];
-    snprintf(sql, sizeof(sql),
-        "INSERT INTO reconnaissance_device_models (device_name, is_stationary, baseline_length, noise_psd, sample_rate, freq_range_min, freq_range_max, angle_azimuth_min, angle_azimuth_max, angle_elevation_min, angle_elevation_max, movement_speed, movement_azimuth, movement_elevation, longitude, latitude, altitude) "
-        "VALUES ('%s', %d, %f, %f, %f, %f, %f, %f, %f, %f, %f, %f, %f, %f, %f, %f, %f)",
-        escaped_name,
-        device.getIsStationary() ? 1 : 0,
-        device.getBaselineLength(),
-        device.getNoisePsd(),
-        device.getSampleRate(),
-        device.getFreqRangeMin(),
-        device.getFreqRangeMax(),
-        device.getAngleAzimuthMin(),
-        device.getAngleAzimuthMax(),
-        device.getAngleElevationMin(),
-        device.getAngleElevationMax(),
-        device.getMovementSpeed(),
-        device.getMovementAzimuth(),
-        device.getMovementElevation(),
-        device.getLongitude(),
-        device.getLatitude(),
-        device.getAltitude()
-    );
+    std::ostringstream oss;
+    oss.setf(std::ios::fixed);
+    oss << std::setprecision(6);
+    oss << "INSERT INTO reconnaissance_device_models (device_name, is_stationary, tech_system, baseline_length, noise_psd, sample_rate, freq_range_min, freq_range_max, angle_azimuth_min, angle_azimuth_max, angle_elevation_min, angle_elevation_max, movement_speed, movement_azimuth, movement_elevation, longitude, latitude, altitude) ";
+    oss << "VALUES ('" << escaped << "', "
+        << (device.getIsStationary() ? 1 : 0) << ", '" << device.getTechSystem() << "', "
+        << device.getBaselineLength() << ", "
+        << device.getNoisePsd() << ", "
+        << device.getSampleRate() << ", "
+        << device.getFreqRangeMin() << ", "
+        << device.getFreqRangeMax() << ", "
+        << device.getAngleAzimuthMin() << ", "
+        << device.getAngleAzimuthMax() << ", "
+        << device.getAngleElevationMin() << ", "
+        << device.getAngleElevationMax() << ", "
+        << device.getMovementSpeed() << ", "
+        << device.getMovementAzimuth() << ", "
+        << device.getMovementElevation() << ", "
+        << device.getLongitude() << ", "
+        << device.getLatitude() << ", "
+        << device.getAltitude() << ")";
     
+    std::string sql = oss.str();
     if (!db.executeSQL(sql)) {
         std::cerr << "Failed to add reconnaissance device: " << mysql_error(conn) << std::endl;
         std::cerr << "SQL: " << sql << std::endl;
@@ -158,33 +164,42 @@ bool ReconnaissanceDeviceDAO::updateReconnaissanceDevice(const ReconnaissanceDev
     if (!conn) return false;
     
     // 转义设备名称，避免SQL注入并处理特殊字符
-    char escaped_name[device.getDeviceName().length()*2+1];
-    mysql_real_escape_string(conn, escaped_name, device.getDeviceName().c_str(), device.getDeviceName().length());
+    std::string escaped;
+    escaped.resize(device.getDeviceName().length() * 2 + 1);
+    unsigned long outLen = mysql_real_escape_string(conn, &escaped[0], device.getDeviceName().c_str(), device.getDeviceName().length());
+    escaped.resize(outLen);
     
-    char sql[512];
-    snprintf(sql, sizeof(sql),
-        "UPDATE reconnaissance_device_models SET device_name='%s', is_stationary=%d, baseline_length=%f, noise_psd=%f, sample_rate=%f, freq_range_min=%f, freq_range_max=%f, angle_azimuth_min=%f, angle_azimuth_max=%f, angle_elevation_min=%f, angle_elevation_max=%f, movement_speed=%f, movement_azimuth=%f, movement_elevation=%f, longitude=%f, latitude=%f, altitude=%f WHERE device_id=%d",
-        escaped_name,
-        device.getIsStationary() ? 1 : 0,
-        device.getBaselineLength(),
-        device.getNoisePsd(),
-        device.getSampleRate(),
-        device.getFreqRangeMin(),
-        device.getFreqRangeMax(),
-        device.getAngleAzimuthMin(),
-        device.getAngleAzimuthMax(),
-        device.getAngleElevationMin(),
-        device.getAngleElevationMax(),
-        device.getMovementSpeed(),
-        device.getMovementAzimuth(),
-        device.getMovementElevation(),
-        device.getLongitude(),
-        device.getLatitude(),
-        device.getAltitude(),
-        device.getDeviceId()
-    );
+    std::ostringstream oss;
+    oss.setf(std::ios::fixed);
+    oss << std::setprecision(6);
+    oss << "UPDATE reconnaissance_device_models SET ";
+    oss << "device_name='" << escaped << "', ";
+    oss << "is_stationary=" << (device.getIsStationary() ? 1 : 0) << ", ";
+    oss << "tech_system='" << device.getTechSystem() << "', ";
+    oss << "baseline_length=" << device.getBaselineLength() << ", ";
+    oss << "noise_psd=" << device.getNoisePsd() << ", ";
+    oss << "sample_rate=" << device.getSampleRate() << ", ";
+    oss << "freq_range_min=" << device.getFreqRangeMin() << ", ";
+    oss << "freq_range_max=" << device.getFreqRangeMax() << ", ";
+    oss << "angle_azimuth_min=" << device.getAngleAzimuthMin() << ", ";
+    oss << "angle_azimuth_max=" << device.getAngleAzimuthMax() << ", ";
+    oss << "angle_elevation_min=" << device.getAngleElevationMin() << ", ";
+    oss << "angle_elevation_max=" << device.getAngleElevationMax() << ", ";
+    oss << "movement_speed=" << device.getMovementSpeed() << ", ";
+    oss << "movement_azimuth=" << device.getMovementAzimuth() << ", ";
+    oss << "movement_elevation=" << device.getMovementElevation() << ", ";
+    oss << "longitude=" << device.getLongitude() << ", ";
+    oss << "latitude=" << device.getLatitude() << ", ";
+    oss << "altitude=" << device.getAltitude() << " ";
+    oss << "WHERE device_id=" << device.getDeviceId();
     
-    return db.executeSQL(sql);
+    std::string sql = oss.str();
+    if (!db.executeSQL(sql)) {
+        std::cerr << "Failed to update reconnaissance device: " << mysql_error(conn) << std::endl;
+        std::cerr << "SQL: " << sql << std::endl;
+        return false;
+    }
+    return true;
 }
 
 // 删除侦察设备

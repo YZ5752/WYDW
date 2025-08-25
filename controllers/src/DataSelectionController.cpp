@@ -158,7 +158,7 @@ void DataSelectionController::deleteSelectedItems(DataSelectionView* view) {
 
 // 向数据库录入数据
 bool DataSelectionController::importData(DataSelectionView* view, bool isSingle, const std::vector<std::string>& values,
-                                       const std::vector<int>& deviceIds, int radiationId, const std::string& techSystem) {
+                                       const std::vector<int>& deviceIds, int radiationId, const std::string& positioningAlgorithm) {
     DBConnector& db = DBConnector::getInstance();
     MYSQL* conn = db.getConnection();
     if (!conn || mysql_ping(conn) != 0) {
@@ -170,11 +170,11 @@ bool DataSelectionController::importData(DataSelectionView* view, bool isSingle,
     if (isSingle) {
         int deviceId = deviceIds.empty() ? -1 : deviceIds[0];
         snprintf(sql, sizeof(sql),
-            "INSERT INTO single_platform_task (device_id, radiation_id, tech_system, "
-            "target_longitude, target_latitude, target_altitude, azimuth, elevation, execution_time,positioning_time, "
-            "positioning_distance,  positioning_accuracy, angle_error,direction_finding_accuracy) "
+            "INSERT INTO single_platform_task (device_id, radiation_id, positioning_algorithm, "
+            "target_longitude, target_latitude, target_altitude, azimuth, elevation, execution_time, positioning_time, "
+            "positioning_distance, positioning_accuracy, angle_error, direction_finding_accuracy) "
             "VALUES (%d, %d, '%s', %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)",
-            deviceId, radiationId, techSystem.c_str(),
+            deviceId, radiationId, positioningAlgorithm.c_str(),
             values[0].c_str(), values[1].c_str(), values[2].c_str(), values[3].c_str(), 
             values[4].c_str(), values[5].c_str(), values[6].c_str(), values[7].c_str(), 
             values[8].c_str(), values[9].c_str(), values[10].c_str()
@@ -185,12 +185,12 @@ bool DataSelectionController::importData(DataSelectionView* view, bool isSingle,
         }
     } else {
         snprintf(sql, sizeof(sql),
-            "INSERT INTO multi_platform_task (radiation_id, tech_system, "
+            "INSERT INTO multi_platform_task (radiation_id, positioning_algorithm, "
             "target_longitude, target_latitude, target_altitude, azimuth, elevation, "
             "execution_time, positioning_time, positioning_distance,positioning_accuracy, "
             "movement_speed, movement_azimuth, movement_elevation) "
             "VALUES (%d, '%s', %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)",
-            radiationId, techSystem.c_str(),
+            radiationId, positioningAlgorithm.c_str(),
             values[0].c_str(), values[1].c_str(), values[2].c_str(), values[3].c_str(),
             values[4].c_str(), values[5].c_str(), values[6].c_str(), values[7].c_str(),
             values[8].c_str(), values[9].c_str(), values[10].c_str(), values[11].c_str()

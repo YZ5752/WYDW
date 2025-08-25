@@ -3,6 +3,7 @@
 #include "../../utils/CoordinateTransform.h"
 #include "../../utils/SimulationValidator.h"
 #include "../SinglePlatformTaskDAO.h" // 添加任务DAO头文件
+#include "../../utils/DirectionErrorUtils.h"
 #include <cmath>
 #include <iostream>
 #include <vector>
@@ -654,7 +655,15 @@ LocationResult SinglePlatformTDOA::runSimulation(const ReconnaissanceDevice& dev
     g_print("  实际位置误差: %.2f m (仅供参考)\n", actualPositionError);
 
     // 计算误差因素 - 使用新的误差计算方法
-    result.errorFactors = calculateTDOAErrors(baselineLength, timeDifference, estimatedDistance, incidentAngle);
+    result.errorFactors = DirectionErrorUtils::calculateTDOAErrors(
+        baselineLength,
+        incidentAngle,
+        estimatedDistance,
+        /*carrierFreqHz*/ 100e6,
+        /*phaseErrorDeg*/ 1.0,
+        /*bandwidthHz*/ 10e6,
+        /*snrLinear*/ 100.0,
+        /*samplingRateHz*/ 10e6);
     
     g_print("单平台时差体制定位结果：\n");
     g_print("  方位角: %.2f°, 俯仰角: %.2f°\n", result.azimuth, result.elevation);
@@ -662,7 +671,7 @@ LocationResult SinglePlatformTDOA::runSimulation(const ReconnaissanceDevice& dev
     
     // 保存结果到数据库
     SinglePlatformTask task;
-    task.techSystem = "TDOA";
+    task.positioningAlgorithm = "BASELINE";
     task.deviceId = device.getDeviceId();
     task.radiationId = source.getRadiationId();
     task.executionTime = static_cast<float>(simulationTime);
@@ -705,90 +714,90 @@ LocationResult SinglePlatformTDOA::runSimulation(const ReconnaissanceDevice& dev
     return result;
 }
 
-// 计算时差体制误差因素 - 按照理论公式重新实现
-std::vector<double> SinglePlatformTDOA::calculateTDOAErrors(double baselineLength, 
-                                                         double timeDifference, 
-                                                         double estimatedDistance,
-                                                         double incidentAngle) {
-    std::vector<double> errors;
+// // 计算时差体制误差因素 - 按照理论公式重新实现
+// std::vector<double> SinglePlatformTDOA::calculateTDOAErrors(double baselineLength, 
+//                                                          double timeDifference, 
+//                                                          double estimatedDistance,
+//                                                          double incidentAngle) {
+//     std::vector<double> errors;
     
-    // 1. 时间测量误差 (纳秒级)
-    double samplingRate = 10e6;
-    double timeMeasurementError = 1.0 / (2 * samplingRate);
-    errors.push_back(timeMeasurementError * 1e9); // 转换为纳秒单位
+//     // 1. 时间测量误差 (纳秒级)
+//     double samplingRate = 10e6;
+//     double timeMeasurementError = 1.0 / (2 * samplingRate);
+//     errors.push_back(timeMeasurementError * 1e9); // 转换为纳秒单位
     
-    // 2. 位置测量误差 (角度，度)
-    double positionMeasurementError = 5.0; // 5米GNSS精度
-    double angularPositionError = std::atan(positionMeasurementError / estimatedDistance) * RAD2DEG;
-    errors.push_back(angularPositionError);
+//     // 2. 位置测量误差 (角度，度)
+//     double positionMeasurementError = 5.0; // 5米GNSS精度
+//     double angularPositionError = std::atan(positionMeasurementError / estimatedDistance) * RAD2DEG;
+//     errors.push_back(angularPositionError);
     
-    // 3. 相位不一致性误差 (纳秒级)
-    double frequency = 100e6; // 100MHz
-    double phaseError = 1.0 * DEG2RAD;
-    double timeErrorFromPhase = phaseError / (2 * PI * frequency);
-    errors.push_back(timeErrorFromPhase * 1e9);
+//     // 3. 相位不一致性误差 (纳秒级)
+//     double frequency = 100e6; // 100MHz
+//     double phaseError = 1.0 * DEG2RAD;
+//     double timeErrorFromPhase = phaseError / (2 * PI * frequency);
+//     errors.push_back(timeErrorFromPhase * 1e9);
     
-    // 4. 多径传播误差
-    double multipathError = 0.05 * (1 + 0.1 * std::abs(std::sin(incidentAngle)));
-    errors.push_back(multipathError);
+//     // 4. 多径传播误差
+//     double multipathError = 0.05 * (1 + 0.1 * std::abs(std::sin(incidentAngle)));
+//     errors.push_back(multipathError);
     
-    // 按照图片中的理论公式计算时差测量误差σ_τ
-    // σ_τ = √(σ_τφ² + σ_τn² + σ_τd²)
+//     // 按照图片中的理论公式计算时差测量误差σ_τ
+//     // σ_τ = √(σ_τφ² + σ_τn² + σ_τd²)
     
-    // σ_τφ: 通道间相位延迟不一致性造成的时延不一致性
-    // σ_τφ = (1/(360° × f₀)) × σ_φ
-    double sigma_phi = 1.0; // 假设1度相位误差
-    double sigma_tau_phi = (sigma_phi / 360.0) / frequency; // 秒
+//     // σ_τφ: 通道间相位延迟不一致性造成的时延不一致性
+//     // σ_τφ = (1/(360° × f₀)) × σ_φ
+//     double sigma_phi = 1.0; // 假设1度相位误差
+//     double sigma_tau_phi = (sigma_phi / 360.0) / frequency; // 秒
     
-    // σ_τn: 通道热噪声误差
-    // σ_τn = 0.175 / (Bv × √(2×SNR))
-    double bandwidth = 10e6; // 10MHz带宽
-    double snr_linear = 100.0; // 假设20dB SNR (10^(20/10) = 100)
-    double sigma_tau_n = 0.175 / (bandwidth * std::sqrt(2 * snr_linear));
+//     // σ_τn: 通道热噪声误差
+//     // σ_τn = 0.175 / (Bv × √(2×SNR))
+//     double bandwidth = 10e6; // 10MHz带宽
+//     double snr_linear = 100.0; // 假设20dB SNR (10^(20/10) = 100)
+//     double sigma_tau_n = 0.175 / (bandwidth * std::sqrt(2 * snr_linear));
     
-    // σ_τd: 时间测量误差
-    // σ_τd = 2 / (2√3 × fs)
-    double sigma_tau_d = 2.0 / (2 * std::sqrt(3) * samplingRate);
+//     // σ_τd: 时间测量误差
+//     // σ_τd = 2 / (2√3 × fs)
+//     double sigma_tau_d = 2.0 / (2 * std::sqrt(3) * samplingRate);
     
-    // 综合时差测量误差
-    double sigma_tau = std::sqrt(sigma_tau_phi * sigma_tau_phi + 
-                                sigma_tau_n * sigma_tau_n + 
-                                sigma_tau_d * sigma_tau_d);
+//     // 综合时差测量误差
+//     double sigma_tau = std::sqrt(sigma_tau_phi * sigma_tau_phi + 
+//                                 sigma_tau_n * sigma_tau_n + 
+//                                 sigma_tau_d * sigma_tau_d);
     
-    // 按照图片中的公式计算测向误差
-    // σ_θ = (c / (d × cos(θ))) × σ_τ
-    double cosTheta = std::cos(incidentAngle);
-    if (std::abs(cosTheta) < 1e-6) {
-        cosTheta = 1e-6; // 防止除零
-    }
+//     // 按照图片中的公式计算测向误差
+//     // σ_θ = (c / (d × cos(θ))) × σ_τ
+//     double cosTheta = std::cos(incidentAngle);
+//     if (std::abs(cosTheta) < 1e-6) {
+//         cosTheta = 1e-6; // 防止除零
+//     }
     
-    double sigma_theta = (c / (baselineLength * cosTheta)) * sigma_tau;
+//     double sigma_theta = (c / (baselineLength * cosTheta)) * sigma_tau;
     
-    // 转换为度并限制在合理范围内
-    sigma_theta = sigma_theta * RAD2DEG;
-    sigma_theta = std::min(sigma_theta, 10.0); // 最大10度
-    sigma_theta = std::max(sigma_theta, 0.1);  // 最小0.1度
+//     // 转换为度并限制在合理范围内
+//     sigma_theta = sigma_theta * RAD2DEG;
+//     sigma_theta = std::min(sigma_theta, 10.0); // 最大10度
+//     sigma_theta = std::max(sigma_theta, 0.1);  // 最小0.1度
     
-    errors.push_back(sigma_theta); // 测向误差，单位：度
+//     errors.push_back(sigma_theta); // 测向误差，单位：度
     
-    // 7. 定位误差 - 基于测向误差计算
-    double positionError = estimatedDistance * std::sin(sigma_theta * DEG2RAD);
-    positionError = std::min(positionError, 1000.0); // 限制最大1000米
-    positionError = std::max(positionError, 5.0);    // 最小5米
+//     // 7. 定位误差 - 基于测向误差计算
+//     double positionError = estimatedDistance * std::sin(sigma_theta * DEG2RAD);
+//     positionError = std::min(positionError, 1000.0); // 限制最大1000米
+//     positionError = std::max(positionError, 5.0);    // 最小5米
     
-    errors.push_back(positionError); // 单位为米
+//     errors.push_back(positionError); // 单位为米
     
-    g_print("按理论公式计算的误差分析：\n");
-    g_print("  时间测量误差: %.2f ns\n", errors[0]);
-    g_print("  位置测量误差: %.6f°\n", errors[1]);
-    g_print("  相位误差: %.2f ns\n", errors[2]);
-    g_print("  多径误差: %.4f\n", errors[3]);
-    g_print("  综合时差误差: %.2f ns\n", sigma_tau * 1e9);
-    g_print("  测向误差σ_θ: %.4f°\n", errors[4]);
-    g_print("  定位误差: %.2f m\n", errors[5]);
+//     g_print("按理论公式计算的误差分析：\n");
+//     g_print("  时间测量误差: %.2f ns\n", errors[0]);
+//     g_print("  位置测量误差: %.6f°\n", errors[1]);
+//     g_print("  相位误差: %.2f ns\n", errors[2]);
+//     g_print("  多径误差: %.4f\n", errors[3]);
+//     g_print("  综合时差误差: %.2f ns\n", sigma_tau * 1e9);
+//     g_print("  测向误差σ_θ: %.4f°\n", errors[4]);
+//     g_print("  定位误差: %.2f m\n", errors[5]);
     
-    return errors;
-}
+//     return errors;
+// }
 
 // 修改精度计算方法，使用理论TDOA精度公式
 double calculateTDOAPrecision(double baselineLength, double timeDifference, 

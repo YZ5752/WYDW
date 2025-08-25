@@ -27,8 +27,8 @@ public:
     // 加载模型数据
     void loadModelData();
     
-    // 技术体制变化处理
-    void handleTechSystemChange(const std::string& techSystem);
+    // 处理定位算法变化
+    void handlePositioningAlgorithmChange(const std::string& positioningAlgorithm);
     
     // 获取视图
     SinglePlatformView* getView() const;
