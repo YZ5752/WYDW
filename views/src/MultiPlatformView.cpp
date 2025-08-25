@@ -696,6 +696,84 @@ void MultiPlatformView::showMultipleDeviceErrorLines(const std::vector<int>& dev
 void MultiPlatformView::clearDirectionErrorLines() {
     if (!m_mapView) return;
     m_directionErrorLines.clearDirectionErrorLines(m_mapView);
+    // 兼容性清理：确保多设备(df-*)与旧容器残留被移除
+    std::stringstream deepClear;
+    deepClear
+        << "try {\n"
+        << "  var list = viewer.entities.values;\n"
+        << "  for (var i = list.length - 1; i >= 0; i--) {\n"
+        << "    var e = list[i];\n"
+        << "    var id = e.id ? ('' + e.id) : '';\n"
+        << "    if (id.indexOf('df-') === 0) { viewer.entities.remove(e); }\n"
+        << "  }\n"
+        << "  list = viewer.entities.values;\n"
+        << "  for (var j = list.length - 1; j >= 0; j--) {\n"
+        << "    var e2 = list[j];\n"
+        << "    var pid = (e2.parent && e2.parent.id) ? ('' + e2.parent.id) : '';\n"
+        << "    var nm  = e2.name ? ('' + e2.name) : '';\n"
+        << "    var pnm = (e2.parent && e2.parent.name) ? ('' + e2.parent.name) : '';\n"
+        << "    if (pid.indexOf('df-') === 0 || nm.indexOf('测向误差线') !== -1 || pnm.indexOf('测向误差线') !== -1) {\n"
+        << "      viewer.entities.remove(e2);\n"
+        << "    }\n"
+        << "  }\n"
+        << "  var legacy = viewer.entities.getById('direction-error-lines');\n"
+        << "  if (legacy) viewer.entities.removeById('direction-error-lines');\n"
+        << "} catch (e) { console.warn('mp clear df lines failed', e); }";
+    m_mapView->executeScript(deepClear.str());
+   
+   // 清除误差点和误差圆：这些实体没有ID，需要特殊处理
+   std::stringstream clearErrorEntities;
+   clearErrorEntities
+       << "try {\n"
+       << "  console.log('开始强力清理误差实体...');\n"
+       << "  var list = viewer.entities.values;\n"
+       << "  var removedCount = 0;\n"
+       << "  \n"
+       << "  // 第一轮：清除所有红色小点（误差点）\n"
+       << "  for (var i = list.length - 1; i >= 0; i--) {\n"
+       << "    var e = list[i];\n"
+       << "    if (e.point && e.point.color && e.point.color.equals(Cesium.Color.RED)) {\n"
+       << "      viewer.entities.remove(e);\n"
+       << "      removedCount++;\n"
+       << "    }\n"
+       << "  }\n"
+       << "  console.log('第一轮清除红色点完成，移除数量: ' + removedCount);\n"
+       << "  \n"
+       << "  // 第二轮：清除所有椭圆实体（误差圆）\n"
+       << "  list = viewer.entities.values;\n"
+       << "  removedCount = 0;\n"
+       << "  for (var j = list.length - 1; j >= 0; j--) {\n"
+       << "    var e2 = list[j];\n"
+       << "    if (e2.ellipse) {\n"
+       << "      viewer.entities.remove(e2);\n"
+       << "      removedCount++;\n"
+       << "    }\n"
+       << "  }\n"
+       << "  console.log('第二轮清除椭圆完成，移除数量: ' + removedCount);\n"
+       << "  \n"
+       << "  // 第三轮：清除所有没有ID的实体（兜底清理）\n"
+       << "  list = viewer.entities.values;\n"
+       << "  removedCount = 0;\n"
+       << "  for (var k = list.length - 1; k >= 0; k--) {\n"
+       << "    var e3 = list[k];\n"
+       << "    if (!e3.id || e3.id === '') {\n"
+       << "      viewer.entities.remove(e3);\n"
+       << "      removedCount++;\n"
+       << "    }\n"
+       << "  }\n"
+       << "  console.log('第三轮清除无ID实体完成，移除数量: ' + removedCount);\n"
+       << "  console.log('误差实体强力清理完成！');\n"
+       << "} catch (e) { \n"
+       << "  console.error('误差实体清理失败:', e); \n"
+       << "  // 兜底方案：强制清除所有实体\n"
+       << "  try {\n"
+       << "    viewer.entities.removeAll();\n"
+       << "    console.log('兜底方案：已清除所有实体');\n"
+       << "  } catch (e2) {\n"
+       << "    console.error('兜底方案也失败了:', e2);\n"
+       << "  }\n"
+       << "}";
+   m_mapView->executeScript(clearErrorEntities.str());
 }
 
 // 创建测向误差参数UI

@@ -122,53 +122,41 @@ void SinglePlatformController::startSimulation() {
     g_print("使用侦察设备 ID: %d, 名称: %s\n", device.getDeviceId(), device.getDeviceName().c_str());
     g_print("使用辐射源 ID: %d, 名称: %s\n", source.getRadiationId(), source.getRadiationName().c_str());
     
-    // // ====== 仿真前条件验证 ======
-    // SimulationValidator validator;
-    // std::vector<int> deviceIds = { device.getDeviceId() };
-    // int sourceId = source.getRadiationId();
-    // std::string failMessage;
-    // if (!validator.validateAll(deviceIds, sourceId, failMessage)) {
-    //     g_print("仿真前条件验证失败：%s\n", failMessage.c_str());
-    //     if (m_view) m_view->showErrorMessage(failMessage);
-    //     return;
-    // }
+    // ====== 仿真前条件验证 ======
+    SimulationValidator validator;
+    std::vector<int> deviceIds = { device.getDeviceId() };
+    int sourceId = source.getRadiationId();
+    std::string failMessage;
+    if (!validator.validateAll(deviceIds, sourceId, failMessage)) {
+        g_print("仿真前条件验证失败：%s\n", failMessage.c_str());
+        if (m_view) m_view->showErrorMessage(failMessage);
+        return;
+    }
     
     // 设置初始地图视角
     MapView* mapView = m_view->getMapView();
     if (mapView) {
-        // 不再主动设置地图视角，而是保持当前视角不变
+        // 在任何可视化动作前，主动清理所有以 df- 开头的测向线实体，避免历史残留
+        std::string clearDfLinesScript =
+            "try {\n"
+            "  var list = viewer.entities.values;\n"
+            "  for (var i = list.length - 1; i >= 0; i--) {\n"
+            "    var e = list[i];\n"
+            "    if (e.id && ('' + e.id).indexOf('df-') === 0) { viewer.entities.remove(e); }\n"
+            "  }\n"
+            "} catch (e) { console.warn('clear df-* lines failed', e); }";
+        mapView->executeScript(clearDfLinesScript);
         
-        // 构建设备描述信息
-        std::stringstream deviceDesc;
-        deviceDesc << "侦察设备: " << device.getDeviceName() << "\n"
-                   << "高度: " << device.getAltitude() << "米\n"
-                   << "速度: " << device.getMovementSpeed() << "米/秒\n"
-                   << "方位角: " << device.getMovementAzimuth() << "度";
+        // 清空所有地图标记，仿照多平台逻辑仅保留需要的标记
+        mapView->clearMarkers();
         
-        // 构建辐射源描述信息
-        std::stringstream sourceDesc;
-        sourceDesc << "辐射源: " << source.getRadiationName() << "\n"
-                   << "高度: " << source.getAltitude() << "米\n"
-                   << "频率: " << source.getCarrierFrequency() << "GHz";
-        
-        // 不再清除之前的标记
-        // mapView->clearMarkers();
-        
-        // 直接添加标记点 - 而不是调用updateRadarMarker和updateSourceMarker
-        int radarMarker = mapView->addMarker(
+        // 添加侦察设备标记点
+        mapView->addMarker(
             device.getLongitude(), 
             device.getLatitude(), 
             device.getDeviceName(), 
-            deviceDesc.str(), 
+            "",
             "red"
-        );
-        
-        int sourceMarker = mapView->addMarker(
-            source.getLongitude(), 
-            source.getLatitude(), 
-            source.getRadiationName(), 
-            sourceDesc.str(), 
-            "blue"
         );
         
         // 保存当前视角位置，确保仿真过程中不会改变
@@ -191,11 +179,11 @@ void SinglePlatformController::startSimulation() {
     // 保存原始设备位置，用于定位计算
     ReconnaissanceDevice originalDevice = device; // 保存原始设备数据，位置不会被修改
     
-    std::vector<std::pair<double, double>> trajectoryPoints = 
-        TrajectorySimulator::getInstance().simulateDeviceMovement(deviceCopy, simulationTime);
+    // std::vector<std::pair<double, double>> trajectoryPoints = 
+    //     TrajectorySimulator::getInstance().simulateDeviceMovement(deviceCopy, simulationTime);
     
-    // 在地图上显示设备移动轨迹
-    m_view->animateDeviceMovement(deviceCopy, trajectoryPoints, simulationTime);
+    // // 在地图上显示设备移动轨迹
+    // m_view->animateDeviceMovement(deviceCopy, trajectoryPoints, simulationTime);
     
     // 仿真开始前清空参数
     m_view->clearSimulationResult();
@@ -221,10 +209,10 @@ void SinglePlatformController::startSimulation() {
         result = InterferometerPositioning::getInstance().runSimulation(originalDevice, source, simulationTime);
     }
     
-    // 先设置仿真结果到缓存，确保animateDeviceMovement可以使用
-    m_view->setSimulationResult(result.longitude, result.latitude, result.altitude, result.azimuth, result.elevation);
-    g_print("已设置仿真结果到缓存：经度=%.6f°, 纬度=%.6f°, 高度=%.2fm, 方位角=%.2f°, 俯仰角=%.2f°\n",
-            result.longitude, result.latitude, result.altitude, result.azimuth, result.elevation);
+    // // 先设置仿真结果到缓存，确保animateDeviceMovement可以使用
+    // m_view->setSimulationResult(result.longitude, result.latitude, result.altitude, result.azimuth, result.elevation);
+    // g_print("已设置仿真结果到缓存：经度=%.6f°, 纬度=%.6f°, 高度=%.2fm, 方位角=%.2f°, 俯仰角=%.2f°\n",
+    //         result.longitude, result.latitude, result.altitude, result.azimuth, result.elevation);
     
     // 更新视图显示结果文本
     char directionBuffer[100];
@@ -325,6 +313,27 @@ void SinglePlatformController::startSimulation() {
     // 显示仿真结果参数
     m_view->showSimulationResult(result.longitude, result.latitude, result.altitude, result.azimuth, result.elevation);
 
+        // 添加侦察设备标记点
+        mapView->addMarker(
+            device.getLongitude(), 
+            device.getLatitude(), 
+            device.getDeviceName(), 
+            "",
+            "red"
+        );
+
+    // 在地图上添加“计算后的目标位置”标记，隐藏实际目标位置（不添加实际辐射源标记）
+    if (mapView) {
+        mapView->addMarker(
+            result.longitude,
+            result.latitude,
+            source.getRadiationName(),
+            "",
+            "blue"
+        );
+    }
+
+    // 新增：完全仿照多平台的误差线绘制逻辑
     // 使用已经存在的地图视图变量
     if (mapView && !errorFactors.empty() && errorFactors.size() >= 5) {
         // 获取测向误差数据
@@ -365,7 +374,6 @@ void SinglePlatformController::startSimulation() {
                 
                 // 在绘制新测向线之前立即清除旧的测向线（完全仿照多平台）
                 m_view->clearDirectionErrorLines();
-            
                 
                 // 使用计算的定位结果位置，而不是真实辐射源位置
                 // 这样测向线会指向计算结果，而不是真实目标位置
@@ -451,6 +459,7 @@ void SinglePlatformController::handlePositioningAlgorithmChange(const std::strin
     // 在技术体制改变时执行相关处理
     g_print("定位算法已变更为: %s\n", positioningAlgorithm.c_str());
     
+    // 如果有需要，可以在这里添加其他处理逻辑
 }
 
 // 获取视图

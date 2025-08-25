@@ -657,108 +657,108 @@ MapView* SinglePlatformView::getMapView() const {
     return m_mapView;
 }
 
-// 设备移动动画
-void SinglePlatformView::animateDeviceMovement(const ReconnaissanceDevice& device, 
-                                            const std::vector<std::pair<double, double>>& trajectoryPoints, 
-                                            int simulationTime) {
-    if (!m_mapView || trajectoryPoints.empty()) return;
+// // 设备移动动画
+// void SinglePlatformView::animateDeviceMovement(const ReconnaissanceDevice& device, 
+//                                             const std::vector<std::pair<double, double>>& trajectoryPoints, 
+//                                             int simulationTime) {
+//     if (!m_mapView || trajectoryPoints.empty()) return;
     
-    g_print("开始设备移动动画，轨迹点数量: %zu\n", trajectoryPoints.size());
+//     g_print("开始设备移动动画，轨迹点数量: %zu\n", trajectoryPoints.size());
     
-    // 获取定位数据和测向数据的文本
-    const gchar* locDataStr = gtk_label_get_text(GTK_LABEL(m_locDataValue));
-    const gchar* dirDataStr = gtk_label_get_text(GTK_LABEL(m_dirDataValue));
+    // // 获取定位数据和测向数据的文本
+    // const gchar* locDataStr = gtk_label_get_text(GTK_LABEL(m_locDataValue));
+    // const gchar* dirDataStr = gtk_label_get_text(GTK_LABEL(m_dirDataValue));
     
-    // 解析定位数据（经度、纬度、高度）
-    double calculatedLongitude = 0;
-    double calculatedLatitude = 0;
-    double calculatedAltitude = 0;
+    // // 解析定位数据（经度、纬度、高度）
+    // double calculatedLongitude = 0;
+    // double calculatedLatitude = 0;
+    // double calculatedAltitude = 0;
     
-    // 优先使用缓存中的结果，避免解析失败
-    if (m_hasResult) {
-        calculatedLongitude = m_lastLon;
-        calculatedLatitude = m_lastLat;
-        calculatedAltitude = m_lastAlt;
-        g_print("使用缓存的定位结果: 经度=%.6f°, 纬度=%.6f°, 高度=%.2fm\n", 
-                calculatedLongitude, calculatedLatitude, calculatedAltitude);
-    }
-    // 尝试从标签解析
-    else if (locDataStr && strstr(locDataStr, "经度:") != NULL) {
-        if (sscanf(locDataStr, "经度: %lf°, 纬度: %lf°, 高度: %lfm", 
-               &calculatedLongitude, &calculatedLatitude, &calculatedAltitude) == 3) {
-            g_print("解析定位结果: 经度=%.6f°, 纬度=%.6f°, 高度=%.2fm\n", 
-                    calculatedLongitude, calculatedLatitude, calculatedAltitude);
-        } else {
-            g_print("解析定位结果失败，格式不匹配: %s\n", locDataStr);
-            // 使用辐射源位置作为默认值
-            for (const auto& src : m_sources) {
-                if (src.getRadiationName() == getSelectedSource()) {
-                    calculatedLongitude = src.getLongitude();
-                    calculatedLatitude = src.getLatitude();
-                    calculatedAltitude = src.getAltitude();
-                    break;
-                }
-            }
-        }
-    } else {
-        // 使用辐射源位置作为默认值（这里仅用于可视化）
-        for (const auto& src : m_sources) {
-            if (src.getRadiationName() == getSelectedSource()) {
-                calculatedLongitude = src.getLongitude();
-                calculatedLatitude = src.getLatitude();
-                calculatedAltitude = src.getAltitude();
-                break;
-            }
-        }
-    }
+    // // 优先使用缓存中的结果，避免解析失败
+    // if (m_hasResult) {
+    //     calculatedLongitude = m_lastLon;
+    //     calculatedLatitude = m_lastLat;
+    //     calculatedAltitude = m_lastAlt;
+    //     g_print("使用缓存的定位结果: 经度=%.6f°, 纬度=%.6f°, 高度=%.2fm\n", 
+    //             calculatedLongitude, calculatedLatitude, calculatedAltitude);
+    // }
+    // // 尝试从标签解析
+    // else if (locDataStr && strstr(locDataStr, "经度:") != NULL) {
+    //     if (sscanf(locDataStr, "经度: %lf°, 纬度: %lf°, 高度: %lfm", 
+    //            &calculatedLongitude, &calculatedLatitude, &calculatedAltitude) == 3) {
+    //         g_print("解析定位结果: 经度=%.6f°, 纬度=%.6f°, 高度=%.2fm\n", 
+    //                 calculatedLongitude, calculatedLatitude, calculatedAltitude);
+    //     } else {
+    //         g_print("解析定位结果失败，格式不匹配: %s\n", locDataStr);
+    //         // 使用辐射源位置作为默认值
+    //         for (const auto& src : m_sources) {
+    //             if (src.getRadiationName() == getSelectedSource()) {
+    //                 calculatedLongitude = src.getLongitude();
+    //                 calculatedLatitude = src.getLatitude();
+    //                 calculatedAltitude = src.getAltitude();
+    //                 break;
+    //             }
+    //         }
+    //     }
+    // } else {
+    //     // 使用辐射源位置作为默认值（这里仅用于可视化）
+    //     for (const auto& src : m_sources) {
+    //         if (src.getRadiationName() == getSelectedSource()) {
+    //             calculatedLongitude = src.getLongitude();
+    //             calculatedLatitude = src.getLatitude();
+    //             calculatedAltitude = src.getAltitude();
+    //             break;
+    //         }
+    //     }
+    // }
     
-    // 获取辐射源的位置和名称
-    double radiationSourceLongitude = 0;
-    double radiationSourceLatitude = 0;
-    double radiationSourceAltitude = 0;
-    std::string sourceName = "辐射源";
-    bool sourceFound = false;
+    // // 获取辐射源的位置和名称
+    // double radiationSourceLongitude = 0;
+    // double radiationSourceLatitude = 0;
+    // double radiationSourceAltitude = 0;
+    // std::string sourceName = "辐射源";
+    // bool sourceFound = false;
     
-    for (const auto& src : m_sources) {
-        if (src.getRadiationName() == getSelectedSource()) {
-            radiationSourceLongitude = src.getLongitude();
-            radiationSourceLatitude = src.getLatitude();
-            radiationSourceAltitude = src.getAltitude();
-            sourceName = src.getRadiationName();
-            sourceFound = true;
-            break;
-        }
-    }
+    // for (const auto& src : m_sources) {
+    //     if (src.getRadiationName() == getSelectedSource()) {
+    //         radiationSourceLongitude = src.getLongitude();
+    //         radiationSourceLatitude = src.getLatitude();
+    //         radiationSourceAltitude = src.getAltitude();
+    //         sourceName = src.getRadiationName();
+    //         sourceFound = true;
+    //         break;
+    //     }
+    // }
     
-    if (!sourceFound) {
-        g_print("警告：未找到辐射源位置，使用默认值\n");
-    }
+    // if (!sourceFound) {
+    //     g_print("警告：未找到辐射源位置，使用默认值\n");
+    // }
     
-    // 使用TrajectorySimulator执行动画，并在动画结束时回调显示参数
-    auto self = this;
-    TrajectorySimulator::getInstance().animateDeviceMovement(
-        m_mapView,
-        device,
-        trajectoryPoints,
-        simulationTime,
-        calculatedLongitude,
-        calculatedLatitude,
-        calculatedAltitude,
-        sourceName,
-        radiationSourceLongitude,
-        radiationSourceLatitude,
-        radiationSourceAltitude
-    );
+    // // 使用TrajectorySimulator执行动画，并在动画结束时回调显示参数
+    // auto self = this;
+    // TrajectorySimulator::getInstance().animateDeviceMovement(
+    //     m_mapView,
+    //     device,
+    //     trajectoryPoints,
+    //     simulationTime,
+    //     calculatedLongitude,
+    //     calculatedLatitude,
+    //     calculatedAltitude,
+    //     sourceName,
+    //     radiationSourceLongitude,
+    //     radiationSourceLatitude,
+    //     radiationSourceAltitude
+    // );
     
-    // 动画结束后显示参数（直接从缓存读取）
-    g_timeout_add(simulationTime * 1000 + 1200, [](gpointer data) -> gboolean {
-        auto* view = static_cast<SinglePlatformView*>(data);
-        double lon=0, lat=0, alt=0, az=0, el=0;
-        if (view->getSimulationResult(lon, lat, alt, az, el)) {
-            view->showSimulationResult(lon, lat, alt, az, el);
-        }
-        return G_SOURCE_REMOVE;
-    }, self);
+    // // 动画结束后显示参数（直接从缓存读取）
+    // g_timeout_add(simulationTime * 1000 + 1200, [](gpointer data) -> gboolean {
+    //     auto* view = static_cast<SinglePlatformView*>(data);
+    //     double lon=0, lat=0, alt=0, az=0, el=0;
+    //     if (view->getSimulationResult(lon, lat, alt, az, el)) {
+    //         view->showSimulationResult(lon, lat, alt, az, el);
+    //     }
+    //     return G_SOURCE_REMOVE;
+    // }, self);
     
     // 注释掉动画结束后显示测向误差线的代码
     /*
@@ -880,7 +880,7 @@ void SinglePlatformView::animateDeviceMovement(const ReconnaissanceDevice& devic
         return G_SOURCE_REMOVE;
     }, self);
     */
-}
+// }
 
 void SinglePlatformView::showSimulationResult(double lon, double lat, double alt, double az, double el) {
     char buf[64];
@@ -975,6 +975,37 @@ void SinglePlatformView::showDirectionErrorLines(
 
 // 清除测向误差线
 void SinglePlatformView::clearDirectionErrorLines() {
+<<<<<<< HEAD
+    // if (!m_mapView) return;
+    // // 1) 清除通用ID的误差线容器
+    // m_directionErrorLines.clearDirectionErrorLines(m_mapView);
+    // // 2) 彻底清除多平台绘制产生的所有相关实体：df-*父实体及其子实体、名称含“测向误差线”的实体
+    // std::string deepClearScript =
+    //     "try {\n"
+    //     "  // 先移除以 df- 开头的父容器\n"
+    //     "  var list = viewer.entities.values;\n"
+    //     "  for (var i = list.length - 1; i >= 0; i--) {\n"
+    //     "    var e = list[i];\n"
+    //     "    var id = e.id ? ('' + e.id) : '';\n"
+    //     "    if (id.indexOf('df-') === 0) { viewer.entities.remove(e); }\n"
+    //     "  }\n"
+    //     "  // 再次遍历，删除父容器被删后遗留的子实体（parent id 以 df- 开头）或名称包含'测向误差线'的实体\n"
+    //     "  list = viewer.entities.values;\n"
+    //     "  for (var j = list.length - 1; j >= 0; j--) {\n"
+    //     "    var e2 = list[j];\n"
+    //     "    var pid = (e2.parent && e2.parent.id) ? ('' + e2.parent.id) : '';\n"
+    //     "    var nm  = e2.name ? ('' + e2.name) : '';\n"
+    //     "    var pnm = (e2.parent && e2.parent.name) ? ('' + e2.parent.name) : '';\n"
+    //     "    if (pid.indexOf('df-') === 0 || nm.indexOf('测向误差线') !== -1 || pnm.indexOf('测向误差线') !== -1) {\n"
+    //     "      viewer.entities.remove(e2);\n"
+    //     "    }\n"
+    //     "  }\n"
+    //     "  // 兼容旧容器ID\n"
+    //     "  var oldC = viewer.entities.getById('direction-error-lines');\n"
+    //     "  if (oldC) viewer.entities.removeById('direction-error-lines');\n"
+    //     "} catch (e) { console.warn('deep clear df lines failed', e); }";
+    // m_mapView->executeScript(deepClearScript);
+=======
     if (!m_mapView) return;
     // 1) 清除通用ID的误差线容器
     m_directionErrorLines.clearDirectionErrorLines(m_mapView);
@@ -1004,4 +1035,5 @@ void SinglePlatformView::clearDirectionErrorLines() {
         "  if (oldC) viewer.entities.removeById('direction-error-lines');\n"
         "} catch (e) { console.warn('deep clear df lines failed', e); }";
     m_mapView->executeScript(deepClearScript);
+>>>>>>> b6517e84d090df393acbef76359c87fa77c72143
 }

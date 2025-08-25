@@ -214,16 +214,16 @@ void MultiPlatformController::startSimulation(const std::vector<std::string>& de
                 m_view->updateResult("定位结果（多平台仿真任务保存失败）");
             }
             
-            // 执行多设备轨迹动画
-            TrajectorySimulator::getInstance().animateMultipleDevicesMovement(
-                mapView,
-                selectedDevices,
-                selectedSource,
-                simulationTime,
-                calculatedLongitude,
-                calculatedLatitude,
-                calculatedAltitude
-            );
+            // // 执行多设备轨迹动画
+            // TrajectorySimulator::getInstance().animateMultipleDevicesMovement(
+            //     mapView,
+            //     selectedDevices,
+            //     selectedSource,
+            //     simulationTime,
+            //     calculatedLongitude,
+            //     calculatedLatitude,
+            //     calculatedAltitude
+            // );
         } else {
             m_view->updateResult("定位计算失败");
         }
@@ -396,16 +396,16 @@ void MultiPlatformController::startSimulation(const std::vector<std::string>& de
             int taskId;
             MultiPlatformTaskDAO::getInstance().addMultiPlatformTask(task, taskId);
 
-            // 执行轨迹动画
-            TrajectorySimulator::getInstance().animateMultipleDevicesMovement(
-                mapView,
-                selectedDevices,
-                selectedSource,
-                simulationTime,
-                resultLBH.p1,  // 使用计算的位置
-                resultLBH.p2,
-                resultLBH.p3
-            );
+            // // 执行轨迹动画
+            // TrajectorySimulator::getInstance().animateMultipleDevicesMovement(
+            //     mapView,
+            //     selectedDevices,
+            //     selectedSource,
+            //     simulationTime,
+            //     resultLBH.p1,  // 使用计算的位置
+            //     resultLBH.p2,
+            //     resultLBH.p3
+            // );
             
             // 误差圆计算与显示
             DFResult dfResult = calculateDFErrorCircle(
@@ -415,20 +415,26 @@ void MultiPlatformController::startSimulation(const std::vector<std::string>& de
                 dev2MeanError, dev2StdDev,
                 0 // 随机种子,0表示系统当前时间      
             );
-            showErrorPointsOnMap(mapView, dfResult.estimatedPoints);
-            // 圆心用定位结果的空间直角坐标
-            showErrorCircleOnMap(mapView, resultLBH, dfResult.cepRadius);
-
-            // 显示测向误差线
-            DirectionErrorLines directionErrorLines;
+            
+            // 仿照时差定位的逻辑：先清除所有地图标记，包括误差点和误差圆
+            mapView->clearMarkers();
+            
+            // 仿照时差定位：重新添加侦察设备和辐射源标记
+            for (const auto& device : selectedDevices) {
+                mapView->addMarker(device.getLongitude(), device.getLatitude(), device.getDeviceName(), "", "red");
+            }
+            mapView->addMarker(resultLBH.p1, resultLBH.p2, selectedSource.getRadiationName(), "", "blue");
+            
             m_view->clearDirectionErrorLines(); // 清除可能存在的旧线
+            DirectionErrorLines directionErrorLines;// 显示测向误差线
+
             
             // 设置颜色
             const std::string colors[] = {"#FF0000", "#0000FF"};
             
             // 为每个设备绘制测向线 - 使用从视图获取的误差参数
             for (size_t i = 0; i < selectedDevices.size() && i < 2; ++i) {
-                double meanError = (i == 0) ? dev1MeanError : dev2MeanError;
+                double meanError = (i == 0) ? dev1MeanError : dev2StdDev;
                 double stdDev = (i == 0) ? dev1StdDev : dev2StdDev;
                 
                 // 使用计算的定位结果位置，而不是真实辐射源位置
@@ -446,6 +452,11 @@ void MultiPlatformController::startSimulation(const std::vector<std::string>& de
                 );
                 
             }
+            
+            // 在测向线绘制完成后再绘制误差点和误差圆，这样清理时能一起清除
+            showErrorPointsOnMap(mapView, dfResult.estimatedPoints);
+            // 圆心用定位结果的空间直角坐标
+            showErrorCircleOnMap(mapView, resultLBH, dfResult.cepRadius);
         }
     }
 } 
