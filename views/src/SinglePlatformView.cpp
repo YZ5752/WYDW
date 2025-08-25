@@ -975,6 +975,7 @@ void SinglePlatformView::showDirectionErrorLines(
 
 // 清除测向误差线
 void SinglePlatformView::clearDirectionErrorLines() {
+<<<<<<< HEAD
     // if (!m_mapView) return;
     // // 1) 清除通用ID的误差线容器
     // m_directionErrorLines.clearDirectionErrorLines(m_mapView);
@@ -1004,4 +1005,35 @@ void SinglePlatformView::clearDirectionErrorLines() {
     //     "  if (oldC) viewer.entities.removeById('direction-error-lines');\n"
     //     "} catch (e) { console.warn('deep clear df lines failed', e); }";
     // m_mapView->executeScript(deepClearScript);
+=======
+    if (!m_mapView) return;
+    // 1) 清除通用ID的误差线容器
+    m_directionErrorLines.clearDirectionErrorLines(m_mapView);
+    // 2) 彻底清除多平台绘制产生的所有相关实体：df-*父实体及其子实体、名称含“测向误差线”的实体
+    std::string deepClearScript =
+        "try {\n"
+        "  // 先移除以 df- 开头的父容器\n"
+        "  var list = viewer.entities.values;\n"
+        "  for (var i = list.length - 1; i >= 0; i--) {\n"
+        "    var e = list[i];\n"
+        "    var id = e.id ? ('' + e.id) : '';\n"
+        "    if (id.indexOf('df-') === 0) { viewer.entities.remove(e); }\n"
+        "  }\n"
+        "  // 再次遍历，删除父容器被删后遗留的子实体（parent id 以 df- 开头）或名称包含'测向误差线'的实体\n"
+        "  list = viewer.entities.values;\n"
+        "  for (var j = list.length - 1; j >= 0; j--) {\n"
+        "    var e2 = list[j];\n"
+        "    var pid = (e2.parent && e2.parent.id) ? ('' + e2.parent.id) : '';\n"
+        "    var nm  = e2.name ? ('' + e2.name) : '';\n"
+        "    var pnm = (e2.parent && e2.parent.name) ? ('' + e2.parent.name) : '';\n"
+        "    if (pid.indexOf('df-') === 0 || nm.indexOf('测向误差线') !== -1 || pnm.indexOf('测向误差线') !== -1) {\n"
+        "      viewer.entities.remove(e2);\n"
+        "    }\n"
+        "  }\n"
+        "  // 兼容旧容器ID\n"
+        "  var oldC = viewer.entities.getById('direction-error-lines');\n"
+        "  if (oldC) viewer.entities.removeById('direction-error-lines');\n"
+        "} catch (e) { console.warn('deep clear df lines failed', e); }";
+    m_mapView->executeScript(deepClearScript);
+>>>>>>> b6517e84d090df393acbef76359c87fa77c72143
 }
