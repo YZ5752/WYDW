@@ -121,17 +121,17 @@ GtkWidget* MultiPlatformView::createView() {
     // 保存时间输入框引用
     m_timeEntry = timeEntry;
     
-    // 创建测向误差参数UI - 将这部分移动到这里，在开始按钮之前
-    createDFParamsUI(rightBox);
+    // 创建测向误差参数UI - 自动计算改造：界面不再展示，保留创建但注释掉显示
+    // createDFParamsUI(rightBox);
     
     // 创建TDOA误差参数UI
     createTDOAParamsUI(rightBox);
     
     // 立即隐藏测向参数UI和TDOA参数UI
-    if (m_dfParamsFrame) {
-        gtk_widget_set_no_show_all(m_dfParamsFrame, TRUE);
-        gtk_widget_hide(m_dfParamsFrame);
-    }
+    // if (m_dfParamsFrame) {
+    //     gtk_widget_set_no_show_all(m_dfParamsFrame, TRUE);
+    //     gtk_widget_hide(m_dfParamsFrame);
+    // }
     
     if (m_tdoaParamsFrame) {
         gtk_widget_set_no_show_all(m_tdoaParamsFrame, TRUE);
@@ -256,8 +256,8 @@ void MultiPlatformView::onAlgorithmChanged() {
         }
         gtk_combo_box_set_active(GTK_COMBO_BOX(m_sourceCombo), -1);
         
-        // 显示测向参数UI，隐藏TDOA误差参数UI
-        toggleDFParamsUI(true);
+        // 自动计算：不显示测向参数UI
+        // toggleDFParamsUI(true);
         toggleTDOAParamsUI(false);
     }
     

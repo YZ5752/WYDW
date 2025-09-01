@@ -119,6 +119,8 @@ endforeach()
 add_executable(${PROJECT_NAME} 
     ${MAIN_SRC}
     ${MODEL_SOURCES}
+    ${CMAKE_CURRENT_SOURCE_DIR}/models/src/FastAalgorithm.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/models/src/BaselineAalgorithm.cpp
     ${MODEL_HEADERS}
     ${VIEW_SOURCES}
     ${CONTROLLER_SOURCES}

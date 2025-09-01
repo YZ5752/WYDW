@@ -1,3 +1,4 @@
+#if 0
 #include "../SinglePlatformTDOA.h"
 #include "../../constants/PhysicsConstants.h"
 #include "../../utils/CoordinateTransform.h"
@@ -821,3 +822,4 @@ double calculateTDOAPrecision(double baselineLength, double timeDifference,
     
     return precision;
 }
+#endif

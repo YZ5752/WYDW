@@ -28,4 +28,18 @@ namespace DirectionErrorUtils {
 		double bandwidthHz = 10e6,
 		double snrLinear = 100.0,
 		double samplingRateHz = 10e6);
+
+	// 动态计算TDOA误差计算所需的参数
+	// 根据侦察设备和辐射源的实际参数计算相位误差、带宽、SNR和采样率
+	struct TDOAParams {
+		double phaseErrorDeg;    // 相位误差（度）
+		double bandwidthHz;      // 带宽（Hz）
+		double snrLinear;        // 信噪比（线性值）
+		double samplingRateHz;   // 采样率（Hz）
+	};
+	
+	TDOAParams calculateTDOAParams(
+		const ReconnaissanceDevice& device,
+		const RadiationSource& source,
+		double estimatedDistance);
 } 

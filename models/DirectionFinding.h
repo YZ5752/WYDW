@@ -39,6 +39,9 @@ public:
     bool calculate(double dev1MeanError, double dev1StdDev, 
                  double dev2MeanError, double dev2StdDev);
     
+    // 自动计算（集成 DirectionErrorUtils 按体制计算均值/标准差）
+    bool calculateAuto();
+    
     Result getResult() const;
     std::vector<int> getDeviceIds() const;
     int getSourceId() const;

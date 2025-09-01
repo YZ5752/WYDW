@@ -25,9 +25,8 @@ namespace Constants {
     
     // 干涉仪误差计算相关常量
     const double INTERFEROMETER_ALIGNMENT_ERROR = 0.17;   // 对中误差（度）
-    const double INTERFEROMETER_ATTITUDE_ERROR = 0.1;     // 惯导测量精度（度）
-    const double INTERFEROMETER_PHASE_ERROR = 35.0;       // 相位不一致性误差（度）
-
+    const double INTERFEROMETER_ATTITUDE_ERROR = 0.1;    // 惯导测量精度（度）
+    const double INTERFEROMETER_PHASE_ERROR = 35;       // 相位不一致性误差（度)
     // 圆锥效应误差表格数据
     const int CONE_EFFECT_ALPHA_LEVELS = 4;  // 方位角等级数
     const int CONE_EFFECT_BETA_LEVELS = 3;   // 仰角等级数
