@@ -1,5 +1,6 @@
 #include "../constants/PhysicsConstants.h"
 #include "DirectionFinding.h"
+#include "../utils/DirectionErrorUtils.h"
 #include "../utils/SimulationValidator.h"
 #include <iostream>
 #include <cmath>
@@ -157,6 +158,204 @@ bool DirectionFinding::calculate(double dev1MeanError, double dev1StdDev,
     
     m_result.position = {lbh.p1, lbh.p2, lbh.p3};
     m_result.error = error;
+    m_isInitialized = true;
+    return true;
+}
+
+bool DirectionFinding::calculateAuto() {
+    if (!loadDeviceInfo() || !loadSourceInfo()) return false;
+
+    // 仿真前验证
+    SimulationValidator validator;
+    std::vector<int> deviceIds;
+    for (const auto& device : m_devices) {
+        deviceIds.push_back(device.getDeviceId());
+    }
+    std::string failMessage;
+    if (!validator.validateAll(deviceIds, m_source.getRadiationId(), failMessage)) {
+        GtkWidget* dialog = gtk_message_dialog_new(
+            nullptr,
+            GTK_DIALOG_MODAL,
+            GTK_MESSAGE_ERROR,
+            GTK_BUTTONS_OK,
+            "仿真验证失败：%s", failMessage.c_str()
+        );
+        gtk_window_set_title(GTK_WINDOW(dialog), "测向定位仿真验证失败");
+        gtk_dialog_run(GTK_DIALOG(dialog));
+        gtk_widget_destroy(dialog);
+        return false;
+    }
+
+    // 清除之前的测向线信息
+    m_directionLines.clear();
+    m_deviceErrors.clear();
+
+    // 只用前两个固定设备
+    const auto& dev1 = m_devices[0];
+    const auto& dev2 = m_devices[1];
+
+    // 计算两个设备到辐射源的方位角/俯仰角
+    COORD3 dev1_xyz = lbh2xyz(dev1.getLongitude(), dev1.getLatitude(), dev1.getAltitude());
+    COORD3 dev2_xyz = lbh2xyz(dev2.getLongitude(), dev2.getLatitude(), dev2.getAltitude());
+    COORD3 src_xyz  = lbh2xyz(m_source.getLongitude(), m_source.getLatitude(), m_source.getAltitude());
+
+    auto calcAzEl = [](const COORD3& obs, const COORD3& tgt){
+        double dx = tgt.p1 - obs.p1;
+        double dy = tgt.p2 - obs.p2;
+        double dz = tgt.p3 - obs.p3;
+        double az = std::atan2(dx, dy) * Constants::RAD2DEG; if (az < 0) az += 360.0;
+        double r = std::sqrt(dx*dx + dy*dy);
+        double el = std::atan2(dz, r) * Constants::RAD2DEG;
+        return std::make_pair(az, el);
+    };
+
+    auto [az1, el1] = calcAzEl(dev1_xyz, src_xyz);
+    auto [az2, el2] = calcAzEl(dev2_xyz, src_xyz);
+    std::cout << "[DF] dev1 az(deg)=" << az1 << ", el(deg)=" << el1 << std::endl;
+    std::cout << "[DF] dev2 az(deg)=" << az2 << ", el(deg)=" << el2 << std::endl;
+
+    // 根据设备技术体制选择误差计算方法
+    std::vector<double> err1, err2;
+    double mean1, std1, mean2, std2;
+
+    // 设备1误差计算
+    std::cout << "[DF] 设备1=" << dev1.getDeviceName() << " 技术体制=" << dev1.getTechSystem() << std::endl;
+    if (dev1.getTechSystem() == "时差体制" || dev1.getTechSystem() == "TDOA") {
+        // 时差体制：使用TDOA误差计算方法
+        double incidentAngleRad = az1 * Constants::DEG2RAD;
+        double estimatedDistance = std::sqrt(
+            (src_xyz.p1 - dev1_xyz.p1) * (src_xyz.p1 - dev1_xyz.p1) +
+            (src_xyz.p2 - dev1_xyz.p2) * (src_xyz.p2 - dev1_xyz.p2) +
+            (src_xyz.p3 - dev1_xyz.p3) * (src_xyz.p3 - dev1_xyz.p3)
+        );
+        
+        // 动态计算TDOA参数，根据侦察设备和辐射源的实际参数
+        auto tdoaParams = DirectionErrorUtils::calculateTDOAParams(dev1, m_source, estimatedDistance);
+        
+        std::cout << "[DF] 设备1 TDOA参数: phaseErr=" << tdoaParams.phaseErrorDeg 
+                  << "°, bandwidth=" << tdoaParams.bandwidthHz/1e6 << "MHz, SNR=" << tdoaParams.snrLinear 
+                  << ", fs=" << tdoaParams.samplingRateHz/1e6 << "MHz" << std::endl;
+        
+        err1 = DirectionErrorUtils::calculateTDOAErrors(
+            dev1.getBaselineLength(),
+            incidentAngleRad,
+            estimatedDistance,
+            m_source.getCarrierFrequency() * 1e9,  // 转换为Hz
+            tdoaParams.phaseErrorDeg,
+            tdoaParams.bandwidthHz,
+            tdoaParams.snrLinear,
+            tdoaParams.samplingRateHz
+        );
+        // TDOA返回: [σ_τ, 占位, σ_τφ, σ_τn, σ_θ]
+        // 均值误差=0，标准差=σ_θ
+        mean1 = 0.0;
+        std1 = err1.size() >= 5 ? err1[4] : 0.0;  // σ_θ
+        std::cout << "[DF] 设备1 TDOA误差: mean(deg)=" << mean1 << ", std(deg)=" << std1 << std::endl;
+    } else {
+        // 干涉仪体制：使用干涉仪误差计算方法
+        err1 = DirectionErrorUtils::calculateInterferometerErrors(dev1, m_source, az1, el1);
+        // 干涉仪返回: [Δem, σ_α, σ_β, σ_θ, total]
+        // 均值误差=Δem，标准差=sqrt(σ_α^2+σ_β^2+σ_θ^2)
+        auto calcMeanStd = [](const std::vector<double>& e){
+            if (e.size() < 4) return std::make_pair(0.0, 0.0);
+            double delta_em = e[0];
+            double sigma_alpha = e[1];
+            double sigma_beta  = e[2];
+            double sigma_theta = e[3];
+            double stddev = std::sqrt(sigma_alpha*sigma_alpha + sigma_beta*sigma_beta + sigma_theta*sigma_theta);
+            return std::make_pair(delta_em, stddev);
+        };
+        auto [m1, s1] = calcMeanStd(err1);
+        mean1 = m1;
+        std1 = s1;
+        std::cout << "[DF] 设备1 干涉仪误差: mean(deg)=" << mean1 << ", std(deg)=" << std1 << std::endl;
+    }
+
+    // 设备2误差计算
+    std::cout << "[DF] 设备2=" << dev2.getDeviceName() << " 技术体制=" << dev2.getTechSystem() << std::endl;
+    if (dev2.getTechSystem() == "时差体制" || dev2.getTechSystem() == "TDOA") {
+        // 时差体制：使用TDOA误差计算方法
+        double incidentAngleRad = az2 * Constants::DEG2RAD;
+        double estimatedDistance = std::sqrt(
+            (src_xyz.p1 - dev2_xyz.p1) * (src_xyz.p1 - dev2_xyz.p1) +
+            (src_xyz.p2 - dev2_xyz.p2) * (src_xyz.p2 - dev2_xyz.p2) +
+            (src_xyz.p3 - dev2_xyz.p3) * (src_xyz.p3 - dev2_xyz.p3)
+        );
+        
+        // 动态计算TDOA参数，根据侦察设备和辐射源的实际参数
+        auto tdoaParams = DirectionErrorUtils::calculateTDOAParams(dev2, m_source, estimatedDistance);
+        
+        std::cout << "[DF] 设备2 TDOA参数: phaseErr=" << tdoaParams.phaseErrorDeg 
+                  << "°, bandwidth=" << tdoaParams.bandwidthHz/1e6 << "MHz, SNR=" << tdoaParams.snrLinear 
+                  << ", fs=" << tdoaParams.samplingRateHz/1e6 << "MHz" << std::endl;
+        
+        err2 = DirectionErrorUtils::calculateTDOAErrors(
+            dev2.getBaselineLength(),
+            incidentAngleRad,
+            estimatedDistance,
+            m_source.getCarrierFrequency() * 1e9,  // 转换为Hz
+            tdoaParams.phaseErrorDeg,
+            tdoaParams.bandwidthHz,
+            tdoaParams.snrLinear,
+            tdoaParams.samplingRateHz
+        );
+        // TDOA返回: [σ_τ, 占位, σ_τφ, σ_τn, σ_θ]
+        // 均值误差=0，标准差=σ_θ
+        mean2 = 0.0;
+        std2 = err2.size() >= 5 ? err2[4] : 0.0;  // σ_θ
+        std::cout << "[DF] 设备2 TDOA误差: mean(deg)=" << mean2 << ", std(deg)=" << std2 << std::endl;
+    } else {
+        // 干涉仪体制：使用干涉仪误差计算方法
+        err2 = DirectionErrorUtils::calculateInterferometerErrors(dev2, m_source, az2, el2);
+        // 干涉仪返回: [Δem, σ_α, σ_β, σ_θ, total]
+        // 均值误差=Δem，标准差=sqrt(σ_α^2+σ_β^2+σ_θ^2)
+        auto calcMeanStd = [](const std::vector<double>& e){
+            if (e.size() < 4) return std::make_pair(0.0, 0.0);
+            double delta_em = e[0];
+            double sigma_alpha = e[1];
+            double sigma_beta  = e[2];
+            double sigma_theta = e[3];
+            double stddev = std::sqrt(sigma_alpha*sigma_alpha + sigma_beta*sigma_beta + sigma_theta*sigma_theta);
+            return std::make_pair(delta_em, stddev);
+        };
+        auto [m2, s2] = calcMeanStd(err2);
+        mean2 = m2;
+        std2 = s2;
+        std::cout << "[DF] 设备2 干涉仪误差: mean(deg)=" << mean2 << ", std(deg)=" << std2 << std::endl;
+    }
+
+    // 保存误差参数
+    m_deviceErrors.push_back(std::make_tuple(mean1, std1));
+    m_deviceErrors.push_back(std::make_tuple(mean2, std2));
+
+    // COORD3->Vector3
+    Vector3 esm1(dev1_xyz.p1, dev1_xyz.p2, dev1_xyz.p3);
+    Vector3 esm2(dev2_xyz.p1, dev2_xyz.p2, dev2_xyz.p3);
+    Vector3 target(src_xyz.p1, src_xyz.p2, src_xyz.p3);
+
+    Vector3 dir1 = calculateDirectionWithError(esm1, target, mean1, std1);
+    Vector3 dir2 = calculateDirectionWithError(esm2, target, mean2, std2);
+    std::cout << "[DF] dir1=(" << dir1.x << "," << dir1.y << "," << dir1.z << ")" << std::endl;
+    std::cout << "[DF] dir2=(" << dir2.x << "," << dir2.y << ")" << std::endl;
+
+    // 存储测向线信息
+    DirectionLine line1 = {0, esm1, dir1, mean1, std1};
+    DirectionLine line2 = {1, esm2, dir2, mean2, std2};
+    m_directionLines.push_back(line1);
+    m_directionLines.push_back(line2);
+
+    Vector3 estimatedPosition = intersectDirections2D(esm1, dir1, esm2, dir2);
+    std::cout << "[DF] intersect XY=(" << estimatedPosition.x << "," << estimatedPosition.y << ")" << std::endl;
+    double errorXY = std::sqrt((estimatedPosition.x - target.x) * (estimatedPosition.x - target.x) +
+                               (estimatedPosition.y - target.y) * (estimatedPosition.y - target.y));
+    std::cout << "[DF] errorXY(m)=" << errorXY << std::endl;
+
+    // 修正高度后输出结果
+    COORD3 correctedXYZ(estimatedPosition.x, estimatedPosition.y, src_xyz.p3);
+    auto lbh = xyz2lbh(correctedXYZ.p1, correctedXYZ.p2, correctedXYZ.p3);
+    m_result.position = {lbh.p1, lbh.p2, lbh.p3};
+    std::cout << "[DF] result LBH=(lon=" << lbh.p1 << ", lat=" << lbh.p2 << ", h=" << lbh.p3 << ")" << std::endl;
+    m_result.error = errorXY;
     m_isInitialized = true;
     return true;
 }

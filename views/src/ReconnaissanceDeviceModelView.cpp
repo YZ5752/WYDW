@@ -164,11 +164,11 @@ static void on_row_activated(GtkTreeView* treeView, GtkTreePath* path, GtkTreeVi
     }
     
     // 根据列索引执行相应操作
-    if (columnIndex == 4) { // 查看
+    if (columnIndex == 5) { // 查看
         view->showDeviceDetailsDialog(deviceId);
-    } else if (columnIndex == 5) { // 编辑
+    } else if (columnIndex == 6) { // 编辑
         ReconnaissanceDeviceModelController::getInstance().showEditDialog(deviceId);
-    } else if (columnIndex == 6) { // 删除
+    } else if (columnIndex == 7) { // 删除
         // 显示确认对话框
         GtkWidget* dialog = gtk_message_dialog_new(
             GTK_WINDOW(gtk_widget_get_toplevel(GTK_WIDGET(treeView))),
@@ -184,7 +184,7 @@ static void on_row_activated(GtkTreeView* treeView, GtkTreePath* path, GtkTreeVi
         if (result == GTK_RESPONSE_YES) {
             ReconnaissanceDeviceModelController::getInstance().deleteDevice(deviceId);
         }
-    } else if (columnIndex >= 0 && columnIndex <= 3) { // 双击其他列显示详情
+    } else if (columnIndex >= 0 && columnIndex <= 4) { // 双击其他列显示详情
         view->showDeviceDetailsDialog(deviceId);
     }
 }
@@ -221,18 +221,18 @@ static gboolean on_button_press(GtkWidget* widget, GdkEventButton* event, gpoint
     }
     
     // 处理操作列的单击
-    if (columnIndex >= 4 && columnIndex <= 6) {
+    if (columnIndex >= 5 && columnIndex <= 7) {
         int deviceId = view->getSelectedDeviceId();
         if (deviceId < 0) {
             gtk_tree_path_free(path);
             return FALSE;
         }
         
-        if (columnIndex == 4) { // 查看
+        if (columnIndex == 5) { // 查看
             view->showDeviceDetailsDialog(deviceId);
-        } else if (columnIndex == 5) { // 编辑
+        } else if (columnIndex == 6) { // 编辑
             ReconnaissanceDeviceModelController::getInstance().showEditDialog(deviceId);
-        } else if (columnIndex == 6) { // 删除
+        } else if (columnIndex == 7) { // 删除
             // 显示确认对话框
             GtkWidget* dialog = gtk_message_dialog_new(
                 GTK_WINDOW(gtk_widget_get_toplevel(GTK_WIDGET(treeView))),
@@ -284,15 +284,15 @@ static gboolean on_tree_view_query_tooltip(GtkWidget *widget,
     }
     
     // 对操作列显示提示
-    if (columnIndex == 4) {
+    if (columnIndex == 5) {
         gtk_tooltip_set_text(tooltip, "点击查看设备详情");
         gtk_tree_path_free(path);
         return TRUE;
-    } else if (columnIndex == 5) {
+    } else if (columnIndex == 6) {
         gtk_tooltip_set_text(tooltip, "点击编辑设备信息");
         gtk_tree_path_free(path);
         return TRUE;
-    } else if (columnIndex == 6) {
+    } else if (columnIndex == 7) {
         gtk_tooltip_set_text(tooltip, "点击删除此设备");
         gtk_tree_path_free(path);
         return TRUE;
@@ -346,10 +346,11 @@ GtkWidget* ReconnaissanceDeviceModelView::createView() {
         // 创建表格列表
         
         // 创建列表存储
-        GtkListStore* store = gtk_list_store_new(7, 
+        GtkListStore* store = gtk_list_store_new(8, 
                                               G_TYPE_STRING,  // ID
                                               G_TYPE_STRING,  // 名称
                                               G_TYPE_STRING,  // 类型
+                                              G_TYPE_STRING,  // 技术体制
                                               G_TYPE_STRING,  // 位置
                                               G_TYPE_STRING,  // 查看按钮
                                               G_TYPE_STRING,  // 编辑按钮
@@ -378,9 +379,14 @@ GtkWidget* ReconnaissanceDeviceModelView::createView() {
         column = gtk_tree_view_column_new_with_attributes("类型", renderer, "text", 2, NULL);
         gtk_tree_view_append_column(GTK_TREE_VIEW(m_deviceList), column);
         
+        // 技术体制列
+        renderer = gtk_cell_renderer_text_new();
+        column = gtk_tree_view_column_new_with_attributes("技术体制", renderer, "text", 3, NULL);
+        gtk_tree_view_append_column(GTK_TREE_VIEW(m_deviceList), column);
+        
         // 位置列
         renderer = gtk_cell_renderer_text_new();
-        column = gtk_tree_view_column_new_with_attributes("位置信息", renderer, "text", 3, NULL);
+        column = gtk_tree_view_column_new_with_attributes("位置信息", renderer, "text", 4, NULL);
         gtk_tree_view_append_column(GTK_TREE_VIEW(m_deviceList), column);
         
         // 查看按钮列
@@ -391,7 +397,7 @@ GtkWidget* ReconnaissanceDeviceModelView::createView() {
                     "xalign", 0.0,  // 左对齐
                     "mode", GTK_CELL_RENDERER_MODE_ACTIVATABLE,
                     NULL);
-        column = gtk_tree_view_column_new_with_attributes("查看", renderer, "text", 4, NULL);
+        column = gtk_tree_view_column_new_with_attributes("查看", renderer, "text", 5, NULL);
         gtk_tree_view_column_set_sizing(column, GTK_TREE_VIEW_COLUMN_FIXED);
         gtk_tree_view_column_set_fixed_width(column, 60);
         gtk_tree_view_append_column(GTK_TREE_VIEW(m_deviceList), column);
@@ -404,7 +410,7 @@ GtkWidget* ReconnaissanceDeviceModelView::createView() {
                     "xalign", 0.0,  // 左对齐
                     "mode", GTK_CELL_RENDERER_MODE_ACTIVATABLE,
                     NULL);
-        column = gtk_tree_view_column_new_with_attributes("编辑", renderer, "text", 5, NULL);
+        column = gtk_tree_view_column_new_with_attributes("编辑", renderer, "text", 6, NULL);
         gtk_tree_view_column_set_sizing(column, GTK_TREE_VIEW_COLUMN_FIXED);
         gtk_tree_view_column_set_fixed_width(column, 60);
         gtk_tree_view_append_column(GTK_TREE_VIEW(m_deviceList), column);
@@ -417,7 +423,7 @@ GtkWidget* ReconnaissanceDeviceModelView::createView() {
                     "xalign", 0.0,  // 左对齐
                     "mode", GTK_CELL_RENDERER_MODE_ACTIVATABLE,
                     NULL);
-        column = gtk_tree_view_column_new_with_attributes("删除", renderer, "text", 6, NULL);
+        column = gtk_tree_view_column_new_with_attributes("删除", renderer, "text", 7, NULL);
         gtk_tree_view_column_set_sizing(column, GTK_TREE_VIEW_COLUMN_FIXED);
         gtk_tree_view_column_set_fixed_width(column, 60);
         gtk_tree_view_append_column(GTK_TREE_VIEW(m_deviceList), column);
@@ -494,9 +500,12 @@ GtkWidget* ReconnaissanceDeviceModelView::createEditDialog(const ReconnaissanceD
     // 判断是新增还是编辑操作
     bool isNewDevice = (device.getDeviceId() == 0);
     
+    GtkWidget* parent = nullptr;
+    if (m_view) parent = gtk_widget_get_toplevel(m_view);
+    
     GtkWidget* dialog = gtk_dialog_new_with_buttons(
         isNewDevice ? "新增侦察设备" : "编辑侦察设备",
-        nullptr,
+        parent ? GTK_WINDOW(parent) : nullptr,
         GTK_DIALOG_MODAL,
         "保存", GTK_RESPONSE_OK,
         "取消", GTK_RESPONSE_CANCEL,
@@ -505,6 +514,7 @@ GtkWidget* ReconnaissanceDeviceModelView::createEditDialog(const ReconnaissanceD
     
     // 设置对话框大小
     gtk_window_set_default_size(GTK_WINDOW(dialog), 500, 600);
+    if (parent) gtk_window_set_transient_for(GTK_WINDOW(dialog), GTK_WINDOW(parent));
     
     // 获取内容区域
     GtkWidget* contentArea = gtk_dialog_get_content_area(GTK_DIALOG(dialog));
@@ -549,6 +559,32 @@ GtkWidget* ReconnaissanceDeviceModelView::createEditDialog(const ReconnaissanceD
     gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(isNewDevice ? fixedRadio : (device.getIsStationary() ? fixedRadio : mobileRadio)), TRUE);
     row++;
     
+    // 技术体制
+    GtkWidget* techSystemLabel = gtk_label_new("技术体制:");
+    gtk_widget_set_halign(techSystemLabel, GTK_ALIGN_START);
+    gtk_grid_attach(GTK_GRID(grid), techSystemLabel, 0, row, 1, 1);
+    
+    // 创建技术体制下拉框
+    GtkWidget* techSystemCombo = gtk_combo_box_text_new();
+    gtk_combo_box_text_append(GTK_COMBO_BOX_TEXT(techSystemCombo), "INTERFEROMETER", "干涉仪体制");
+    gtk_combo_box_text_append(GTK_COMBO_BOX_TEXT(techSystemCombo), "TDOA", "时差体制");
+    
+    // 设置当前选中项
+    if (!isNewDevice) {
+        if (device.getTechSystem() == "INTERFEROMETER") {
+            gtk_combo_box_set_active(GTK_COMBO_BOX(techSystemCombo), 0); // 干涉仪体制
+        } else if (device.getTechSystem() == "TDOA") {
+            gtk_combo_box_set_active(GTK_COMBO_BOX(techSystemCombo), 1); // 时差体制
+        } else {
+            gtk_combo_box_set_active(GTK_COMBO_BOX(techSystemCombo), 0); // 默认干涉仪体制
+        }
+    } else {
+        gtk_combo_box_set_active(GTK_COMBO_BOX(techSystemCombo), 0); // 默认干涉仪体制
+    }
+    
+    gtk_grid_attach(GTK_GRID(grid), techSystemCombo, 1, row, 1, 1);
+    row++;
+
     // 基线长度
     GtkWidget* baselineLabel = gtk_label_new("基线长度(m):");
     gtk_widget_set_halign(baselineLabel, GTK_ALIGN_START);
@@ -806,6 +842,7 @@ GtkWidget* ReconnaissanceDeviceModelView::createEditDialog(const ReconnaissanceD
     // 保存对话框中的控件引用，以便在getDeviceFromDialog中使用
     g_object_set_data(G_OBJECT(dialog), "nameEntry", nameEntry);
     g_object_set_data(G_OBJECT(dialog), "fixedRadio", fixedRadio);
+    g_object_set_data(G_OBJECT(dialog), "techSystemCombo", techSystemCombo);
     g_object_set_data(G_OBJECT(dialog), "baselineSpin", baselineSpin);
     g_object_set_data(G_OBJECT(dialog), "noisePsdSpin", noisePsdSpin);
     g_object_set_data(G_OBJECT(dialog), "sampleRateSpin", sampleRateSpin);
@@ -861,10 +898,11 @@ void ReconnaissanceDeviceModelView::updateDeviceList(const std::vector<Reconnais
                           0, "", 
                           1, "无数据", 
                           2, "请添加侦察设备", 
-                          3, "", 
-                          4, "查看",
-                          5, "编辑",
-                          6, "删除",
+                          3, "", // 技术体制
+                          4, "", // 位置信息
+                          5, "查看",
+                          6, "编辑",
+                          7, "删除",
                           -1);
         return;
     }
@@ -883,10 +921,11 @@ void ReconnaissanceDeviceModelView::updateDeviceList(const std::vector<Reconnais
                           0, std::to_string(device.getDeviceId()).c_str(), 
                           1, device.getDeviceName().c_str(), 
                           2, device.getDeviceTypeString().c_str(), 
-                          3, positionSS.str().c_str(),
-                          4, "查看",
-                          5, "编辑",
-                          6, "删除",
+                          3, device.getTechSystemString().c_str(), // 技术体制
+                          4, positionSS.str().c_str(),
+                          5, "查看",
+                          6, "编辑",
+                          7, "删除",
                           -1);
     }
 }
@@ -920,6 +959,7 @@ ReconnaissanceDevice ReconnaissanceDeviceModelView::getDeviceFromDialog(GtkWidge
     // 获取控件引用
     GtkWidget* nameEntry = GTK_WIDGET(g_object_get_data(G_OBJECT(dialog), "nameEntry"));
     GtkWidget* fixedRadio = GTK_WIDGET(g_object_get_data(G_OBJECT(dialog), "fixedRadio"));
+    GtkWidget* techSystemCombo = GTK_WIDGET(g_object_get_data(G_OBJECT(dialog), "techSystemCombo"));
     GtkWidget* baselineSpin = GTK_WIDGET(g_object_get_data(G_OBJECT(dialog), "baselineSpin"));
     GtkWidget* noisePsdSpin = GTK_WIDGET(g_object_get_data(G_OBJECT(dialog), "noisePsdSpin"));
     GtkWidget* sampleRateSpin = GTK_WIDGET(g_object_get_data(G_OBJECT(dialog), "sampleRateSpin"));
@@ -939,6 +979,22 @@ ReconnaissanceDevice ReconnaissanceDeviceModelView::getDeviceFromDialog(GtkWidge
     // 设置设备基本属性
     device.setDeviceName(gtk_entry_get_text(GTK_ENTRY(nameEntry)));
     device.setIsStationary(gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(fixedRadio)));
+    
+    // 设置技术体制
+    gchar* techSystemText = gtk_combo_box_text_get_active_text(GTK_COMBO_BOX_TEXT(techSystemCombo));
+    if (techSystemText) {
+        // 将显示文本映射为内部值
+        if (strcmp(techSystemText, "干涉仪体制") == 0) {
+            device.setTechSystem("INTERFEROMETER");
+        } else if (strcmp(techSystemText, "时差体制") == 0) {
+            device.setTechSystem("TDOA");
+        } else {
+            device.setTechSystem("INTERFEROMETER"); // 默认干涉仪体制
+        }
+        g_free(techSystemText);
+    } else {
+        device.setTechSystem("INTERFEROMETER"); // 默认干涉仪体制
+    }
     
     try {
         double baselineLength = gtk_spin_button_get_value(GTK_SPIN_BUTTON(baselineSpin));
@@ -1083,9 +1139,11 @@ void ReconnaissanceDeviceModelView::showDeviceDetailsDialog(int deviceId) {
     }
     
     // 创建对话框
+    GtkWidget* parent = nullptr;
+    if (m_view) parent = gtk_widget_get_toplevel(m_view);
     GtkWidget* dialog = gtk_dialog_new_with_buttons(
         "侦察设备详情",
-        nullptr,
+        parent ? GTK_WINDOW(parent) : nullptr,
         GTK_DIALOG_MODAL,
         "关闭", GTK_RESPONSE_CLOSE,
         nullptr
@@ -1093,6 +1151,7 @@ void ReconnaissanceDeviceModelView::showDeviceDetailsDialog(int deviceId) {
     
     // 设置对话框大小
     gtk_window_set_default_size(GTK_WINDOW(dialog), 500, 500);
+    if (parent) gtk_window_set_transient_for(GTK_WINDOW(dialog), GTK_WINDOW(parent));
     
     // 获取内容区域
     GtkWidget* contentArea = gtk_dialog_get_content_area(GTK_DIALOG(dialog));
@@ -1142,6 +1201,9 @@ void ReconnaissanceDeviceModelView::showDeviceDetailsDialog(int deviceId) {
     
     // 设备类型
     addInfoRow("设备类型:", device.getDeviceTypeString().c_str());
+    
+    // 技术体制
+    addInfoRow("技术体制:", device.getTechSystemString().c_str());
     
     // 基线长度
     std::ostringstream baselineSS;

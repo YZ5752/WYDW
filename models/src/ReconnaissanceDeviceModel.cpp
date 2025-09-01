@@ -7,6 +7,7 @@ ReconnaissanceDevice::ReconnaissanceDevice()
     : m_deviceId(0),                 // 设备ID（主键）
       m_deviceName(""),              // 设备名称
       m_isStationary(true),          // 是否为固定设备，默认为固定
+      m_techSystem("INTERFEROMETER"), // 技术体制，默认干涉仪体制
       m_baselineLength(0),           // 基线长度（米）
       m_noisePsd(0),                 // 噪声功率谱密度（dBm/Hz）
       m_sampleRate(0),               // 采样速率（GHz）
@@ -51,6 +52,10 @@ void ReconnaissanceDevice::setIsStationary(bool s) {
     }
 }
 bool ReconnaissanceDevice::getIsStationary() const { return m_isStationary; }
+
+// 技术体制
+void ReconnaissanceDevice::setTechSystem(const std::string& techSystem) { m_techSystem = techSystem; }
+std::string ReconnaissanceDevice::getTechSystem() const { return m_techSystem; }
 
 // 基线长度
 void ReconnaissanceDevice::setBaselineLength(float v) { m_baselineLength = v; }
@@ -190,4 +195,15 @@ std::string ReconnaissanceDevice::getAngleRangeString() const {
     snprintf(buf, sizeof(buf), "方位角：%.0f-%.0f，俯仰角：%.0f-%.0f",
              m_angleAzimuthMin, m_angleAzimuthMax, m_angleElevationMin, m_angleElevationMax);
     return std::string(buf);
+}
+
+// 获取技术体制的友好显示文本
+std::string ReconnaissanceDevice::getTechSystemString() const {
+    if (m_techSystem == "INTERFEROMETER") {
+        return "干涉仪体制";
+    } else if (m_techSystem == "TDOA") {
+        return "时差体制";
+    } else {
+        return m_techSystem; // 如果是未知的技术体制，直接返回原始值
+    }
 }

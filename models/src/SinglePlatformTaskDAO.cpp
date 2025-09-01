@@ -17,11 +17,11 @@ bool SinglePlatformTaskDAO::addSinglePlatformTask(const SinglePlatformTask& task
     
     char sql[1024];
     snprintf(sql, sizeof(sql),
-        "INSERT INTO single_platform_task (tech_system, device_id, radiation_id, execution_time, "
+        "INSERT INTO single_platform_task (positioning_algorithm, device_id, radiation_id, execution_time, "
         "target_longitude, target_latitude, target_altitude, azimuth, elevation, angle_error, "
         "positioning_distance, positioning_time, positioning_accuracy, direction_finding_accuracy) "
         "VALUES ('%s', %d, %d, %f, %.6f, %.6f, %.2f, %.2f, %.2f, %.6f, %f, %f, %.6f, %.6f)",
-        task.techSystem.c_str(),
+        task.positioningAlgorithm.c_str(),
         task.deviceId,
         task.radiationId,
         task.executionTime,
@@ -54,7 +54,7 @@ SinglePlatformTask SinglePlatformTaskDAO::getSinglePlatformTaskById(int taskId) 
     
     char sql[1024];
     snprintf(sql, sizeof(sql),
-        "SELECT task_id, tech_system, device_id, radiation_id, execution_time, "
+        "SELECT task_id, positioning_algorithm, device_id, radiation_id, execution_time, "
         "target_longitude, target_latitude, target_altitude, azimuth, elevation, angle_error, "
         "positioning_distance, positioning_time, positioning_accuracy, direction_finding_accuracy, "
         "created_at FROM single_platform_task WHERE task_id = %d",
@@ -87,7 +87,7 @@ std::vector<SinglePlatformTask> SinglePlatformTaskDAO::getAllSinglePlatformTasks
     MYSQL* conn = db.getConnection();
     if (!conn) return std::vector<SinglePlatformTask>{};
     
-    const char* sql = "SELECT task_id, tech_system, device_id, radiation_id, execution_time, "
+    const char* sql = "SELECT task_id, positioning_algorithm, device_id, radiation_id, execution_time, "
                      "target_longitude, target_latitude, target_altitude, azimuth, elevation, angle_error, "
                      "positioning_distance, positioning_time, positioning_accuracy, direction_finding_accuracy, "
                      "created_at FROM single_platform_task ORDER BY task_id DESC";
@@ -119,7 +119,7 @@ std::vector<SinglePlatformTask> SinglePlatformTaskDAO::getSinglePlatformTasksByD
     
     char sql[1024];
     snprintf(sql, sizeof(sql),
-        "SELECT task_id, tech_system, device_id, radiation_id, execution_time, "
+        "SELECT task_id, positioning_algorithm, device_id, radiation_id, execution_time, "
         "target_longitude, target_latitude, target_altitude, azimuth, elevation, angle_error, "
         "positioning_distance, positioning_time, positioning_accuracy, direction_finding_accuracy, "
         "created_at FROM single_platform_task WHERE device_id = %d ORDER BY task_id DESC",
@@ -153,7 +153,7 @@ std::vector<SinglePlatformTask> SinglePlatformTaskDAO::getSinglePlatformTasksByR
     
     char sql[1024];
     snprintf(sql, sizeof(sql),
-        "SELECT task_id, tech_system, device_id, radiation_id, execution_time, "
+        "SELECT task_id, positioning_algorithm, device_id, radiation_id, execution_time, "
         "target_longitude, target_latitude, target_altitude, azimuth, elevation, angle_error, "
         "positioning_distance, positioning_time, positioning_accuracy, direction_finding_accuracy, "
         "created_at FROM single_platform_task WHERE radiation_id = %d ORDER BY task_id DESC",
@@ -187,11 +187,11 @@ bool SinglePlatformTaskDAO::updateSinglePlatformTask(const SinglePlatformTask& t
     
     char sql[1024];
     snprintf(sql, sizeof(sql),
-        "UPDATE single_platform_task SET tech_system = '%s', device_id = %d, radiation_id = %d, "
+        "UPDATE single_platform_task SET positioning_algorithm = '%s', device_id = %d, radiation_id = %d, "
         "execution_time = %f, target_longitude = %.6f, target_latitude = %.6f, target_altitude = %.2f, "
         "azimuth = %.2f, elevation = %.2f, angle_error = %.6f, positioning_distance = %f, positioning_time = %f, "
         "positioning_accuracy = %.6f, direction_finding_accuracy = %.6f WHERE task_id = %d",
-        task.techSystem.c_str(),
+        task.positioningAlgorithm.c_str(),
         task.deviceId,
         task.radiationId,
         task.executionTime,
@@ -236,7 +236,7 @@ SinglePlatformTask SinglePlatformTaskDAO::createTaskFromRow(MYSQL_ROW row) {
     SinglePlatformTask task;
     
     task.taskId = row[0] ? atoi(row[0]) : 0;
-    task.techSystem = row[1] ? row[1] : "";
+    task.positioningAlgorithm = row[1] ? row[1] : "";
     task.deviceId = row[2] ? atoi(row[2]) : 0;
     task.radiationId = row[3] ? atoi(row[3]) : 0;
     task.executionTime = row[4] ? atof(row[4]) : 0.0f;
@@ -266,7 +266,7 @@ std::vector<SinglePlatformTask> SinglePlatformTaskDAO::getTasksBySourceId(int so
     }
         
     char sql[1024];
-    snprintf(sql, sizeof(sql), "SELECT task_id, tech_system, device_id, radiation_id, execution_time, "
+    snprintf(sql, sizeof(sql), "SELECT task_id, positioning_algorithm, device_id, radiation_id, execution_time, "
                      "target_longitude, target_latitude, target_altitude, azimuth, elevation, angle_error, "
                      "positioning_distance, positioning_time, positioning_accuracy, direction_finding_accuracy, "
                      "created_at FROM single_platform_task WHERE radiation_id = %d ORDER BY task_id DESC",
@@ -287,7 +287,7 @@ std::vector<SinglePlatformTask> SinglePlatformTaskDAO::getTasksBySourceId(int so
         
         int idx = 0;
         task.taskId = row[idx] ? atoi(row[idx]) : 0; idx++;
-        task.techSystem = row[idx] ? row[idx] : ""; idx++;
+        task.positioningAlgorithm = row[idx] ? row[idx] : ""; idx++;
         task.deviceId = row[idx] ? atoi(row[idx]) : 0; idx++;
         task.radiationId = row[idx] ? atoi(row[idx]) : 0; idx++;
         task.executionTime = row[idx] ? atof(row[idx]) : 0.0f; idx++;

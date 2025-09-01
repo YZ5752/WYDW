@@ -28,6 +28,8 @@ SinglePlatformView::SinglePlatformView() :
     m_lastAlt(0),
     m_lastAz(0),
     m_lastEl(0) {
+    // 新增：初始化技术体制下拉框指针
+    m_techCombo = nullptr;
 }
 
 SinglePlatformView::~SinglePlatformView() {
@@ -59,8 +61,22 @@ GtkWidget* SinglePlatformView::createView() {
     GtkWidget* rightBox = gtk_box_new(GTK_ORIENTATION_VERTICAL, 10);
     gtk_box_pack_start(GTK_BOX(container), rightBox, FALSE, FALSE, 0);
 
-    // 技术体制选择
-    GtkWidget* algoFrame = gtk_frame_new("技术体制");
+    // 新增：技术体制选择
+    GtkWidget* techFrame = gtk_frame_new("技术体制");
+    gtk_box_pack_start(GTK_BOX(rightBox), techFrame, FALSE, FALSE, 0);
+    GtkWidget* techBox = gtk_box_new(GTK_ORIENTATION_VERTICAL, 5);
+    gtk_container_add(GTK_CONTAINER(techFrame), techBox);
+    gtk_container_set_border_width(GTK_CONTAINER(techBox), 10);
+    GtkWidget* techCombo = gtk_combo_box_text_new();
+    gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(techCombo), "干涉仪体制");
+    gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(techCombo), "时差体制");
+    gtk_combo_box_set_active(GTK_COMBO_BOX(techCombo), 0);
+    gtk_box_pack_start(GTK_BOX(techBox), techCombo, TRUE, TRUE, 5);
+    g_signal_connect(techCombo, "changed", G_CALLBACK(onTechSystemChangedCallback), this);
+    m_techCombo = techCombo;
+
+    // 定位算法选择
+    GtkWidget* algoFrame = gtk_frame_new("定位算法");
     gtk_box_pack_start(GTK_BOX(rightBox), algoFrame, FALSE, FALSE, 0);
     
     GtkWidget* algoBox = gtk_box_new(GTK_ORIENTATION_VERTICAL, 5);
@@ -68,13 +84,14 @@ GtkWidget* SinglePlatformView::createView() {
     gtk_container_set_border_width(GTK_CONTAINER(algoBox), 10);
     
     GtkWidget* algoCombo = gtk_combo_box_text_new();
-    gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(algoCombo), "干涉仪体制");
-    gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(algoCombo), "时差体制");
-    gtk_combo_box_set_active(GTK_COMBO_BOX(algoCombo), 0);
+    // 修改：改为“基线定位/快速定位”
+    gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(algoCombo), "基线定位");
+    gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(algoCombo), "快速定位");
+    gtk_combo_box_set_active(GTK_COMBO_BOX(algoCombo), 1);
     gtk_box_pack_start(GTK_BOX(algoBox), algoCombo, TRUE, TRUE, 5);
-    g_signal_connect(algoCombo, "changed", G_CALLBACK(onTechSystemChangedCallback), this);
+    g_signal_connect(algoCombo, "changed", G_CALLBACK(onAlgorithmChangedCallback), this);
     
-    // 保存技术体制下拉框引用
+    // 保存定位算法下拉框引用
     m_algoCombo = algoCombo;
     
     // 雷达设备模型选择
@@ -253,7 +270,7 @@ void SinglePlatformView::updateLocationData(const std::string& data) {
     gtk_label_set_text(GTK_LABEL(m_locDataValue), data.c_str());
 }
 
-void SinglePlatformView::updateErrorTable(const std::string& techSystem) {
+void SinglePlatformView::updateErrorTable(const std::string& positioningAlgorithm) {
     if (!m_errorTable) {
         return;
     }
@@ -284,11 +301,28 @@ void SinglePlatformView::updateErrorTable(const std::string& techSystem) {
     gtk_widget_show_all(m_errorTable);
 }
 
-std::string SinglePlatformView::getSelectedTechSystem() const {
+std::string SinglePlatformView::getSelectedPositioningAlgorithm() const {
     gchar* text = gtk_combo_box_text_get_active_text(GTK_COMBO_BOX_TEXT(m_algoCombo));
-    std::string result(text ? text : "");
+    std::string algo(text ? text : "");
     g_free(text);
-    return result;
+    
+    // 将“定位算法”中文显示映射为内部编码
+    if (algo == "快速定位") {
+        return "FAST_LOCATION";
+    } else if (algo == "基线定位") {
+        return "BASELINE_LOCATION";
+    }
+    // 默认返回快速定位
+    return "FAST_LOCATION";
+}
+
+std::string SinglePlatformView::getSelectedTechSystem() const {
+    gchar* text = gtk_combo_box_text_get_active_text(GTK_COMBO_BOX_TEXT(m_techCombo));
+    std::string tech(text ? text : "");
+    g_free(text);
+    if (tech == "干涉仪体制") return "INTERFEROMETER";
+    if (tech == "时差体制") return "TDOA";
+    return "INTERFEROMETER";
 }
 
 std::string SinglePlatformView::getSelectedDevice() const {
@@ -352,33 +386,40 @@ void SinglePlatformView::updateDeviceList(const std::vector<ReconnaissanceDevice
 
 // 更新侦察设备下拉框内容
 void SinglePlatformView::updateDeviceCombo() {
-    if (!m_radarCombo) {
-        return;
-    }
-    
-    // 清空下拉框
-    gtk_combo_box_text_remove_all(GTK_COMBO_BOX_TEXT(m_radarCombo));
-    
-    // 如果没有设备，添加提示信息
-    if (m_devices.empty()) {
-        gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(m_radarCombo), "无侦察设备");
-        gtk_combo_box_set_active(GTK_COMBO_BOX(m_radarCombo), 0);
-        return;
-    }
-    
-    // 添加设备列表 - 只能选择移动设备
-    for (const auto& dev : m_devices) {
-        // 只显示移动设备
-        if (dev.getIsStationary()) continue;
-        
-        gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(m_radarCombo), dev.getDeviceName().c_str());
-    }
-    
-    // 默认选择第一项
-    gtk_combo_box_set_active(GTK_COMBO_BOX(m_radarCombo), 0);
-    
-    // 更新地图标记
-    updateRadarMarker();
+	if (!m_radarCombo) {
+		return;
+	}
+	
+	// 清空下拉框
+	gtk_combo_box_text_remove_all(GTK_COMBO_BOX_TEXT(m_radarCombo));
+	
+	// 如果没有设备，添加提示信息
+	if (m_devices.empty()) {
+		gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(m_radarCombo), "无侦察设备");
+		gtk_combo_box_set_active(GTK_COMBO_BOX(m_radarCombo), 0);
+		return;
+	}
+	
+	// 按技术体制与是否移动过滤后添加设备列表 - 单平台只能选择移动设备
+	std::string selTech = getSelectedTechSystem();
+	int appended = 0;
+	for (const auto& dev : m_devices) {
+		if (dev.getIsStationary()) continue; // 只显示移动设备
+		if (dev.getTechSystem() != selTech) continue; // 只显示选中体制
+		gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(m_radarCombo), dev.getDeviceName().c_str());
+		appended++;
+	}
+	
+	if (appended == 0) {
+		gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(m_radarCombo), "无侦察设备");
+		gtk_combo_box_set_active(GTK_COMBO_BOX(m_radarCombo), 0);
+	} else {
+		// 默认选择第一项（若有）
+		gtk_combo_box_set_active(GTK_COMBO_BOX(m_radarCombo), 0);
+	}
+	
+	// 更新地图标记
+	updateRadarMarker();
 }
 
 // 更新辐射源下拉框内容
@@ -401,7 +442,6 @@ void SinglePlatformView::updateSourceCombo() {
     for (const auto& src : m_sources) {
         // 只显示固定辐射源
         if (!src.getIsStationary()) continue;
-        
         gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(m_sourceCombo), src.getRadiationName().c_str());
     }
     
@@ -484,12 +524,23 @@ extern "C" void onSourceComboChangedCallback(GtkWidget* widget, gpointer data) {
 
 // 全局回调函数实现
 extern "C" {
-    void onTechSystemChangedCallback(GtkWidget* widget, gpointer data) {
+    void onAlgorithmChangedCallback(GtkWidget* widget, gpointer data) {
         // 获取SinglePlatformView实例
         SinglePlatformView* view = static_cast<SinglePlatformView*>(data);
         if (view) {
             // 调用静态成员函数
+            SinglePlatformView::onAlgorithmChanged(widget, view);
+        } else {
+            g_print("错误：回调中获取SinglePlatformView实例失败\n");
+        }
+    }
+    
+    void onTechSystemChangedCallback(GtkWidget* widget, gpointer data) {
+        SinglePlatformView* view = static_cast<SinglePlatformView*>(data);
+        if (view) {
             SinglePlatformView::onTechSystemChanged(widget, view);
+        } else {
+            g_print("错误：回调中获取SinglePlatformView实例失败\n");
         }
     }
     
@@ -498,34 +549,70 @@ extern "C" {
         
         // 获取SinglePlatformView实例
         SinglePlatformView* view = static_cast<SinglePlatformView*>(data);
-        if (view) {
-            // 调用静态成员函数
-            SinglePlatformView::onSinglePlatformSimulation(widget, view);
-        } else {
-            g_print("错误：回调中获取SinglePlatformView实例失败\n");
+        if (!view) {
+            g_print("错误：无法获取SinglePlatformView实例\n");
+            return;
         }
+        
+        // 在开始仿真前清除之前的测向误差线
+        view->clearDirectionErrorLines();
+        
+        g_print("调用SinglePlatformController::startSimulation()...\n");
+        
+        // 调用控制器启动仿真
+        SinglePlatformController::getInstance().startSimulation();
+        
+        g_print("仿真函数调用完成\n");
     }
 }
 
 // 静态成员函数实现
-void SinglePlatformView::onTechSystemChanged(GtkWidget* widget, gpointer data) {
+void SinglePlatformView::onAlgorithmChanged(GtkWidget* widget, gpointer data) {
     // 获取SinglePlatformView实例
     SinglePlatformView* view = static_cast<SinglePlatformView*>(data);
     if (!view) return;
     
-    // 获取当前选择的技术体制
+    // 获取当前选择的定位算法显示值
     gchar* text = gtk_combo_box_text_get_active_text(GTK_COMBO_BOX_TEXT(widget));
-    std::string techSystem(text ? text : "");
+    std::string algoUI(text ? text : "");
     g_free(text);
     
-    // 更新精度分析表格（不再依赖技术体制）
-    view->updateErrorTable("");
+    // 获取对应的定位算法内部编码
+    std::string positioningAlgorithm = view->getSelectedPositioningAlgorithm();
     
-    // 更新设备和辐射源下拉框
-    view->updateDeviceCombo();
-    view->updateSourceCombo();
+    // 更新精度分析表格
+    view->updateErrorTable(positioningAlgorithm);
     
-    g_print("技术体制已更改为: %s\n", techSystem.c_str());
+    g_print("定位算法已更改为: %s (内部: %s)\n", algoUI.c_str(), positioningAlgorithm.c_str());
+}
+
+void SinglePlatformView::onTechSystemChanged(GtkWidget* widget, gpointer data) {
+	SinglePlatformView* view = static_cast<SinglePlatformView*>(data);
+	if (!view) return;
+	
+	// 体制改变时刷新设备列表（只展示该技术体制且为移动的设备）
+	view->updateDeviceCombo();
+	// 同步更新当前地图上的设备标记
+	view->updateRadarMarker();
+	// 清除测向误差线
+	view->clearDirectionErrorLines();
+	
+	// 根据体制自动选择常用算法：干涉仪->快速定位；时差->基线定位
+	std::string tech = view->getSelectedTechSystem();
+	if (view->m_algoCombo) {
+		if (tech == "INTERFEROMETER") {
+			// 设置为"快速定位"索引1
+			gtk_combo_box_set_active(GTK_COMBO_BOX(view->m_algoCombo), 1);
+		} else if (tech == "TDOA") {
+			// 设置为"基线定位"索引0
+			gtk_combo_box_set_active(GTK_COMBO_BOX(view->m_algoCombo), 0);
+		}
+	}
+	
+	gchar* text = gtk_combo_box_text_get_active_text(GTK_COMBO_BOX_TEXT(widget));
+	std::string techUI(text ? text : "");
+	if (text) g_free(text);
+	g_print("技术体制已更改为: %s\n", techUI.c_str());
 }
 
 void SinglePlatformView::onSinglePlatformSimulation(GtkWidget* widget, gpointer data) {
@@ -538,8 +625,8 @@ void SinglePlatformView::onSinglePlatformSimulation(GtkWidget* widget, gpointer 
         return;
     }
     
-    // 注释掉清除测向误差线的代码
-    // view->clearDirectionErrorLines();
+    // 在开始仿真前清除之前的测向误差线
+    view->clearDirectionErrorLines();
     
     g_print("调用SinglePlatformController::startSimulation()...\n");
     
@@ -570,108 +657,108 @@ MapView* SinglePlatformView::getMapView() const {
     return m_mapView;
 }
 
-// 设备移动动画
-void SinglePlatformView::animateDeviceMovement(const ReconnaissanceDevice& device, 
-                                            const std::vector<std::pair<double, double>>& trajectoryPoints, 
-                                            int simulationTime) {
-    if (!m_mapView || trajectoryPoints.empty()) return;
+// // 设备移动动画
+// void SinglePlatformView::animateDeviceMovement(const ReconnaissanceDevice& device, 
+//                                             const std::vector<std::pair<double, double>>& trajectoryPoints, 
+//                                             int simulationTime) {
+//     if (!m_mapView || trajectoryPoints.empty()) return;
     
-    g_print("开始设备移动动画，轨迹点数量: %zu\n", trajectoryPoints.size());
+//     g_print("开始设备移动动画，轨迹点数量: %zu\n", trajectoryPoints.size());
     
-    // 获取定位数据和测向数据的文本
-    const gchar* locDataStr = gtk_label_get_text(GTK_LABEL(m_locDataValue));
-    const gchar* dirDataStr = gtk_label_get_text(GTK_LABEL(m_dirDataValue));
+    // // 获取定位数据和测向数据的文本
+    // const gchar* locDataStr = gtk_label_get_text(GTK_LABEL(m_locDataValue));
+    // const gchar* dirDataStr = gtk_label_get_text(GTK_LABEL(m_dirDataValue));
     
-    // 解析定位数据（经度、纬度、高度）
-    double calculatedLongitude = 0;
-    double calculatedLatitude = 0;
-    double calculatedAltitude = 0;
+    // // 解析定位数据（经度、纬度、高度）
+    // double calculatedLongitude = 0;
+    // double calculatedLatitude = 0;
+    // double calculatedAltitude = 0;
     
-    // 优先使用缓存中的结果，避免解析失败
-    if (m_hasResult) {
-        calculatedLongitude = m_lastLon;
-        calculatedLatitude = m_lastLat;
-        calculatedAltitude = m_lastAlt;
-        g_print("使用缓存的定位结果: 经度=%.6f°, 纬度=%.6f°, 高度=%.2fm\n", 
-                calculatedLongitude, calculatedLatitude, calculatedAltitude);
-    }
-    // 尝试从标签解析
-    else if (locDataStr && strstr(locDataStr, "经度:") != NULL) {
-        if (sscanf(locDataStr, "经度: %lf°, 纬度: %lf°, 高度: %lfm", 
-               &calculatedLongitude, &calculatedLatitude, &calculatedAltitude) == 3) {
-            g_print("解析定位结果: 经度=%.6f°, 纬度=%.6f°, 高度=%.2fm\n", 
-                    calculatedLongitude, calculatedLatitude, calculatedAltitude);
-        } else {
-            g_print("解析定位结果失败，格式不匹配: %s\n", locDataStr);
-            // 使用辐射源位置作为默认值
-            for (const auto& src : m_sources) {
-                if (src.getRadiationName() == getSelectedSource()) {
-                    calculatedLongitude = src.getLongitude();
-                    calculatedLatitude = src.getLatitude();
-                    calculatedAltitude = src.getAltitude();
-                    break;
-                }
-            }
-        }
-    } else {
-        // 使用辐射源位置作为默认值（这里仅用于可视化）
-        for (const auto& src : m_sources) {
-            if (src.getRadiationName() == getSelectedSource()) {
-                calculatedLongitude = src.getLongitude();
-                calculatedLatitude = src.getLatitude();
-                calculatedAltitude = src.getAltitude();
-                break;
-            }
-        }
-    }
+    // // 优先使用缓存中的结果，避免解析失败
+    // if (m_hasResult) {
+    //     calculatedLongitude = m_lastLon;
+    //     calculatedLatitude = m_lastLat;
+    //     calculatedAltitude = m_lastAlt;
+    //     g_print("使用缓存的定位结果: 经度=%.6f°, 纬度=%.6f°, 高度=%.2fm\n", 
+    //             calculatedLongitude, calculatedLatitude, calculatedAltitude);
+    // }
+    // // 尝试从标签解析
+    // else if (locDataStr && strstr(locDataStr, "经度:") != NULL) {
+    //     if (sscanf(locDataStr, "经度: %lf°, 纬度: %lf°, 高度: %lfm", 
+    //            &calculatedLongitude, &calculatedLatitude, &calculatedAltitude) == 3) {
+    //         g_print("解析定位结果: 经度=%.6f°, 纬度=%.6f°, 高度=%.2fm\n", 
+    //                 calculatedLongitude, calculatedLatitude, calculatedAltitude);
+    //     } else {
+    //         g_print("解析定位结果失败，格式不匹配: %s\n", locDataStr);
+    //         // 使用辐射源位置作为默认值
+    //         for (const auto& src : m_sources) {
+    //             if (src.getRadiationName() == getSelectedSource()) {
+    //                 calculatedLongitude = src.getLongitude();
+    //                 calculatedLatitude = src.getLatitude();
+    //                 calculatedAltitude = src.getAltitude();
+    //                 break;
+    //             }
+    //         }
+    //     }
+    // } else {
+    //     // 使用辐射源位置作为默认值（这里仅用于可视化）
+    //     for (const auto& src : m_sources) {
+    //         if (src.getRadiationName() == getSelectedSource()) {
+    //             calculatedLongitude = src.getLongitude();
+    //             calculatedLatitude = src.getLatitude();
+    //             calculatedAltitude = src.getAltitude();
+    //             break;
+    //         }
+    //     }
+    // }
     
-    // 获取辐射源的位置和名称
-    double radiationSourceLongitude = 0;
-    double radiationSourceLatitude = 0;
-    double radiationSourceAltitude = 0;
-    std::string sourceName = "辐射源";
-    bool sourceFound = false;
+    // // 获取辐射源的位置和名称
+    // double radiationSourceLongitude = 0;
+    // double radiationSourceLatitude = 0;
+    // double radiationSourceAltitude = 0;
+    // std::string sourceName = "辐射源";
+    // bool sourceFound = false;
     
-    for (const auto& src : m_sources) {
-        if (src.getRadiationName() == getSelectedSource()) {
-            radiationSourceLongitude = src.getLongitude();
-            radiationSourceLatitude = src.getLatitude();
-            radiationSourceAltitude = src.getAltitude();
-            sourceName = src.getRadiationName();
-            sourceFound = true;
-            break;
-        }
-    }
+    // for (const auto& src : m_sources) {
+    //     if (src.getRadiationName() == getSelectedSource()) {
+    //         radiationSourceLongitude = src.getLongitude();
+    //         radiationSourceLatitude = src.getLatitude();
+    //         radiationSourceAltitude = src.getAltitude();
+    //         sourceName = src.getRadiationName();
+    //         sourceFound = true;
+    //         break;
+    //     }
+    // }
     
-    if (!sourceFound) {
-        g_print("警告：未找到辐射源位置，使用默认值\n");
-    }
+    // if (!sourceFound) {
+    //     g_print("警告：未找到辐射源位置，使用默认值\n");
+    // }
     
-    // 使用TrajectorySimulator执行动画，并在动画结束时回调显示参数
-    auto self = this;
-    TrajectorySimulator::getInstance().animateDeviceMovement(
-        m_mapView,
-        device,
-        trajectoryPoints,
-        simulationTime,
-        calculatedLongitude,
-        calculatedLatitude,
-        calculatedAltitude,
-        sourceName,
-        radiationSourceLongitude,
-        radiationSourceLatitude,
-        radiationSourceAltitude
-    );
+    // // 使用TrajectorySimulator执行动画，并在动画结束时回调显示参数
+    // auto self = this;
+    // TrajectorySimulator::getInstance().animateDeviceMovement(
+    //     m_mapView,
+    //     device,
+    //     trajectoryPoints,
+    //     simulationTime,
+    //     calculatedLongitude,
+    //     calculatedLatitude,
+    //     calculatedAltitude,
+    //     sourceName,
+    //     radiationSourceLongitude,
+    //     radiationSourceLatitude,
+    //     radiationSourceAltitude
+    // );
     
-    // 动画结束后显示参数（直接从缓存读取）
-    g_timeout_add(simulationTime * 1000 + 1200, [](gpointer data) -> gboolean {
-        auto* view = static_cast<SinglePlatformView*>(data);
-        double lon=0, lat=0, alt=0, az=0, el=0;
-        if (view->getSimulationResult(lon, lat, alt, az, el)) {
-            view->showSimulationResult(lon, lat, alt, az, el);
-        }
-        return G_SOURCE_REMOVE;
-    }, self);
+    // // 动画结束后显示参数（直接从缓存读取）
+    // g_timeout_add(simulationTime * 1000 + 1200, [](gpointer data) -> gboolean {
+    //     auto* view = static_cast<SinglePlatformView*>(data);
+    //     double lon=0, lat=0, alt=0, az=0, el=0;
+    //     if (view->getSimulationResult(lon, lat, alt, az, el)) {
+    //         view->showSimulationResult(lon, lat, alt, az, el);
+    //     }
+    //     return G_SOURCE_REMOVE;
+    // }, self);
     
     // 注释掉动画结束后显示测向误差线的代码
     /*
@@ -793,7 +880,7 @@ void SinglePlatformView::animateDeviceMovement(const ReconnaissanceDevice& devic
         return G_SOURCE_REMOVE;
     }, self);
     */
-}
+// }
 
 void SinglePlatformView::showSimulationResult(double lon, double lat, double alt, double az, double el) {
     char buf[64];
@@ -821,6 +908,8 @@ void SinglePlatformView::clearSimulationResult() {
         // 重新初始化精度分析表格 - 仅显示标签，不显示数值
         updateErrorTable("");
     }
+    // 清除测向误差线
+    clearDirectionErrorLines();
 }
 
 void SinglePlatformView::setSimulationResult(double lon, double lat, double alt, double az, double el) {
@@ -886,6 +975,33 @@ void SinglePlatformView::showDirectionErrorLines(
 
 // 清除测向误差线
 void SinglePlatformView::clearDirectionErrorLines() {
-    if (!m_mapView) return;
-    m_directionErrorLines.clearDirectionErrorLines(m_mapView);
+    // if (!m_mapView) return;
+    // // 1) 清除通用ID的误差线容器
+    // m_directionErrorLines.clearDirectionErrorLines(m_mapView);
+    // // 2) 彻底清除多平台绘制产生的所有相关实体：df-*父实体及其子实体、名称含“测向误差线”的实体
+    // std::string deepClearScript =
+    //     "try {\n"
+    //     "  // 先移除以 df- 开头的父容器\n"
+    //     "  var list = viewer.entities.values;\n"
+    //     "  for (var i = list.length - 1; i >= 0; i--) {\n"
+    //     "    var e = list[i];\n"
+    //     "    var id = e.id ? ('' + e.id) : '';\n"
+    //     "    if (id.indexOf('df-') === 0) { viewer.entities.remove(e); }\n"
+    //     "  }\n"
+    //     "  // 再次遍历，删除父容器被删后遗留的子实体（parent id 以 df- 开头）或名称包含'测向误差线'的实体\n"
+    //     "  list = viewer.entities.values;\n"
+    //     "  for (var j = list.length - 1; j >= 0; j--) {\n"
+    //     "    var e2 = list[j];\n"
+    //     "    var pid = (e2.parent && e2.parent.id) ? ('' + e2.parent.id) : '';\n"
+    //     "    var nm  = e2.name ? ('' + e2.name) : '';\n"
+    //     "    var pnm = (e2.parent && e2.parent.name) ? ('' + e2.parent.name) : '';\n"
+    //     "    if (pid.indexOf('df-') === 0 || nm.indexOf('测向误差线') !== -1 || pnm.indexOf('测向误差线') !== -1) {\n"
+    //     "      viewer.entities.remove(e2);\n"
+    //     "    }\n"
+    //     "  }\n"
+    //     "  // 兼容旧容器ID\n"
+    //     "  var oldC = viewer.entities.getById('direction-error-lines');\n"
+    //     "  if (oldC) viewer.entities.removeById('direction-error-lines');\n"
+    //     "} catch (e) { console.warn('deep clear df lines failed', e); }";
+    // m_mapView->executeScript(deepClearScript);
 }

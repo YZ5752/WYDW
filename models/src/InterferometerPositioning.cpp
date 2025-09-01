@@ -1,9 +1,11 @@
+#if 0
 #include "../InterferometerPositioning.h"
 #include "../../constants/PhysicsConstants.h"
 #include "../../utils/CoordinateTransform.h"
 #include "../../utils/SNRValidator.h"
 #include "../../utils/SimulationValidator.h"
 #include "../SinglePlatformTaskDAO.h"
+#include "../../utils/DirectionErrorUtils.h"
 #include <cmath>
 #include <iostream>
 #include <gtk/gtk.h>
@@ -134,8 +136,12 @@ LocationResult InterferometerPositioning::runSimulation(const ReconnaissanceDevi
     g_print("理论俯仰角(运动后): %.1f°\n", epsilon_t_ideal * RAD2DEG);
 
     // 预先计算误差因素（用于添加测向误差）
-    double r_t_temp = sqrt(pow(X_T - X_0_moved, 2) + pow(Y_T - Y_0_moved, 2) + pow(Z_T - Z_0_moved, 2));
-    std::vector<double> errorFactors = calculateErrors(device, source, r_t_temp);
+    // 误差按图片公式：需要当前入射方位/俯仰角（理论值）
+    double azForErrorDeg = theta_t_ideal * RAD2DEG;
+    if (azForErrorDeg < 0) azForErrorDeg += 360.0;
+    double elForErrorDeg = epsilon_t_ideal * RAD2DEG;
+    std::vector<double> errorFactors = DirectionErrorUtils::calculateInterferometerErrors(
+        device, source, azForErrorDeg, elForErrorDeg);
 
     // 根据参数决定是否添加测向误差
     double theta_t, epsilon_t;
@@ -269,7 +275,7 @@ LocationResult InterferometerPositioning::runSimulation(const ReconnaissanceDevi
     
     // 保存结果到数据库
     SinglePlatformTask task;
-    task.techSystem = "INTERFEROMETER";
+    task.positioningAlgorithm = "FAST"; // 使用快速定位算法
     task.deviceId = device.getDeviceId();
     task.radiationId = source.getRadiationId();
     task.executionTime = static_cast<float>(simulationTime);
@@ -414,145 +420,146 @@ std::pair<std::pair<double, double>, double> InterferometerPositioning::calculat
     return std::make_pair(std::make_pair(sourceLBH.p1, sourceLBH.p2), sourceLBH.p3);
 }
 
-// 计算误差因素
-std::vector<double> InterferometerPositioning::calculateErrors(const ReconnaissanceDevice& device,
-                                                             const RadiationSource& source,
-                                                             double distance) {
-    std::vector<double> errors;
+// // 计算误差因素
+// std::vector<double> InterferometerPositioning::calculateErrors(const ReconnaissanceDevice& device,
+//                                                              const RadiationSource& source,
+//                                                              double distance) {
+//     std::vector<double> errors;
     
-    // 获取基线长度（单位：米）
-    double d = device.getBaselineLength();
-    if (d < 0.001) d = 0.001;  // 防止基线长度太小
+//     // 获取基线长度（单位：米）
+//     double d = device.getBaselineLength();
+//     if (d < 0.001) d = 0.001;  // 防止基线长度太小
     
-    // 获取辐射源波长（单位：米）
-    double lambda = c / (source.getCarrierFrequency() * 1e9);  // 频率从GHz转换为Hz
+//     // 获取辐射源波长（单位：米）
+//     double lambda = c / (source.getCarrierFrequency() * 1e9);  // 频率从GHz转换为Hz
     
-    // 获取入射角（方位角和俯仰角）
-    auto [theta, elevation] = calculateDirectionData(device, source);
-    double theta_rad = theta * DEG2RAD;  // 转换为弧度
+//     // 获取入射角（方位角和俯仰角）
+//     auto [theta, elevation] = calculateDirectionData(device, source);
+//     double theta_rad = theta * DEG2RAD;  // 转换为弧度
     
-    // 1. 对中误差 Δem（度）
-    double delta_em = INTERFEROMETER_ALIGNMENT_ERROR;
-    errors.push_back(delta_em);
+//     // 1. 对中误差 Δem（度）
+//     double delta_em = INTERFEROMETER_ALIGNMENT_ERROR;
+//     errors.push_back(delta_em);
     
-    // 2. 惯导测量精度 σα（度）
-    double sigma_alpha = INTERFEROMETER_ATTITUDE_ERROR;
-    errors.push_back(sigma_alpha);
+//     // 2. 惯导测量精度 σα（度）
+//     double sigma_alpha = INTERFEROMETER_ATTITUDE_ERROR;
+//     errors.push_back(sigma_alpha);
     
-    // 3. 圆锥效应误差 σβ（度）
-    double beta = std::abs(elevation);  // 使用仰角绝对值
-    double alpha = std::abs(theta);     // 使用方位角绝对值
+//     // 3. 圆锥效应误差 σβ（度）
+//     double beta = std::abs(elevation);  // 使用仰角绝对值
+//     double alpha = std::abs(theta);     // 使用方位角绝对值
     
-    // 将方位角归一化到[0, 90]度范围内（利用圆锥效应的对称性）
-    alpha = fmod(alpha, 180.0);
-    if (alpha > 90.0) {
-        alpha = 180.0 - alpha;
-    }
+//     // 将方位角归一化到[0, 90]度范围内（利用圆锥效应的对称性）
+//     alpha = fmod(alpha, 180.0);
+//     if (alpha > 90.0) {
+//         alpha = 180.0 - alpha;
+//     }
     
-    // 查表计算圆锥效应误差
-    double sigma_beta = 0.0;
+//     // 查表计算圆锥效应误差
+//     double sigma_beta = 0.0;
     
-    // 处理超出表格范围的情况
-    // 如果仰角超出最大范围，使用最大仰角对应的值
-    double beta_to_use = beta;
-    if (beta > CONE_EFFECT_BETA_BOUNDS[CONE_EFFECT_BETA_LEVELS-1]) {
-        beta_to_use = CONE_EFFECT_BETA_BOUNDS[CONE_EFFECT_BETA_LEVELS-1];
-    }
+//     // 处理超出表格范围的情况
+//     // 如果仰角超出最大范围，使用最大仰角对应的值
+//     double beta_to_use = beta;
+//     if (beta > CONE_EFFECT_BETA_BOUNDS[CONE_EFFECT_BETA_LEVELS-1]) {
+//         beta_to_use = CONE_EFFECT_BETA_BOUNDS[CONE_EFFECT_BETA_LEVELS-1];
+//     }
     
-    // 如果方位角超出最大范围，使用最大方位角对应的值
-    double alpha_to_use = alpha;
-    if (alpha > CONE_EFFECT_ALPHA_BOUNDS[CONE_EFFECT_ALPHA_LEVELS-1]) {
-        alpha_to_use = CONE_EFFECT_ALPHA_BOUNDS[CONE_EFFECT_ALPHA_LEVELS-1];
-    }
+//     // 如果方位角超出最大范围，使用最大方位角对应的值
+//     double alpha_to_use = alpha;
+//     if (alpha > CONE_EFFECT_ALPHA_BOUNDS[CONE_EFFECT_ALPHA_LEVELS-1]) {
+//         alpha_to_use = CONE_EFFECT_ALPHA_BOUNDS[CONE_EFFECT_ALPHA_LEVELS-1];
+//     }
     
-    // 找到对应的区间
-    int beta_index = -1;
-    for (int i = 0; i < CONE_EFFECT_BETA_LEVELS; i++) {
-        if (beta_to_use <= CONE_EFFECT_BETA_BOUNDS[i]) {
-            beta_index = i;
-            break;
-        }
-    }
+//     // 找到对应的区间
+//     int beta_index = -1;
+//     for (int i = 0; i < CONE_EFFECT_BETA_LEVELS; i++) {
+//         if (beta_to_use <= CONE_EFFECT_BETA_BOUNDS[i]) {
+//             beta_index = i;
+//             break;
+//         }
+//     }
     
-    int alpha_index = -1;
-    for (int i = 0; i < CONE_EFFECT_ALPHA_LEVELS; i++) {
-        if (alpha_to_use <= CONE_EFFECT_ALPHA_BOUNDS[i]) {
-            alpha_index = i;
-            break;
-        }
-    }
+//     int alpha_index = -1;
+//     for (int i = 0; i < CONE_EFFECT_ALPHA_LEVELS; i++) {
+//         if (alpha_to_use <= CONE_EFFECT_ALPHA_BOUNDS[i]) {
+//             alpha_index = i;
+//             break;
+//         }
+//     }
     
-    // 获取误差值
-    if (beta_index >= 0 && alpha_index >= 0) {
-        sigma_beta = CONE_EFFECT_ERROR_TABLE[beta_index][alpha_index];
+//     // 获取误差值
+//     if (beta_index >= 0 && alpha_index >= 0) {
+//         sigma_beta = CONE_EFFECT_ERROR_TABLE[beta_index][alpha_index];
         
-        // 对于超出范围的角度，根据角度大小按比例增加误差
-        // 这是一种简单的近似处理方法
-        if (beta > CONE_EFFECT_BETA_BOUNDS[CONE_EFFECT_BETA_LEVELS-1] || 
-            alpha > CONE_EFFECT_ALPHA_BOUNDS[CONE_EFFECT_ALPHA_LEVELS-1]) {
+//         // 对于超出范围的角度，根据角度大小按比例增加误差
+//         // 这是一种简单的近似处理方法
+//         if (beta > CONE_EFFECT_BETA_BOUNDS[CONE_EFFECT_BETA_LEVELS-1] || 
+//             alpha > CONE_EFFECT_ALPHA_BOUNDS[CONE_EFFECT_ALPHA_LEVELS-1]) {
             
-            // 计算比例因子：实际角度与表格最大角度的比值
-            double scale_factor = 1.0;
+//             // 计算比例因子：实际角度与表格最大角度的比值
+//             double scale_factor = 1.0;
             
-            if (beta > CONE_EFFECT_BETA_BOUNDS[CONE_EFFECT_BETA_LEVELS-1]) {
-                double beta_ratio = beta / CONE_EFFECT_BETA_BOUNDS[CONE_EFFECT_BETA_LEVELS-1];
-                // 限制比例因子增长
-                beta_ratio = std::min(beta_ratio, 2.0);
-                scale_factor *= beta_ratio;
-            }
+//             if (beta > CONE_EFFECT_BETA_BOUNDS[CONE_EFFECT_BETA_LEVELS-1]) {
+//                 double beta_ratio = beta / CONE_EFFECT_BETA_BOUNDS[CONE_EFFECT_BETA_LEVELS-1];
+//                 // 限制比例因子增长
+//                 beta_ratio = std::min(beta_ratio, 2.0);
+//                 scale_factor *= beta_ratio;
+//             }
             
-            if (alpha > CONE_EFFECT_ALPHA_BOUNDS[CONE_EFFECT_ALPHA_LEVELS-1]) {
-                double alpha_ratio = alpha / CONE_EFFECT_ALPHA_BOUNDS[CONE_EFFECT_ALPHA_LEVELS-1];
-                // 限制比例因子增长
-                alpha_ratio = std::min(alpha_ratio, 2.0);
-                scale_factor *= alpha_ratio;
-            }
+//             if (alpha > CONE_EFFECT_ALPHA_BOUNDS[CONE_EFFECT_ALPHA_LEVELS-1]) {
+//                 double alpha_ratio = alpha / CONE_EFFECT_ALPHA_BOUNDS[CONE_EFFECT_ALPHA_LEVELS-1];
+//                 // 限制比例因子增长
+//                 alpha_ratio = std::min(alpha_ratio, 2.0);
+//                 scale_factor *= alpha_ratio;
+//             }
             
-            // 应用比例因子
-            sigma_beta *= scale_factor;
-        }
-    }
-    errors.push_back(sigma_beta);
+//             // 应用比例因子
+//             sigma_beta *= scale_factor;
+//         }
+//     }
+//     errors.push_back(sigma_beta);
     
-    // 4. 天线阵测向误差 σθ（度）
-    // 使用公式：σθ = (λ/(2πd*cos(θ))) * σφ
-    double cos_theta = cos(theta_rad);
-    if (std::abs(cos_theta) < 1e-6) {  // 防止除以零
-        cos_theta = 1e-6;
-    }
+//     // 4. 天线阵测向误差 σθ（度）
+//     // 使用公式：σθ = (λ/(2πd*cos(θ))) * σφ
+//     double cos_theta = cos(theta_rad);
+//     if (std::abs(cos_theta) < 1e-6) {  // 防止除以零
+//         cos_theta = 1e-6;
+//     }
     
-    double sigma_phi_rad = INTERFEROMETER_PHASE_ERROR * DEG2RAD;  // 转换为弧度
-    double sigma_theta = (lambda / (2 * M_PI * d * cos_theta)) * sigma_phi_rad;
+//     double sigma_phi_rad = INTERFEROMETER_PHASE_ERROR * DEG2RAD;  // 转换为弧度
+//     double sigma_theta = (lambda / (2 * M_PI * d * cos_theta)) * sigma_phi_rad;
 
     
-    // 添加详细的中间计算值输出
-    g_print("天线阵测向误差计算中间值:\n");
-    g_print("  cos(theta): %.10f\n", cos_theta);
-    g_print("  lambda: %.10f m\n", lambda);
-    g_print("  基线长度(d): %.4f m\n", d);
-    g_print("  sigma_phi_rad: %.10f rad\n", sigma_phi_rad);
-    g_print("  分母(2*PI*d*cos_theta): %.10f\n", 2 * M_PI * d * cos_theta);
-    g_print("  sigma_theta_rad: %.10f rad\n", sigma_theta);
+//     // 添加详细的中间计算值输出
+//     g_print("天线阵测向误差计算中间值:\n");
+//     g_print("  cos(theta): %.10f\n", cos_theta);
+//     g_print("  lambda: %.10f m\n", lambda);
+//     g_print("  基线长度(d): %.4f m\n", d);
+//     g_print("  sigma_phi_rad: %.10f rad\n", sigma_phi_rad);
+//     g_print("  分母(2*PI*d*cos_theta): %.10f\n", 2 * M_PI * d * cos_theta);
+//     g_print("  sigma_theta_rad: %.10f rad\n", sigma_theta);
 
-    // 5. 综合测向误差 Δθ（度）
-    double total_error = sqrt(pow(sigma_alpha, 2) + pow(sigma_beta, 2) + 
-                            pow(sigma_theta, 2) + pow(delta_em, 2));
-        sigma_theta *= RAD2DEG;  // 转换回度
-    errors.push_back(sigma_theta);
-    errors.push_back(total_error);
+//     // 5. 综合测向误差 Δθ（度）
+//     double total_error = sqrt(pow(sigma_alpha, 2) + pow(sigma_beta, 2) + 
+//                             pow(sigma_theta, 2) + pow(delta_em, 2));
+//         sigma_theta *= RAD2DEG;  // 转换回度
+//     errors.push_back(sigma_theta);
+//     errors.push_back(total_error);
     
-    // 打印调试信息
-    g_print("误差计算结果：\n");
-    g_print("  对中误差: %.4f°\n", delta_em);
-    g_print("  惯导测量精度: %.4f°\n", sigma_alpha);
-    g_print("  圆锥效应误差: %.4f°\n", sigma_beta);
-    g_print("  天线阵测向误差: %.4f°\n", sigma_theta);
-    g_print("  综合测向误差: %.4f°\n", total_error);
-    g_print("计算参数：\n");
-    g_print("  基线长度: %.4f m\n", d);
-    g_print("  波长: %.4f m\n", lambda);
-    g_print("  方位角: %.4f°\n", theta);
-    g_print("  俯仰角: %.4f°\n", elevation);
+//     // 打印调试信息
+//     g_print("误差计算结果：\n");
+//     g_print("  对中误差: %.4f°\n", delta_em);
+//     g_print("  惯导测量精度: %.4f°\n", sigma_alpha);
+//     g_print("  圆锥效应误差: %.4f°\n", sigma_beta);
+//     g_print("  天线阵测向误差: %.4f°\n", sigma_theta);
+//     g_print("  综合测向误差: %.4f°\n", total_error);
+//     g_print("计算参数：\n");
+//     g_print("  基线长度: %.4f m\n", d);
+//     g_print("  波长: %.4f m\n", lambda);
+//     g_print("  方位角: %.4f°\n", theta);
+//     g_print("  俯仰角: %.4f°\n", elevation);
     
-    return errors;
-} 
+//     return errors;
+// } 
+#endif

@@ -43,6 +43,7 @@ include_directories(
     ${ODBC_INCLUDE_DIRS}
     ${CMAKE_CURRENT_SOURCE_DIR}  # 根目录，可以访问所有MVC目录
     ${CMAKE_CURRENT_SOURCE_DIR}/models
+    ${CMAKE_CURRENT_SOURCE_DIR}/utils  # utils头文件仍在此目录
     ${MYSQL_INCLUDE_DIR}  # 添加 MySQL 头文件路径
 )
 
@@ -79,16 +80,9 @@ file(GLOB CONTROLLER_SOURCES
     "${CMAKE_CURRENT_SOURCE_DIR}/controllers/*.cpp"
 )
 
-# 添加所有工具类源文件
-set(UTILS_SOURCES
-    "${CMAKE_CURRENT_SOURCE_DIR}/utils/CoordinateTransform.cpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/utils/SimulationValidator.cpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/utils/SNRValidator.cpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/utils/AngleValidator.cpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/utils/DirectionErrorLines.cpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/utils/ErrorCircle.cpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/utils/ErrorCircleDisplay.cpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/utils/HyperbolaLines.cpp"
+# 添加所有工具类源文件（迁移到 utils/src）
+file(GLOB UTILS_SOURCES
+    "${CMAKE_CURRENT_SOURCE_DIR}/utils/src/*.cpp"
 )
 
 # 检查文件存在
@@ -125,6 +119,8 @@ endforeach()
 add_executable(${PROJECT_NAME} 
     ${MAIN_SRC}
     ${MODEL_SOURCES}
+    ${CMAKE_CURRENT_SOURCE_DIR}/models/src/FastAalgorithm.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/models/src/BaselineAalgorithm.cpp
     ${MODEL_HEADERS}
     ${VIEW_SOURCES}
     ${CONTROLLER_SOURCES}

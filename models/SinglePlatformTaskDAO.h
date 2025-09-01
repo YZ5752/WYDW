@@ -9,7 +9,7 @@
  */
 struct SinglePlatformTask {
      int taskId;                 // 任务ID
-    std::string techSystem;     // 技术体制：INTERFEROMETER或TDOA
+    std::string positioningAlgorithm; // 定位算法：'快速定位'、'基线定位'
     int deviceId;               // 关联侦察设备模型ID
     int radiationId;            // 关联辐射源模型ID
     float executionTime;        // 仿真执行时长（秒）

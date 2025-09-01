@@ -1,7 +1,7 @@
-#include "DirectionErrorLines.h"
-#include "AngleValidator.h"
-#include "CoordinateTransform.h"
-#include "../constants/PhysicsConstants.h"
+#include "../DirectionErrorLines.h"
+#include "../AngleValidator.h"
+#include "../CoordinateTransform.h"
+#include "../../constants/PhysicsConstants.h"
 #include <sstream>
 #include <cmath>
 #include <iostream>
