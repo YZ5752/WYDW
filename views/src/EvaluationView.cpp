@@ -113,12 +113,12 @@ static gboolean on_chart_draw(GtkWidget* widget, cairo_t* cr, gpointer data) {
     cairo_set_font_size(cr, 12);
     cairo_text_extents_t extents;
     // X轴标签
-    const char* xLabel = "时间 (s)";
+    const char* xLabel = "time(s)";
     cairo_text_extents(cr, xLabel, &extents);
     cairo_move_to(cr, width / 2 - extents.width / 2, height - marginBottom / 2);
     cairo_show_text(cr, xLabel);
     // Y轴标签
-    const char* yLabel = "定位误差 (m)";
+    const char* yLabel = "location-error (m)";
     cairo_text_extents(cr, yLabel, &extents);
     cairo_save(cr);
     cairo_move_to(cr, marginLeft / 3, height / 2 + extents.width / 2);

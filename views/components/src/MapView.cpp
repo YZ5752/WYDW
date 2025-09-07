@@ -4,12 +4,121 @@
 #include <sstream>
 
 namespace fs = std::filesystem;
+// 调试：WebKit 信号回调
+static void on_load_changed(WebKitWebView* webView, WebKitLoadEvent load_event, gpointer user_data) {
+    switch (load_event) {
+        case WEBKIT_LOAD_STARTED:
+            std::cerr << "[MapView][WebKit] load-changed: STARTED" << std::endl;
+            break;
+        case WEBKIT_LOAD_REDIRECTED:
+            std::cerr << "[MapView][WebKit] load-changed: REDIRECTED" << std::endl;
+            break;
+        case WEBKIT_LOAD_COMMITTED:
+            std::cerr << "[MapView][WebKit] load-changed: COMMITTED" << std::endl;
+            break;
+        case WEBKIT_LOAD_FINISHED:
+            std::cerr << "[MapView][WebKit] load-changed: FINISHED" << std::endl;
+            std::cerr.flush();
+            
+            // 延迟执行探针，确保页面完全加载
+            g_timeout_add(500, [](gpointer data) -> gboolean {
+                WebKitWebView* webView = (WebKitWebView*)data;
+                const char* kProbe = R"(
+                    (function(){
+                        try {
+                            var glOK = false;
+                            var glContext = null;
+                            try { 
+                                var c = document.createElement('canvas'); 
+                                glContext = c.getContext('webgl') || c.getContext('experimental-webgl');
+                                glOK = !!glContext;
+                                if (glContext) {
+                                    console.log('WebGL context created successfully');
+                                }
+                            } catch(e){
+                                console.error('WebGL context creation failed:', e);
+                            }
+                            
+                            var cesiumOK = typeof window.Cesium !== 'undefined';
+                            var viewerOK = typeof window.viewer !== 'undefined' && window.viewer !== null;
+                            var layerCount = viewerOK && viewer && viewer.imageryLayers ? viewer.imageryLayers.length : -1;
+                            
+                            // 检查 Cesium 配置
+                            var cesiumConfig = {};
+                            if (cesiumOK) {
+                                cesiumConfig.buildLocation = Cesium.buildLocation || 'Not set';
+                                cesiumConfig.workerPath = Cesium.workerPath || 'Not set';
+                                cesiumConfig.baseUrl = window.CESIUM_BASE_URL || 'Not set';
+                            }
+                            
+                            return JSON.stringify({
+                                webgl: glOK,
+                                cesium: cesiumOK, 
+                                viewer: viewerOK,
+                                layers: layerCount,
+                                userAgent: navigator.userAgent,
+                                protocol: window.location.protocol,
+                                cesiumConfig: cesiumConfig
+                            });
+                        } catch(e) { 
+                            return JSON.stringify({error: e.message, stack: e.stack}); 
+                        }
+                    })();
+                )";
+                
+                webkit_web_view_run_javascript(webView, kProbe, nullptr, 
+                    [](GObject* object, GAsyncResult* result, gpointer user_data) {
+                        GError* error = nullptr;
+                        WebKitJavascriptResult* js_result = webkit_web_view_run_javascript_finish(WEBKIT_WEB_VIEW(object), result, &error);
+                        if (js_result && !error) {
+                            JSCValue* value = webkit_javascript_result_get_js_value(js_result);
+                            if (value && jsc_value_is_string(value)) {
+                                gchar* str = jsc_value_to_string(value);
+                                std::cerr << "[MapView][Probe] Result: " << str << std::endl;
+                                g_free(str);
+                            }
+                            webkit_javascript_result_unref(js_result);
+                        }
+                        if (error) {
+                            std::cerr << "[MapView][Probe] Error: " << error->message << std::endl;
+                            g_error_free(error);
+                        }
+                    }, nullptr);
+                return FALSE; // 只执行一次
+            }, webView);
+            break;
+        default:
+            break;
+    }
+}
+
+static gboolean on_load_failed(WebKitWebView* webView, WebKitLoadEvent load_event, const gchar* failing_uri, GError* error, gpointer user_data) {
+    std::cerr << "[MapView][WebKit] load-failed: uri=" << (failing_uri ? failing_uri : "(null)")
+              << " code=" << (error ? error->code : -1)
+              << " domain=" << (error && error->domain ? error->domain : 0)
+              << " message=" << (error && error->message ? error->message : "(no message)")
+              << std::endl;
+    return FALSE; // 让默认处理继续
+}
+
+static void on_web_process_terminated(WebKitWebView* webView, WebKitWebProcessTerminationReason reason, gpointer user_data) {
+    std::cerr << "[MapView][WebKit] web-process-terminated: reason=" << (int)reason << std::endl;
+}
+
+// 兼容旧版 WebKit2GTK：console-message 回调签名
+static gboolean on_console_message(WebKitWebView* webView, gchar* message, guint line, gchar* source_id, gpointer user_data) {
+    std::cerr << "[MapView][Console] source=" << (source_id ? source_id : "(unknown)")
+              << " line=" << line
+              << " message=" << (message ? message : "(null)")
+              << std::endl;
+    return FALSE; // 不阻止默认行为
+}
 // 构造函数
 MapView::MapView() 
     : m_webView(nullptr), 
       m_use3DMap(true) {
-    // 默认使用Cesium 3D地图
-    m_htmlPath = getResourcePath() + "/cesium.html";
+    // 使用 HTTP 服务器地址（解决 file:// 协议安全限制）
+    m_htmlPath = "http://localhost:8080/cesium.html";
 }
 
 // 析构函数
@@ -19,19 +128,42 @@ MapView::~MapView() {
 
 // 创建地图视图控件
 GtkWidget* MapView::create() {
+    // 设置 WebKit2GTK 环境变量（增强 WebGL 支持）
+    g_setenv("WEBKIT_DISABLE_COMPOSITING_MODE", "1", TRUE);
+    g_setenv("WEBKIT_DISABLE_DMABUF_RENDERER", "1", TRUE);
+    
     // 创建WebKit视图
     m_webView = WEBKIT_WEB_VIEW(webkit_web_view_new());
     
-    // 启用WebGL和JavaScript
+    // 启用WebGL和JavaScript（增强配置）
     WebKitSettings* settings = webkit_web_view_get_settings(m_webView);
     webkit_settings_set_enable_webgl(settings, TRUE);
     webkit_settings_set_enable_javascript(settings, TRUE);
     webkit_settings_set_javascript_can_access_clipboard(settings, TRUE);
+    
+    // 增强 WebGL 支持
+    webkit_settings_set_enable_webaudio(settings, TRUE);
+    webkit_settings_set_enable_mediasource(settings, TRUE);
+    webkit_settings_set_enable_media_stream(settings, TRUE);
 
-        // 添加以下安全设置
+        // 添加以下安全设置（增强离线支持）
     webkit_settings_set_allow_file_access_from_file_urls(settings, TRUE);
     webkit_settings_set_allow_universal_access_from_file_urls(settings, TRUE);
     webkit_settings_set_enable_xss_auditor(settings, FALSE);
+    webkit_settings_set_enable_developer_extras(settings, TRUE);
+    
+    // 增强离线文件访问支持（兼容不同 WebKit2GTK 版本）
+    // webkit_settings_set_enable_web_security(settings, FALSE); // 某些版本不支持
+    // webkit_settings_set_enable_private_browsing(settings, FALSE); // 已废弃
+    webkit_settings_set_enable_media_stream(settings, TRUE);
+    // webkit_settings_set_enable_media_capture(settings, TRUE); // 某些版本不支持
+
+    // 连接调试信号
+    g_signal_connect(m_webView, "load-changed", G_CALLBACK(on_load_changed), this);
+    g_signal_connect(m_webView, "load-failed", G_CALLBACK(on_load_failed), this);
+    g_signal_connect(m_webView, "web-process-terminated", G_CALLBACK(on_web_process_terminated), this);
+    // 注释掉无效的 console-message 信号（某些 WebKit2GTK 版本不支持）
+    // g_signal_connect(m_webView, "console-message", G_CALLBACK(on_console_message), this);
     
     // 加载地图
     loadMap();
@@ -192,9 +324,9 @@ void MapView::setUse3DMap(bool use3D) {
     
     m_use3DMap = use3D;
     if (m_use3DMap) {
-        m_htmlPath = getResourcePath() + "/cesium.html";
+        m_htmlPath = "http://localhost:8080/cesium.html";
     } else {
-        m_htmlPath = getResourcePath() + "/index.html";
+        m_htmlPath = "http://localhost:8080/index.html";
     }
     
     loadMap();
@@ -211,15 +343,23 @@ void MapView::executeScript(const std::string& script) {
 void MapView::loadMap() {
     if (!m_webView) return;
     
-    // 检查文件是否存在
-    if (!fs::exists(m_htmlPath)) {
-        std::cerr << "Error: Map HTML file not found at: " << m_htmlPath << std::endl;
-        return;
+    // 检查是否为 HTTP URL
+    if (m_htmlPath.substr(0, 7) == "http://" || m_htmlPath.substr(0, 8) == "https://") {
+        // HTTP URL，直接加载
+        std::cerr << "[MapView] Loading HTTP URL: " << m_htmlPath << std::endl;
+        webkit_web_view_load_uri(m_webView, m_htmlPath.c_str());
+    } else {
+        // 本地文件，检查是否存在
+        if (!fs::exists(m_htmlPath)) {
+            std::cerr << "[MapView] Error: Map HTML file not found at: " << m_htmlPath << std::endl;
+            return;
+        }
+        
+        // 使用file://协议加载本地HTML文件
+        std::string fileUrl = "file://" + m_htmlPath;
+        std::cerr << "[MapView] Loading file URL: " << fileUrl << std::endl;
+        webkit_web_view_load_uri(m_webView, fileUrl.c_str());
     }
-    
-    // 使用file://协议加载本地HTML文件
-    std::string fileUrl = "file://" + m_htmlPath;
-    webkit_web_view_load_uri(m_webView, fileUrl.c_str());
 }
 
 // 获取资源路径
@@ -241,11 +381,13 @@ std::string MapView::getResourcePath() const {
     // 检查每个可能的路径
     for (const auto& path : possiblePaths) {
         if (fs::exists(path)) {
-            return fs::absolute(path).string();
+            std::string abs = fs::absolute(path).string();
+            std::cerr << "[MapView] Resource path found: " << abs << std::endl;
+            return abs;
         }
     }
     
     // 如果找不到资源目录，返回默认路径
-    std::cerr << "Warning: Resource directory not found, using default path: ./res" << std::endl;
+    std::cerr << "[MapView] Warning: Resource directory not found, using default path: ./res" << std::endl;
     return "./res";
 } 

@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <script src="./Cesium/Cesium.js"></script> <!--引入cesium的接口文件-->
+  <link href="./Cesium/Widgets/widgets.css" rel="stylesheet"> <!--引入cesium的样式文件-->
+  <script src="./customInfoBox.js"></script> <!--引入自定义InfoBox脚本-->
+</head>
+
+<body>
+  <div id="cesiumContainer"></div>
+  <!-- 添加显示经纬度的元素 -->
+  <div id="coordinateInfo" style="position: absolute; bottom: 10px; left: 10px; background-color: rgba(42, 42, 42, 0.8); color: white; padding: 5px; border-radius: 4px; font-size: 14px; z-index: 999;">
+    经度: 0.000000°, 纬度: 0.000000°
+  </div>
+  <style>
+    html,
+    body,
+    #cesiumContainer {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+    }
+    
+    /* 标尺样式 */
+    .distance-legend {
+      position: absolute;
+      bottom: 40px;
+      right: 10px;
+      background-color: rgba(42, 42, 42, 0.8);
+      color: white;
+      padding: 5px 8px;
+      border-radius: 4px;
+      font-size: 14px;
+      z-index: 999;
+      text-align: center;
+    }
+    
+    .scale-bar {
+      height: 3px;
+      background-color: white;
+      margin-top: 5px;
+      position: relative;
+      margin-left: 1px;
+      margin-right: 1px;
+    }
+    
+    .scale-bar:before, .scale-bar:after {
+      content: '';
+      position: absolute;
+      width: 2px;
+      height: 10px;
+      background-color: white;
+      top: -3.5px;
+    }
+    
+    .scale-bar:before {
+      left: -1px;
+    }
+    
+    .scale-bar:after {
+      right: -1px;
+    }
+  </style>
+  <script>
+    // 设置Cesium ion访问令牌
+    Cesium.Ion.defaultAccessToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiIyMTUwM2VmMi1mMmY0LTQwYTYtOWU5OC1mYTlhYTQ1MzFkY2QiLCJpZCI6MzA5ODE3LCJpYXQiOjE3NDkxOTk2Mjh9.Hkkpi8oEP1rLg6y3yd3T5b3gOOrfuHIHqSbSlH3wPds';
+    
+    // 创建离线瓦片地图提供者 - 使用res/map目录下的TMS格式瓦片
+    var offlineImageryProvider = new Cesium.TileMapServiceImageryProvider({
+        url: './map',  // 使用相对路径指向res/map目录
+        fileExtension: 'jpg',
+        credit: new Cesium.Credit('本地离线瓦片地图'),
+        tilingScheme: new Cesium.GeographicTilingScheme(), // 使用地理坐标系统 (EPSG:4326)
+        maximumLevel: 7 // 根据map文件夹中实际可用的最大级别设置
+    });
+    
+    // 创建Cesium查看器
+    var viewer = new Cesium.Viewer('cesiumContainer', {
+        baseLayerPicker: false,
+        geocoder: false,
+        homeButton: true,
+        sceneModePicker: true,
+        navigationHelpButton: false,
+        animation: false,
+        timeline: false,
+        fullscreenButton: false,
+        imageryProvider: offlineImageryProvider
+    });
+    
+    // 可选：添加谷歌地图作为额外图层（如果有网络连接）
+    try {
+      var googleLayer = viewer.imageryLayers.addImageryProvider(
+        new Cesium.UrlTemplateImageryProvider({
+          url: "http://mt1.google.cn/vt/lyrs=s&hl=zh-CN&x={x}&y={y}&z={z}&s=Gali",
+          tilingScheme: new Cesium.WebMercatorTilingScheme(),
+          maximumLevel: 18
+        })
+      );
+      // 默认隐藏谷歌图层，仅在需要时显示
+      googleLayer.show = false;
+    } catch(e) {
+      console.log("加载谷歌地图图层失败:", e);
+    }
+
+    // 尝试添加高德地图图层
+    try {
+      var gaodeLayer = viewer.imageryLayers.addImageryProvider(
+        new Cesium.WebMapServiceImageryProvider({
+          url: "http://webrd04.is.autonavi.com/appmaptile?lang=zh_cn&size=1&scale=1&style=8&x={x}&y={y}&z={z}",
+          layers: "gaode",
+          tilingScheme: new Cesium.WebMercatorTilingScheme(),
+        })
+      );
+      // 默认隐藏高德图层，仅在需要时显示
+      gaodeLayer.show = false;
+    } catch(e) {
+      console.log("加载高德地图图层失败:", e);
+    }
+
+    // 设置初始视图（中国上空）
+    var CHINA_VIEW = {
+      destination: Cesium.Cartesian3.fromDegrees(116.3833, 39.9167, 1000000), // 北京上空
+      orientation: {
+        heading: 0, // 左右摆头
+        pitch: -1.5,  // 上下摇头
+        roll: 0.0                    // default value
+      }
+    };
+    
+    // 设置home按钮的默认视图为中国上空
+    viewer.homeButton.viewModel.command.beforeExecute.addEventListener(function(e) {
+      e.cancel = true; // 取消默认行为
+      viewer.camera.flyTo(CHINA_VIEW); // 飞行到中国上空的视图
+    });
+    
+    // 初始化视图为中国上空
+    viewer.camera.setView(CHINA_VIEW);
+
+    // 移除版权信息
+    viewer.cesiumWidget.creditContainer.style.display = "none";
+    
+    // 获取经纬度显示元素
+    var coordinateInfoElement = document.getElementById('coordinateInfo');
+    
+    // 添加鼠标点击事件监听器
+    var handler = new Cesium.ScreenSpaceEventHandler(viewer.scene.canvas);
+    handler.setInputAction(function(click) {
+      // 获取点击位置的笛卡尔坐标
+      var cartesian = viewer.camera.pickEllipsoid(click.position, viewer.scene.globe.ellipsoid);
+      if (cartesian) {
+        // 将笛卡尔坐标转换为经纬度坐标
+        var cartographic = Cesium.Cartographic.fromCartesian(cartesian);
+        var longitude = Cesium.Math.toDegrees(cartographic.longitude);
+        var latitude = Cesium.Math.toDegrees(cartographic.latitude);
+        
+        // 格式化经纬度显示（保留6位小数）
+        var longitudeStr = longitude.toFixed(6);
+        var latitudeStr = latitude.toFixed(6);
+        
+        // 更新显示
+        coordinateInfoElement.innerHTML = '经度: ' + longitudeStr + '°, 纬度: ' + latitudeStr + '°';
+      }
+    }, Cesium.ScreenSpaceEventType.LEFT_CLICK);
+    
+    // 添加鼠标移动事件监听器，显示鼠标悬停位置的经纬度
+    handler.setInputAction(function(movement) {
+      var cartesian = viewer.camera.pickEllipsoid(movement.endPosition, viewer.scene.globe.ellipsoid);
+      if (cartesian) {
+        var cartographic = Cesium.Cartographic.fromCartesian(cartesian);
+        var longitude = Cesium.Math.toDegrees(cartographic.longitude);
+        var latitude = Cesium.Math.toDegrees(cartographic.latitude);
+        
+        var longitudeStr = longitude.toFixed(6);
+        var latitudeStr = latitude.toFixed(6);
+        
+        coordinateInfoElement.innerHTML = '经度: ' + longitudeStr + '°, 纬度: ' + latitudeStr + '°';
+      }
+    }, Cesium.ScreenSpaceEventType.MOUSE_MOVE);
+    
+    // 创建标尺元素
+    function createDistanceLegend() {
+      var distanceLegendDiv = document.createElement('div');
+      distanceLegendDiv.className = 'distance-legend';
+      
+      var distanceLabel = document.createElement('div');
+      distanceLabel.id = 'distanceLabel';
+      distanceLabel.textContent = '0 km';
+      distanceLegendDiv.appendChild(distanceLabel);
+      
+      var scaleBar = document.createElement('div');
+      scaleBar.className = 'scale-bar';
+      scaleBar.id = 'scaleBar';
+      distanceLegendDiv.appendChild(scaleBar);
+      
+      document.body.appendChild(distanceLegendDiv);
+      return distanceLegendDiv;
+    }
+    
+    // 更新标尺
+    function updateDistanceLegend() {
+      var distanceLegendDiv = document.querySelector('.distance-legend');
+      var distanceLabel = document.getElementById('distanceLabel');
+      var scaleBar = document.getElementById('scaleBar');
+      
+      if (!distanceLegendDiv) {
+        distanceLegendDiv = createDistanceLegend();
+        distanceLabel = document.getElementById('distanceLabel');
+        scaleBar = document.getElementById('scaleBar');
+      }
+      
+      // 获取视图中心点
+      var center = new Cesium.Cartesian2(
+        viewer.canvas.clientWidth / 2,
+        viewer.canvas.clientHeight / 2
+      );
+      
+      var leftPoint = new Cesium.Cartesian2(
+        center.x - 100,
+        center.y
+      );
+      
+      // 将屏幕坐标转换为地理坐标
+      var centerCartesian = viewer.camera.pickEllipsoid(center);
+      var leftCartesian = viewer.camera.pickEllipsoid(leftPoint);
+      
+      if (centerCartesian && leftCartesian) {
+        // 计算两点之间的距离
+        var centerCartographic = Cesium.Cartographic.fromCartesian(centerCartesian);
+        var leftCartographic = Cesium.Cartographic.fromCartesian(leftCartesian);
+        
+        var geodesic = new Cesium.EllipsoidGeodesic(
+          new Cesium.Cartographic(centerCartographic.longitude, centerCartographic.latitude),
+          new Cesium.Cartographic(leftCartographic.longitude, leftCartographic.latitude)
+        );
+        
+        var distance = geodesic.surfaceDistance;
+        
+        // 根据距离选择合适的单位和标尺长度
+        var label;
+        var width = 100; // 标尺固定宽度为100px
+        
+        // 计算标尺表示的距离值（四舍五入到合适的数值）
+        if (distance >= 100000) {
+          // 超过100公里，以100公里为单位
+          var km = Math.round(distance / 100000) * 100;
+          label = km + ' km';
+        } else if (distance >= 10000) {
+          // 10-100公里，以10公里为单位
+          var km = Math.round(distance / 10000) * 10;
+          label = km + ' km';
+        } else if (distance >= 1000) {
+          // 1-10公里，以1公里为单位
+          var km = Math.round(distance / 1000);
+          label = km + ' km';
+        } else {
+          // 不足1公里，以100米为单位
+          var m = Math.round(distance / 100) * 100;
+          if (m === 0) m = 100;
+          label = m + ' m';
+        }
+        
+        // 更新标尺
+        distanceLabel.textContent = label;
+        scaleBar.style.width = width + 'px';
+      }
+    }
+    
+    // 创建标尺
+    createDistanceLegend();
+    
+    // 视图变化时更新标尺
+    viewer.camera.changed.addEventListener(updateDistanceLegend);
+    viewer.scene.preRender.addEventListener(updateDistanceLegend);
+    
+    // 初始更新
+    updateDistanceLegend();
+  </script>
+</body>
+
+</html>

@@ -3,7 +3,19 @@
 
 <head>
   <meta charset="utf-8">
-  <script src="./Cesium/Cesium.js"></script> <!--引入cesium的接口文件-->
+  <script>window.CESIUM_BASE_URL = './Cesium/';</script>
+  <!-- Web Streams API polyfill for environments missing TransformStream/ReadableStream/WritableStream -->
+  <script src="./Cesium/ThirdParty/web-streams-polyfill/dist/polyfill.js"></script>
+  <script src="./Cesium/Cesium.js" onload="
+    try {
+      console.log('Cesium.js加载成功');
+      console.log('CESIUM_BASE_URL=', window.CESIUM_BASE_URL);
+      console.log('window.Cesium keys sample:', Object.keys(window.Cesium || {}).slice(0,20));
+      if (!window.Cesium || typeof window.Cesium.Viewer !== 'function') {
+        console.error('检测到当前 Cesium.js 未导出全局 Viewer。请改为引用全局构建版本，例如 ./Cesium/Build/Cesium/Cesium.js');
+      }
+    } catch (e) {}
+  " onerror="console.error('Cesium.js加载失败')"></script> <!--引入cesium的接口文件-->             
   <link href="./Cesium/Widgets/widgets.css" rel="stylesheet"> <!--引入cesium的样式文件-->
   <script src="./customInfoBox.js"></script> <!--引入自定义InfoBox脚本-->
 </head>
@@ -66,218 +78,391 @@
     }
   </style>
   <script>
-    // 设置Cesium ion访问令牌
-    Cesium.Ion.defaultAccessToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiIyMTUwM2VmMi1mMmY0LTQwYTYtOWU5OC1mYTlhYTQ1MzFkY2QiLCJpZCI6MzA5ODE3LCJpYXQiOjE3NDkxOTk2Mjh9.Hkkpi8oEP1rLg6y3yd3T5b3gOOrfuHIHqSbSlH3wPds';
+    // 设置 Cesium 基础路径（解决 file:// 协议下的资源加载问题）
+    window.CESIUM_BASE_URL = './Cesium/';
     
-    // 创建离线瓦片地图提供者 - 使用res/map目录下的TMS格式瓦片
-    var offlineImageryProvider = new Cesium.TileMapServiceImageryProvider({
-        url: './map',  // 使用相对路径指向res/map目录
-        fileExtension: 'jpg',
-        credit: new Cesium.Credit('本地离线瓦片地图'),
-        tilingScheme: new Cesium.GeographicTilingScheme(), // 使用地理坐标系统 (EPSG:4326)
-        maximumLevel: 7 // 根据map文件夹中实际可用的最大级别设置
-    });
+    // 配置 Cesium Worker 路径（在 Cesium 加载前设置）
+    window.CESIUM_BASE_URL = './Cesium/';
     
-    // 创建Cesium查看器
-    var viewer = new Cesium.Viewer('cesiumContainer', {
-        baseLayerPicker: false,
-        geocoder: false,
-        homeButton: true,
-        sceneModePicker: true,
-        navigationHelpButton: false,
-        animation: false,
-        timeline: false,
-        fullscreenButton: false,
-        imageryProvider: offlineImageryProvider
-    });
-    
-    // 可选：添加谷歌地图作为额外图层（如果有网络连接）
-    try {
-      var googleLayer = viewer.imageryLayers.addImageryProvider(
-        new Cesium.UrlTemplateImageryProvider({
-          url: "http://mt1.google.cn/vt/lyrs=s&hl=zh-CN&x={x}&y={y}&z={z}&s=Gali",
-          tilingScheme: new Cesium.WebMercatorTilingScheme(),
-          maximumLevel: 18
-        })
-      );
-      // 默认隐藏谷歌图层，仅在需要时显示
-      googleLayer.show = false;
-    } catch(e) {
-      console.log("加载谷歌地图图层失败:", e);
-    }
-
-    // 尝试添加高德地图图层
-    try {
-      var gaodeLayer = viewer.imageryLayers.addImageryProvider(
-        new Cesium.WebMapServiceImageryProvider({
-          url: "http://webrd04.is.autonavi.com/appmaptile?lang=zh_cn&size=1&scale=1&style=8&x={x}&y={y}&z={z}",
-          layers: "gaode",
-          tilingScheme: new Cesium.WebMercatorTilingScheme(),
-        })
-      );
-      // 默认隐藏高德图层，仅在需要时显示
-      gaodeLayer.show = false;
-    } catch(e) {
-      console.log("加载高德地图图层失败:", e);
-    }
-
-    // 设置初始视图（中国上空）
-    var CHINA_VIEW = {
-      destination: Cesium.Cartesian3.fromDegrees(116.3833, 39.9167, 1000000), // 北京上空
-      orientation: {
-        heading: 0, // 左右摆头
-        pitch: -1.5,  // 上下摇头
-        roll: 0.0                    // default value
-      }
-    };
-    
-    // 设置home按钮的默认视图为中国上空
-    viewer.homeButton.viewModel.command.beforeExecute.addEventListener(function(e) {
-      e.cancel = true; // 取消默认行为
-      viewer.camera.flyTo(CHINA_VIEW); // 飞行到中国上空的视图
-    });
-    
-    // 初始化视图为中国上空
-    viewer.camera.setView(CHINA_VIEW);
-
-    // 移除版权信息
-    viewer.cesiumWidget.creditContainer.style.display = "none";
-    
-    // 获取经纬度显示元素
-    var coordinateInfoElement = document.getElementById('coordinateInfo');
-    
-    // 添加鼠标点击事件监听器
-    var handler = new Cesium.ScreenSpaceEventHandler(viewer.scene.canvas);
-    handler.setInputAction(function(click) {
-      // 获取点击位置的笛卡尔坐标
-      var cartesian = viewer.camera.pickEllipsoid(click.position, viewer.scene.globe.ellipsoid);
-      if (cartesian) {
-        // 将笛卡尔坐标转换为经纬度坐标
-        var cartographic = Cesium.Cartographic.fromCartesian(cartesian);
-        var longitude = Cesium.Math.toDegrees(cartographic.longitude);
-        var latitude = Cesium.Math.toDegrees(cartographic.latitude);
-        
-        // 格式化经纬度显示（保留6位小数）
-        var longitudeStr = longitude.toFixed(6);
-        var latitudeStr = latitude.toFixed(6);
-        
-        // 更新显示
-        coordinateInfoElement.innerHTML = '经度: ' + longitudeStr + '°, 纬度: ' + latitudeStr + '°';
-      }
-    }, Cesium.ScreenSpaceEventType.LEFT_CLICK);
-    
-    // 添加鼠标移动事件监听器，显示鼠标悬停位置的经纬度
-    handler.setInputAction(function(movement) {
-      var cartesian = viewer.camera.pickEllipsoid(movement.endPosition, viewer.scene.globe.ellipsoid);
-      if (cartesian) {
-        var cartographic = Cesium.Cartographic.fromCartesian(cartesian);
-        var longitude = Cesium.Math.toDegrees(cartographic.longitude);
-        var latitude = Cesium.Math.toDegrees(cartographic.latitude);
-        
-        var longitudeStr = longitude.toFixed(6);
-        var latitudeStr = latitude.toFixed(6);
-        
-        coordinateInfoElement.innerHTML = '经度: ' + longitudeStr + '°, 纬度: ' + latitudeStr + '°';
-      }
-    }, Cesium.ScreenSpaceEventType.MOUSE_MOVE);
-    
-    // 创建标尺元素
-    function createDistanceLegend() {
-      var distanceLegendDiv = document.createElement('div');
-      distanceLegendDiv.className = 'distance-legend';
-      
-      var distanceLabel = document.createElement('div');
-      distanceLabel.id = 'distanceLabel';
-      distanceLabel.textContent = '0 km';
-      distanceLegendDiv.appendChild(distanceLabel);
-      
-      var scaleBar = document.createElement('div');
-      scaleBar.className = 'scale-bar';
-      scaleBar.id = 'scaleBar';
-      distanceLegendDiv.appendChild(scaleBar);
-      
-      document.body.appendChild(distanceLegendDiv);
-      return distanceLegendDiv;
-    }
-    
-    // 更新标尺
-    function updateDistanceLegend() {
-      var distanceLegendDiv = document.querySelector('.distance-legend');
-      var distanceLabel = document.getElementById('distanceLabel');
-      var scaleBar = document.getElementById('scaleBar');
-      
-      if (!distanceLegendDiv) {
-        distanceLegendDiv = createDistanceLegend();
-        distanceLabel = document.getElementById('distanceLabel');
-        scaleBar = document.getElementById('scaleBar');
-      }
-      
-      // 获取视图中心点
-      var center = new Cesium.Cartesian2(
-        viewer.canvas.clientWidth / 2,
-        viewer.canvas.clientHeight / 2
-      );
-      
-      var leftPoint = new Cesium.Cartesian2(
-        center.x - 100,
-        center.y
-      );
-      
-      // 将屏幕坐标转换为地理坐标
-      var centerCartesian = viewer.camera.pickEllipsoid(center);
-      var leftCartesian = viewer.camera.pickEllipsoid(leftPoint);
-      
-      if (centerCartesian && leftCartesian) {
-        // 计算两点之间的距离
-        var centerCartographic = Cesium.Cartographic.fromCartesian(centerCartesian);
-        var leftCartographic = Cesium.Cartographic.fromCartesian(leftCartesian);
-        
-        var geodesic = new Cesium.EllipsoidGeodesic(
-          new Cesium.Cartographic(centerCartographic.longitude, centerCartographic.latitude),
-          new Cesium.Cartographic(leftCartographic.longitude, leftCartographic.latitude)
-        );
-        
-        var distance = geodesic.surfaceDistance;
-        
-        // 根据距离选择合适的单位和标尺长度
-        var label;
-        var width = 100; // 标尺固定宽度为100px
-        
-        // 计算标尺表示的距离值（四舍五入到合适的数值）
-        if (distance >= 100000) {
-          // 超过100公里，以100公里为单位
-          var km = Math.round(distance / 100000) * 100;
-          label = km + ' km';
-        } else if (distance >= 10000) {
-          // 10-100公里，以10公里为单位
-          var km = Math.round(distance / 10000) * 10;
-          label = km + ' km';
-        } else if (distance >= 1000) {
-          // 1-10公里，以1公里为单位
-          var km = Math.round(distance / 1000);
-          label = km + ' km';
+    // 等待 Cesium 加载完成后配置
+    function configureCesium() {
+        if (typeof Cesium !== 'undefined') {
+            console.log('Configuring Cesium...');
+            Cesium.buildLocation = './Cesium/';
+            Cesium.workerPath = './Cesium/Workers/';
+            console.log('Cesium buildLocation:', Cesium.buildLocation);
+            console.log('Cesium workerPath:', Cesium.workerPath);
         } else {
-          // 不足1公里，以100米为单位
-          var m = Math.round(distance / 100) * 100;
-          if (m === 0) m = 100;
-          label = m + ' m';
+            console.error('Cesium not loaded!');
+        }
+    }
+    
+    // 延迟配置，确保 Cesium 完全加载
+    setTimeout(configureCesium, 100);
+    
+    // 完全离线配置 - 不设置 Cesium Ion 令牌
+    // Cesium.Ion.defaultAccessToken = '...'; // 注释掉
+    
+    // 创建离线瓦片地图提供者的函数
+    function createOfflineImageryProvider() {
+        return new Cesium.TileMapServiceImageryProvider({
+            url: './map',  // 使用相对路径指向res/map目录
+            fileExtension: 'jpg',
+            credit: '本地离线瓦片地图', // 直接使用字符串，不使用new Cesium.Credit()
+            tilingScheme: new Cesium.GeographicTilingScheme(), // 使用地理坐标系统 (EPSG:4326)
+            maximumLevel: 7 // 根据map文件夹中实际可用的最大级别设置
+        });
+    }
+    
+    // 检查 WebGL 支持
+    function checkWebGL() {
+        try {
+            var canvas = document.createElement('canvas');
+            var gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
+            return !!gl;
+        } catch (e) {
+            return false;
+        }
+    }
+    
+    // 检查 Cesium 是否加载
+    function checkCesium() {
+        return typeof Cesium !== 'undefined';
+    }
+    
+    // 显示诊断信息
+    function showDiagnostics() {
+        var diagnostics = document.createElement('div');
+        diagnostics.style.cssText = 'position: fixed; top: 10px; left: 10px; background: rgba(0,0,0,0.8); color: white; padding: 10px; z-index: 10000; font-size: 12px; max-width: 300px;';
+        diagnostics.innerHTML = 
+            'WebGL: ' + (checkWebGL() ? 'OK' : 'FAILED') + '<br>' +
+            'Cesium: ' + (checkCesium() ? 'OK' : 'FAILED') + '<br>' +
+            'Protocol: ' + window.location.protocol + '<br>' +
+            'Base URL: ' + (window.CESIUM_BASE_URL || 'Not set') + '<br>' +
+            'Cesium buildLocation: ' + (typeof Cesium !== 'undefined' ? Cesium.buildLocation : 'N/A') + '<br>' +
+            'Cesium workerPath: ' + (typeof Cesium !== 'undefined' ? Cesium.workerPath : 'N/A') + '<br>' +
+            'User Agent: ' + navigator.userAgent.substring(0, 50) + '...';
+        document.body.appendChild(diagnostics);
+        
+        // 5秒后自动移除诊断信息
+        setTimeout(function() {
+            if (diagnostics.parentNode) {
+                diagnostics.parentNode.removeChild(diagnostics);
+            }
+        }, 5000);
+    }
+    
+    // 显示诊断信息
+    showDiagnostics();
+    
+    let cesiumRetryCount = 0;
+    const maxCesiumRetries = 50; // 最大重试次数（50次 * 200ms = 10秒）
+    
+    // 等待Cesium完全加载的函数
+    function waitForCesiumComponents() {
+        cesiumRetryCount++;
+        
+        if (cesiumRetryCount >= maxCesiumRetries) {
+            console.error('Cesium加载超时！');
+            console.error('请检查：');
+            console.error('1. 是否通过HTTP服务器访问（不是直接打开HTML文件）');
+            console.error('2. 浏览器控制台是否有错误信息');
+            console.error('3. 网络连接是否正常');
+            console.error('4. Cesium.js文件是否正确加载');
+            return;
+        }
+        
+        // 详细检查Cesium加载状态
+        if (typeof Cesium === 'undefined') {
+            console.log(`等待Cesium库加载... (${cesiumRetryCount}/${maxCesiumRetries})`);
+            console.log('Cesium对象未定义，可能的原因：');
+            console.log('- Cesium.js文件加载失败');
+            console.log('- 网络连接问题');
+            console.log('- 文件路径错误');
+            setTimeout(waitForCesiumComponents, 200);
+            return;
+        }
+        
+        // 检查Cesium对象的基本结构
+        console.log('Cesium对象存在，检查组件：');
+        console.log('- Cesium对象类型:', typeof Cesium);
+        console.log('- Cesium对象属性数量:', Object.keys(Cesium).length);
+        console.log('- Cesium对象前10个属性:', Object.keys(Cesium).slice(0, 10));
+        
+        if (Cesium.Viewer && 
+            Cesium.TileMapServiceImageryProvider && 
+            Cesium.GeographicTilingScheme &&
+            Cesium.EllipsoidTerrainProvider) {
+            console.log('Cesium组件已加载完成，开始初始化...');
+            initializeCesium();
+        } else {
+            console.log(`等待Cesium组件加载... (${cesiumRetryCount}/${maxCesiumRetries})`);
+            console.log('Cesium部分加载，缺少组件：');
+            console.log('- Viewer:', typeof Cesium.Viewer);
+            console.log('- TileMapServiceImageryProvider:', typeof Cesium.TileMapServiceImageryProvider);
+            console.log('- GeographicTilingScheme:', typeof Cesium.GeographicTilingScheme);
+            console.log('- EllipsoidTerrainProvider:', typeof Cesium.EllipsoidTerrainProvider);
+            
+            // 检查是否有错误
+            if (Cesium.DeveloperError || Cesium.RuntimeError) {
+                console.log('发现Cesium错误对象，可能存在加载问题');
+            }
+            
+            setTimeout(waitForCesiumComponents, 200);
+        }
+    }
+    
+    // 初始化Cesium的函数
+    function initializeCesium() {
+        console.log('Starting Cesium initialization...');
+        
+        // 创建Cesium查看器（完全离线模式）
+        try {
+            if (!checkWebGL()) {
+                throw new Error('WebGL not supported');
+            }
+            if (!checkCesium()) {
+                throw new Error('Cesium library not loaded');
+            }
+            
+            console.log('Creating Cesium Viewer...');
+        
+        var viewer = new Cesium.Viewer('cesiumContainer', {
+            baseLayerPicker: false,
+            geocoder: false,
+            homeButton: true,
+            sceneModePicker: true,
+            navigationHelpButton: false,
+            animation: false,
+            timeline: false,
+            fullscreenButton: false,
+            imageryProvider: createOfflineImageryProvider(), // 在Cesium加载后创建
+            // 使用简单的椭球体地形（完全离线）
+            terrainProvider: new Cesium.EllipsoidTerrainProvider()
+        });
+        // 将viewer暴露到全局，供外部脚本（测向线绘制等）访问
+        window.viewer = viewer;
+        
+        // 添加错误处理
+        viewer.scene.globe.enableLighting = false;
+        viewer.scene.globe.dynamicAtmosphereLighting = false;
+        // 避免几何被地形遮挡导致线不可见
+        viewer.scene.globe.depthTestAgainstTerrain = false;
+        
+        console.log('Cesium Viewer created successfully');
+        
+        // 移除诊断信息
+        var diagnostics = document.querySelector('div[style*="position: fixed"]');
+        if (diagnostics) diagnostics.remove();
+
+        // 广播初始化完成事件，供外部脚本（测向线绘制等）监听
+        try {
+          var evt = new Event('viewer-ready');
+          document.dispatchEvent(evt);
+        } catch (e) { /* 兼容旧内核 */
+          var evtLegacy = document.createEvent('Event');
+          evtLegacy.initEvent('viewer-ready', true, true);
+          document.dispatchEvent(evtLegacy);
+        }
+        
+        // 设置初始视图（中国上空）
+        var CHINA_VIEW = {
+          destination: Cesium.Cartesian3.fromDegrees(116.3833, 39.9167, 1000000), // 北京上空
+          orientation: {
+            heading: 0, // 左右摆头
+            pitch: -1.5,  // 上下摇头
+            roll: 0.0                    // default value
+          }
+        };
+        
+        // 设置home按钮的默认视图为中国上空
+        viewer.homeButton.viewModel.command.beforeExecute.addEventListener(function(e) {
+          e.cancel = true; // 取消默认行为
+          viewer.camera.flyTo(CHINA_VIEW); // 飞行到中国上空的视图
+        });
+        
+        // 初始化视图为中国上空
+        viewer.camera.setView(CHINA_VIEW);
+
+        // 移除版权信息
+        viewer.cesiumWidget.creditContainer.style.display = "none";
+        
+        // 获取经纬度显示元素
+        var coordinateInfoElement = document.getElementById('coordinateInfo');
+        
+        // 添加鼠标点击事件监听器
+        var handler = new Cesium.ScreenSpaceEventHandler(viewer.scene.canvas);
+        handler.setInputAction(function(click) {
+          // 获取点击位置的笛卡尔坐标
+          var cartesian = viewer.camera.pickEllipsoid(click.position, viewer.scene.globe.ellipsoid);
+          if (cartesian) {
+            // 将笛卡尔坐标转换为经纬度坐标
+            var cartographic = Cesium.Cartographic.fromCartesian(cartesian);
+            var longitude = Cesium.Math.toDegrees(cartographic.longitude);
+            var latitude = Cesium.Math.toDegrees(cartographic.latitude);
+            
+            // 格式化经纬度显示（保留6位小数）
+            var longitudeStr = longitude.toFixed(6);
+            var latitudeStr = latitude.toFixed(6);
+            
+            // 更新显示
+            coordinateInfoElement.innerHTML = '经度: ' + longitudeStr + '°, 纬度: ' + latitudeStr + '°';
+          }
+        }, Cesium.ScreenSpaceEventType.LEFT_CLICK);
+        
+        // 添加鼠标移动事件监听器，显示鼠标悬停位置的经纬度
+        handler.setInputAction(function(movement) {
+          var cartesian = viewer.camera.pickEllipsoid(movement.endPosition, viewer.scene.globe.ellipsoid);
+          if (cartesian) {
+            var cartographic = Cesium.Cartographic.fromCartesian(cartesian);
+            var longitude = Cesium.Math.toDegrees(cartographic.longitude);
+            var latitude = Cesium.Math.toDegrees(cartographic.latitude);
+            
+            var longitudeStr = longitude.toFixed(6);
+            var latitudeStr = latitude.toFixed(6);
+            
+            coordinateInfoElement.innerHTML = '经度: ' + longitudeStr + '°, 纬度: ' + latitudeStr + '°';
+          }
+        }, Cesium.ScreenSpaceEventType.MOUSE_MOVE);
+        
+        // 创建标尺元素
+        function createDistanceLegend() {
+          var distanceLegendDiv = document.createElement('div');
+          distanceLegendDiv.className = 'distance-legend';
+          
+          var distanceLabel = document.createElement('div');
+          distanceLabel.id = 'distanceLabel';
+          distanceLabel.textContent = '0 km';
+          distanceLegendDiv.appendChild(distanceLabel);
+          
+          var scaleBar = document.createElement('div');
+          scaleBar.className = 'scale-bar';
+          scaleBar.id = 'scaleBar';
+          distanceLegendDiv.appendChild(scaleBar);
+          
+          document.body.appendChild(distanceLegendDiv);
+          return distanceLegendDiv;
         }
         
         // 更新标尺
-        distanceLabel.textContent = label;
-        scaleBar.style.width = width + 'px';
-      }
+        function updateDistanceLegend() {
+          var distanceLegendDiv = document.querySelector('.distance-legend');
+          var distanceLabel = document.getElementById('distanceLabel');
+          var scaleBar = document.getElementById('scaleBar');
+          
+          if (!distanceLegendDiv) {
+            distanceLegendDiv = createDistanceLegend();
+            distanceLabel = document.getElementById('distanceLabel');
+            scaleBar = document.getElementById('scaleBar');
+          }
+          
+          // 获取视图中心点
+          var center = new Cesium.Cartesian2(
+            viewer.canvas.clientWidth / 2,
+            viewer.canvas.clientHeight / 2
+          );
+          
+          var leftPoint = new Cesium.Cartesian2(
+            center.x - 100,
+            center.y
+          );
+          
+          // 将屏幕坐标转换为地理坐标
+          var centerCartesian = viewer.camera.pickEllipsoid(center);
+          var leftCartesian = viewer.camera.pickEllipsoid(leftPoint);
+          
+          if (centerCartesian && leftCartesian) {
+            // 计算两点之间的距离
+            var centerCartographic = Cesium.Cartographic.fromCartesian(centerCartesian);
+            var leftCartographic = Cesium.Cartographic.fromCartesian(leftCartesian);
+            
+            var geodesic = new Cesium.EllipsoidGeodesic(
+              new Cesium.Cartographic(centerCartographic.longitude, centerCartographic.latitude),
+              new Cesium.Cartographic(leftCartographic.longitude, leftCartographic.latitude)
+            );
+            
+            var distance = geodesic.surfaceDistance;
+            
+            // 根据距离选择合适的单位和标尺长度
+            var label;
+            var width = 100; // 标尺固定宽度为100px
+            
+            // 计算标尺表示的距离值（四舍五入到合适的数值）
+            if (distance >= 100000) {
+              // 超过100公里，以100公里为单位
+              var km = Math.round(distance / 100000) * 100;
+              label = km + ' km';
+            } else if (distance >= 10000) {
+              // 10-100公里，以10公里为单位
+              var km = Math.round(distance / 10000) * 10;
+              label = km + ' km';
+            } else if (distance >= 1000) {
+              // 1-10公里，以1公里为单位
+              var km = Math.round(distance / 1000);
+              label = km + ' km';
+            } else {
+              // 不足1公里，以100米为单位
+              var m = Math.round(distance / 100) * 100;
+              if (m === 0) m = 100;
+              label = m + ' m';
+            }
+            
+            // 更新标尺
+            distanceLabel.textContent = label;
+            scaleBar.style.width = width + 'px';
+          }
+        }
+        
+        // 创建标尺
+        createDistanceLegend();
+        
+        // 视图变化时更新标尺
+        viewer.camera.changed.addEventListener(updateDistanceLegend);
+        viewer.scene.preRender.addEventListener(updateDistanceLegend);
+        
+        // 初始更新
+        updateDistanceLegend();
+        
+        } catch (error) {
+            console.error('Failed to create Cesium Viewer:', error);
+            document.getElementById('cesiumContainer').innerHTML = 
+                '<div style="color: red; padding: 20px; text-align: center;">' +
+                '<h3>地图加载失败</h3>' +
+                '<p>错误: ' + error.message + '</p>' +
+                '<p>WebGL: ' + (checkWebGL() ? '支持' : '不支持') + '</p>' +
+                '<p>Cesium: ' + (checkCesium() ? '已加载' : '未加载') + '</p>' +
+                '<p>协议: ' + window.location.protocol + '</p>' +
+                '<p>建议: 使用 HTTP 服务器而不是 file:// 协议</p>' +
+                '</div>';
+            return;
+        }
     }
     
-    // 创建标尺
-    createDistanceLegend();
+    // 添加Cesium加载事件监听
+    window.addEventListener('load', function() {
+        console.log('页面完全加载完成，开始检查Cesium...');
+        // 延迟一点时间确保所有脚本都加载完成
+        setTimeout(function() {
+            if (typeof Cesium !== 'undefined') {
+                console.log('Cesium对象存在，开始检查组件...');
+                waitForCesiumComponents();
+            } else {
+                console.error('页面加载完成但Cesium对象不存在！');
+                console.error('请检查Cesium.js文件是否正确加载');
+            }
+        }, 500);
+    });
     
-    // 视图变化时更新标尺
-    viewer.camera.changed.addEventListener(updateDistanceLegend);
-    viewer.scene.preRender.addEventListener(updateDistanceLegend);
-    
-    // 初始更新
-    updateDistanceLegend();
+    // 备用检查机制
+    setTimeout(function() {
+        if (typeof Cesium === 'undefined') {
+            console.error('5秒后Cesium仍未加载，可能存在严重问题');
+            console.error('请检查：');
+            console.error('1. 文件路径是否正确');
+            console.error('2. 是否通过HTTP服务器访问');
+            console.error('3. 浏览器控制台是否有网络错误');
+        }
+    }, 5000);
   </script>
 </body>
 

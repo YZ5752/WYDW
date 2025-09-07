@@ -561,9 +561,5 @@ std::pair<std::pair<double, double>, double> InterferometerPositioning::calculat
 //     g_print("  俯仰角: %.4f°\n", elevation);
     
 //     return errors;
-<<<<<<< HEAD
 // } 
 #endif
-=======
-// } 
->>>>>>> origin/main
