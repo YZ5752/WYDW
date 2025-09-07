@@ -9,8 +9,6 @@
 #include "../../models/TrajectorySimulator.h"
 #include "../../utils/DirectionErrorLines.h"
 #include <gtk/gtk.h>
-#include "../../utils/DirectionErrorLines.h"
-#include <gtk/gtk.h>
 #include <iostream>
 #include <cmath>    // 添加数学函数头文件
 #include <ctime>    // 添加时间函数头文件
@@ -53,13 +51,11 @@ void SinglePlatformController::startSimulation() {
     
     // 获取视图中选择的参数
     std::string positioningAlgorithm = m_view->getSelectedPositioningAlgorithm();
-    std::string positioningAlgorithm = m_view->getSelectedPositioningAlgorithm();
     std::string deviceName = m_view->getSelectedDevice();
     std::string sourceName = m_view->getSelectedSource();
     int simulationTime = m_view->getSimulationTime();
     
     g_print("开始单平台仿真...\n");
-    g_print("定位算法: %s\n", positioningAlgorithm.c_str());
     g_print("定位算法: %s\n", positioningAlgorithm.c_str());
     g_print("侦察设备: %s\n", deviceName.c_str());
     g_print("辐射源: %s\n", sourceName.c_str());
@@ -136,16 +132,6 @@ void SinglePlatformController::startSimulation() {
         if (m_view) m_view->showErrorMessage(failMessage);
         return;
     }
-    // ====== 仿真前条件验证 ======
-    SimulationValidator validator;
-    std::vector<int> deviceIds = { device.getDeviceId() };
-    int sourceId = source.getRadiationId();
-    std::string failMessage;
-    if (!validator.validateAll(deviceIds, sourceId, failMessage)) {
-        g_print("仿真前条件验证失败：%s\n", failMessage.c_str());
-        if (m_view) m_view->showErrorMessage(failMessage);
-        return;
-    }
     
     // 设置初始地图视角
     MapView* mapView = m_view->getMapView();
@@ -160,30 +146,15 @@ void SinglePlatformController::startSimulation() {
             "  }\n"
             "} catch (e) { console.warn('clear df-* lines failed', e); }";
         mapView->executeScript(clearDfLinesScript);
-        // 在任何可视化动作前，主动清理所有以 df- 开头的测向线实体，避免历史残留
-        std::string clearDfLinesScript =
-            "try {\n"
-            "  var list = viewer.entities.values;\n"
-            "  for (var i = list.length - 1; i >= 0; i--) {\n"
-            "    var e = list[i];\n"
-            "    if (e.id && ('' + e.id).indexOf('df-') === 0) { viewer.entities.remove(e); }\n"
-            "  }\n"
-            "} catch (e) { console.warn('clear df-* lines failed', e); }";
-        mapView->executeScript(clearDfLinesScript);
         
         // 清空所有地图标记，仿照多平台逻辑仅保留需要的标记
         mapView->clearMarkers();
-        // 清空所有地图标记，仿照多平台逻辑仅保留需要的标记
-        mapView->clearMarkers();
         
-        // 添加侦察设备标记点
-        mapView->addMarker(
         // 添加侦察设备标记点
         mapView->addMarker(
             device.getLongitude(), 
             device.getLatitude(), 
             device.getDeviceName(), 
-            "",
             "",
             "red"
         );
@@ -210,11 +181,7 @@ void SinglePlatformController::startSimulation() {
     
     // std::vector<std::pair<double, double>> trajectoryPoints = 
     //     TrajectorySimulator::getInstance().simulateDeviceMovement(deviceCopy, simulationTime);
-    // std::vector<std::pair<double, double>> trajectoryPoints = 
-    //     TrajectorySimulator::getInstance().simulateDeviceMovement(deviceCopy, simulationTime);
     
-    // // 在地图上显示设备移动轨迹
-    // m_view->animateDeviceMovement(deviceCopy, trajectoryPoints, simulationTime);
     // // 在地图上显示设备移动轨迹
     // m_view->animateDeviceMovement(deviceCopy, trajectoryPoints, simulationTime);
     
@@ -224,7 +191,6 @@ void SinglePlatformController::startSimulation() {
     // 执行仿真
     LocationResult result;
     
-    // 根据选择的定位算法执行不同的算法
     // 根据选择的定位算法执行不同的算法
     // 使用原始设备位置进行定位计算，而不是移动后的位置
     if (positioningAlgorithm == "FAST_LOCATION") {
@@ -261,7 +227,6 @@ void SinglePlatformController::startSimulation() {
     
     // 保存误差因素以便在仿真结束后显示
     std::vector<double> errorFactors = result.errorFactors;
-    std::string currentTechSystem = positioningAlgorithm;
     std::string currentTechSystem = positioningAlgorithm;
     
 //  // 在动画结束后才显示结果参数和误差分析
@@ -429,87 +394,6 @@ void SinglePlatformController::startSimulation() {
         }
     }
 
-        // 添加侦察设备标记点
-        mapView->addMarker(
-            device.getLongitude(), 
-            device.getLatitude(), 
-            device.getDeviceName(), 
-            "",
-            "red"
-        );
-
-    // 在地图上添加“计算后的目标位置”标记，隐藏实际目标位置（不添加实际辐射源标记）
-    if (mapView) {
-        mapView->addMarker(
-            result.longitude,
-            result.latitude,
-            source.getRadiationName(),
-            "",
-            "blue"
-        );
-    }
-
-    // 新增：完全仿照多平台的误差线绘制逻辑
-    // 使用已经存在的地图视图变量
-    if (mapView && !errorFactors.empty() && errorFactors.size() >= 5) {
-        // 获取测向误差数据
-        double directionError = errorFactors[4]; // 综合测向误差
-        
-        // 获取当前选中的设备
-        std::string deviceName = m_view->getSelectedDevice();
-        std::string sourceName = m_view->getSelectedSource();
-        
-        if (!deviceName.empty() && !sourceName.empty()) {
-            // 从DAO获取设备和辐射源数据
-            std::vector<ReconnaissanceDevice> allDevices = ReconnaissanceDeviceDAO::getInstance().getAllReconnaissanceDevices();
-            std::vector<RadiationSource> allSources = RadiationSourceDAO::getInstance().getAllRadiationSources();
-            
-            ReconnaissanceDevice selectedDevice;
-            RadiationSource selectedSource;
-            bool deviceFound = false, sourceFound = false;
-            
-            for (const auto& dev : allDevices) {
-                if (dev.getDeviceName() == deviceName) {
-                    selectedDevice = dev;
-                    deviceFound = true;
-                    break;
-                }
-            }
-            
-            for (const auto& src : allSources) {
-                if (src.getRadiationName() == sourceName) {
-                    selectedSource = src;
-                    sourceFound = true;
-                    break;
-                }
-            }
-            
-            if (deviceFound && sourceFound) {
-                // 显示测向误差线 - 完全仿照多平台的逻辑
-                DirectionErrorLines directionErrorLines;
-                
-                // 在绘制新测向线之前立即清除旧的测向线（完全仿照多平台）
-                m_view->clearDirectionErrorLines();
-                
-                // 使用计算的定位结果位置，而不是真实辐射源位置
-                // 这样测向线会指向计算结果，而不是真实目标位置
-                directionErrorLines.showDirectionSimulationLines(
-                    mapView,
-                    selectedDevice,
-                    result.longitude,   // 使用计算的定位结果经度
-                    result.latitude,    // 使用计算的定位结果纬度
-                    result.altitude,    // 使用计算的定位结果高度
-                    directionError,     // 综合测向误差作为均值误差
-                    directionError / 2.0, // 标准差设为误差的一半
-                    "#FF0000",         // 红色
-                    40000.0            // 足够长的线
-                );
-                
-                g_print("成功显示测向误差线，使用计算的定位结果位置\n");
-            }
-        }
-    }
-
     // 更新精度分析表格
     GtkWidget* errorTable = m_view->getErrorTable();
 
@@ -571,11 +455,6 @@ void SinglePlatformController::loadModelData() {
 }
 
 // 技术体制变化处理
-void SinglePlatformController::handlePositioningAlgorithmChange(const std::string& positioningAlgorithm) {
-    // 在技术体制改变时执行相关处理
-    g_print("定位算法已变更为: %s\n", positioningAlgorithm.c_str());
-    
-    // 如果有需要，可以在这里添加其他处理逻辑
 void SinglePlatformController::handlePositioningAlgorithmChange(const std::string& positioningAlgorithm) {
     // 在技术体制改变时执行相关处理
     g_print("定位算法已变更为: %s\n", positioningAlgorithm.c_str());

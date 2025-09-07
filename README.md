@@ -76,6 +76,10 @@ make
 3. 运行程序：
 
 ```bash
+在res文件中打开终端启动http服务，不要关闭窗口
+python3 -m http.server 8080
+
+在build文件中打开终端运行程序
 ./passivelocation
 ```
 

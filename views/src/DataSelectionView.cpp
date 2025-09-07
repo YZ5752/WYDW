@@ -64,8 +64,8 @@ static void on_radio_multi_toggled(GtkToggleButton* btn, gpointer user_data) {
 void refreshTechCombo(GtkComboBoxText* techCombo, bool isSingle) {
     gtk_combo_box_text_remove_all(techCombo);
     if (isSingle) {
-        gtk_combo_box_text_append_text(techCombo, "时差定位");
-        gtk_combo_box_text_append_text(techCombo, "干涉仪定位");
+        gtk_combo_box_text_append_text(techCombo, "快速定位");
+        gtk_combo_box_text_append_text(techCombo, "基线定位");
     } else {
         gtk_combo_box_text_append_text(techCombo, "时差定位");
         gtk_combo_box_text_append_text(techCombo, "频差定位");
@@ -142,7 +142,7 @@ void DataSelectionView::updateTaskList(int radiationId) {
     for (const auto &task : tasks) {
         gtk_list_store_append(store, &iter);
         gtk_list_store_set(store, &iter,
-                           0, false,
+                           0, false, // 选择列（虽然被注释掉，但数据模型仍然存在）
                            1, task[0].c_str(), // 任务类型
                            2, ("("+task[3] + "°, " + task[4] + "°, " + task[5]+")").c_str(), // 定位数据
                            3, ("("+task[6] + "°, " + task[7]+"°)").c_str(), // 测向数据
@@ -177,8 +177,8 @@ static void on_row_activated(GtkTreeView *tree_view, GtkTreePath *path, GtkTreeV
             break;
         }
     }
-    // 如果点击的是"操作"列
-    if (columnIndex == 4) {
+    // 如果点击的是"操作"列（由于选择列被注释掉，操作列的实际索引是3）
+    if (columnIndex == 3) {
         // 获取选中行的数据
         GtkTreeModel *model = gtk_tree_view_get_model(tree_view);
         GtkTreeIter iter;
@@ -271,6 +271,8 @@ GtkWidget* DataSelectionView::createView() {
     // 创建树视图
     m_dataList = gtk_tree_view_new_with_model(GTK_TREE_MODEL(store));
     g_object_unref(store);
+    // 单击即激活行，便于点击“操作”列一次就弹出详情
+    gtk_tree_view_set_activate_on_single_click(GTK_TREE_VIEW(m_dataList), TRUE);
 
     // 设置树视图支持多行选择
     GtkTreeSelection *selection = gtk_tree_view_get_selection(GTK_TREE_VIEW(m_dataList));
@@ -280,12 +282,12 @@ GtkWidget* DataSelectionView::createView() {
     g_signal_connect(G_OBJECT(m_dataList), "row-activated", G_CALLBACK(on_row_activated), this);
     
     
-    // 选择列
-    GtkCellRenderer* toggleRenderer = gtk_cell_renderer_toggle_new();
-    GtkTreeViewColumn* toggleColumn = gtk_tree_view_column_new_with_attributes(
-        "选择", toggleRenderer, "active", 0, NULL);
-    gtk_tree_view_column_set_min_width(toggleColumn, 60);
-    gtk_tree_view_append_column(GTK_TREE_VIEW(m_dataList), toggleColumn);
+    // // 选择列
+    // GtkCellRenderer* toggleRenderer = gtk_cell_renderer_toggle_new();
+    // GtkTreeViewColumn* toggleColumn = gtk_tree_view_column_new_with_attributes(
+    //     "选择", toggleRenderer, "active", 0, NULL);
+    // gtk_tree_view_column_set_min_width(toggleColumn, 60);
+    // gtk_tree_view_append_column(GTK_TREE_VIEW(m_dataList), toggleColumn);
     
     // 任务类型列
     GtkCellRenderer* textRenderer1 = gtk_cell_renderer_text_new();
@@ -666,7 +668,7 @@ void DataSelectionView::onImportButtonClicked(GtkWidget* widget, gpointer user_d
     g_signal_connect(techCombo, "changed", G_CALLBACK(on_tech_changed), ctx);
     // 初始化下拉框
     refreshTechCombo(GTK_COMBO_BOX_TEXT(techCombo), true);
-    refreshDeviceCombo(GTK_COMBO_BOX_TEXT(deviceCombo), allDevices, fixedDevices, mobileDevices, true, "时差定位");
+    refreshDeviceCombo(GTK_COMBO_BOX_TEXT(deviceCombo), allDevices, fixedDevices, mobileDevices, true, "快速定位");
     // 显示对话框
     gtk_widget_show_all(dialog);
     // 确保初始时为单平台则隐藏所有多平台设备下拉框
@@ -700,7 +702,7 @@ void DataSelectionView::onImportButtonClicked(GtkWidget* widget, gpointer user_d
         //处理技术体制
         if (isSingle) {
             showList = &mobileDevices;
-            positioningAlgorithm = (tech == "时差定位") ? "BASELINE_LOCATION" : "FAST_LOCATION";
+            positioningAlgorithm = (tech == "快速定位") ? "FAST_LOCATION" : "BASELINE_LOCATION";
         } else {
             if (tech == "频差定位") {
                 showList = &allDevices;
@@ -920,8 +922,8 @@ void DataSelectionView::showTaskDetailsDialog(int taskId, const std::string& tas
             std::string displayValue = taskDetails[field.key];
             if (strcmp(field.key, "tech_system") == 0) {
                 if (displayValue == "FDOA") displayValue = "频差定位";
-                else if (displayValue == "TDOA") displayValue = "时差定位";
-                else if (displayValue == "INTERFEROMETER") displayValue = "干涉仪定位";
+                        else if (displayValue == "FAST_LOCATION") displayValue = "快速定位";
+        else if (displayValue == "BASELINE_LOCATION") displayValue = "基线定位";
                 else if (displayValue == "FD") displayValue = "测向定位";
             }
             
